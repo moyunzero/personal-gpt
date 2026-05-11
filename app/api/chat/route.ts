@@ -4,7 +4,6 @@ import { DataAPIClient } from "@datastax/astra-db-ts";
 import OpenAI from "openai";
 
 const {
-  ASTRA_DB_NAMESPACE,
   ASTRA_DB_COLLECTION,
   ASTRA_DB_API_ENDPOINT,
   ASTRA_DB_APPLICATION_TOKEN,
@@ -19,7 +18,16 @@ const openRouterClient = new OpenAI({
 
 const openrouter = createOpenRouter({ apiKey: OPENROUTER_API_KEY });
 
-let db: any = null;
+interface AstraCollection {
+  find: (query: object, options: object) => { toArray: () => Promise<unknown[]> };
+  insertOne: (doc: object) => Promise<unknown>;
+}
+
+interface AstraDb {
+  collection: (name: string) => AstraCollection;
+}
+
+let db: AstraDb | null = null;
 
 function getDb() {
   if (!db) {
@@ -104,14 +112,18 @@ async function getRelevantContext(query: string): Promise<string> {
       const docs = await cursor.toArray();
 
       // 降低相似度阈值，确保有结果
-      const relevantDocs = docs.filter((doc: any) => (doc.$similarity || 0) >= 0.65);
+      interface DocResult {
+        $similarity?: number;
+        content: string;
+      }
+      const relevantDocs = (docs as DocResult[]).filter((doc) => (doc.$similarity || 0) >= 0.65);
 
       // 拼接上下文（只取 content，节省 token）
-      return relevantDocs.map((doc: any) => doc.content).join("\n\n");
+      return relevantDocs.map((doc) => doc.content).join("\n\n");
     })();
 
     return await Promise.race([searchPromise, timeoutPromise]);
-  } catch (err: any) {
+  } catch {
     // 降级：返回空字符串，让 AI 使用自身知识回答
     return "";
   }
@@ -127,14 +139,25 @@ export async function POST(req: Request) {
     }
 
     // 转换 UIMessage 格式到标准格式
-    const formattedMessages = messages.map((msg: any) => {
+    interface MessagePart {
+      type: string;
+      text: string;
+    }
+    
+    interface InputMessage {
+      role: string;
+      parts?: MessagePart[];
+      content?: string;
+    }
+    
+    const formattedMessages = messages.map((msg: InputMessage) => {
       let content = '';
       
       // 处理 UIMessage 格式（带 parts 数组）
       if (msg.parts && Array.isArray(msg.parts)) {
         content = msg.parts
-          .filter((part: any) => part.type === 'text')
-          .map((part: any) => part.text)
+          .filter((part: MessagePart) => part.type === 'text')
+          .map((part: MessagePart) => part.text)
           .join('');
       } 
       // 处理标准格式（直接有 content）

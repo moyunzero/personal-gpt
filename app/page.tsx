@@ -7,9 +7,7 @@ import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
 
 export default function Home() {
-  const { messages, sendMessage, status } = useChat({
-    api: '/api/chat',
-  });
+  const { messages, sendMessage, status } = useChat();
   const [input, setInput] = useState("");
   const sectionRef = useRef<HTMLElement>(null);
   const noMessages = messages.length === 0;

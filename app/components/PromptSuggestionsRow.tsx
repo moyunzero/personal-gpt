@@ -1,5 +1,10 @@
 import PromptSuggestionsButton from './PromptSuggestionButton'
-const PromptSuggestionsRow = ({onPromptClick})=>{
+
+interface PromptSuggestionsRowProps {
+  onPromptClick: (prompt: string) => void;
+}
+
+const PromptSuggestionsRow = ({onPromptClick}: PromptSuggestionsRowProps)=>{
     const prompts = [
         "介绍一下心晴MO",
         "介绍一下欠费修仙中",

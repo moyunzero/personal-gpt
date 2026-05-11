@@ -132,20 +132,24 @@ const scrapePageSmart = async (
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      let docs: any[] = [];
-      let usedBrowser = false;
+      let docs: unknown[] = [];
       
-      // 策略：先尝试 Cheerio，如果内容不足则自动切换到 Playwright
+      // 策略:先尝试 Cheerio，如果内容不足则自动切换到 Playwright
       if (!forceBrowser && shouldTryCheerioFirst) {
         try {
           console.log(`  ⚡ 尝试 Cheerio 静态模式抓取...`);
           const loader = new CheerioWebBaseLoader(url, {
-            selector: selector as any,
+            // @ts-expect-error - CheerioWebBaseLoader selector type is overly restrictive
+            selector,
           });
           
           docs = await loader.load();
           
-          const content = docs
+          interface Doc {
+            pageContent: string;
+          }
+          
+          const content = (docs as Doc[])
             .map((doc) => doc.pageContent)
             .join("\n")
             .replace(/\n\s*\n/g, "\n")
@@ -171,7 +175,6 @@ const scrapePageSmart = async (
       if (forceBrowser || useBrowser === true) {
         // 使用 Playwright 抓取动态网站
         console.log(`  🌐 使用 Playwright 浏览器模式抓取...`);
-        usedBrowser = true;
         const loader = new PlaywrightWebBaseLoader(url, {
           launchOptions: {
             headless: true,
@@ -180,7 +183,7 @@ const scrapePageSmart = async (
             waitUntil: "networkidle",
             timeout: 30000,
           },
-          evaluate: async (page, browser) => {
+          evaluate: async (page) => {
             // 等待页面加载完成
             await page.waitForTimeout(2000);
             
@@ -211,13 +214,20 @@ const scrapePageSmart = async (
       }
       
       if (debug && docs.length > 0) {
+        interface Doc {
+          pageContent: string;
+        }
+        const firstDoc = docs[0] as Doc;
         console.log(`  [调试] 加载了 ${docs.length} 个文档`);
-        console.log(`  [调试] 第一个文档内容长度: ${docs[0].pageContent.length}`);
-        console.log(`  [调试] 前 200 字符: ${docs[0].pageContent.substring(0, 200)}`);
+        console.log(`  [调试] 第一个文档内容长度: ${firstDoc.pageContent.length}`);
+        console.log(`  [调试] 前 200 字符: ${firstDoc.pageContent.substring(0, 200)}`);
       }
       
       // 清理内容：去除多余空白、空行
-      const content = docs
+      interface Doc {
+        pageContent: string;
+      }
+      const content = (docs as Doc[])
         .map((doc) => doc.pageContent)
         .join("\n")
         .replace(/\n\s*\n/g, "\n") // 移除多余空行
@@ -330,7 +340,7 @@ const loadSampleData = async () => {
         console.log("请使用以下 keyspace 之一:", keyspaces);
         process.exit(1);
       }
-    } catch (adminError) {
+    } catch {
       console.log("无法获取 keyspaces 列表，尝试直接连接...");
     }
     

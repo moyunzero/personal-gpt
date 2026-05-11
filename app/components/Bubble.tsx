@@ -9,8 +9,8 @@ interface BubbleProps {
 const Bubble = ({ message }: BubbleProps) => {
     // 从 parts 中提取文本内容
     const content = message.parts
-        .filter((part: any) => part.type === 'text')
-        .map((part: any) => part.text)
+        .filter((part) => 'type' in part && part.type === 'text' && 'text' in part)
+        .map((part) => ('text' in part ? (part.text as string) : ''))
         .join('');
     
     const { role } = message;

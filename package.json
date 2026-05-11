@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "seed": "ts-node ./script/loadDB.ts",
-    "lint": "eslint"
+    "lint": "eslint",
+    "type-check": "tsc --noEmit",
+    "validate": "yarn type-check && yarn lint && yarn build"
   },
   "dependencies": {
     "@ai-sdk/react": "3.0.179",
