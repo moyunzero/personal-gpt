@@ -301,7 +301,7 @@ const loadSampleData = async () => {
       // 插入到 AstraDB
       await collection.insertOne({
         $vector: embedding,
-        text: chunk,
+        content: chunk,  // 改为 content，与 API 保持一致
         source: url,
       });
 

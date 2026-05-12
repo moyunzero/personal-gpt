@@ -187,9 +187,9 @@ export async function POST(req: Request) {
       docContext = await getRelevantContext(lastContent);
     }
 
-    const systemPrompt = `你是一个专业、友好、乐于助人的助手。
+    const systemPrompt = `你是一个专业、友好、乐于助人的心理咨询助手。
 请自然、清晰地回答用户问题。
-如果提供了参考内容，请优先基于参考内容回答，并注明信息来源。
+如果提供了参考内容，请基于参考内容进行回答，用自己的语言自然地融入这些信息。
 如果没有相关参考内容，请使用自己的知识正常回答。
 
 参考内容：

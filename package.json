@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "seed": "ts-node ./script/loadDB.ts",
+    "seed:psychology": "ts-node ./script/loadPsychologyData.ts",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "validate": "yarn type-check && yarn lint && yarn build"
