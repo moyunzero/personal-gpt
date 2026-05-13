@@ -25,11 +25,16 @@ export interface FormattedMessage {
 }
 
 /**
- * 把任意 role 字符串收敛到 ChatRole；未识别的角色一律降级成 user
- * （比 throw 友好，且能避免 tool / function 等中间态泄漏到 LLM 输入）。
+ * 把任意 role 字符串收敛到 ChatRole。
+ *
+ * 安全策略：
+ *   - 只放行 `assistant`（保留多轮上下文必要）。
+ *   - 客户端传入的 `system` **不放行**，防止 prompt 注入：服务端的系统
+ *     指令由 `buildSystemPrompt` 在 route.ts 中独立生成，绝不从外部透传。
+ *   - 其他角色（tool / function / 自造的字符串等）一律降级为 `user`。
  */
 function normalizeRole(role: string): ChatRole {
-  if (role === "system" || role === "assistant") return role;
+  if (role === "assistant") return "assistant";
   return "user";
 }
 
