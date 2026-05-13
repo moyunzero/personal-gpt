@@ -8,6 +8,8 @@
     "start": "next start",
     "seed": "ts-node ./script/loadDB.ts",
     "seed:psychology": "ts-node ./script/loadPsychologyData.ts",
+    "seed:suggestions": "ts-node ./script/loadPromptSuggestions.ts",
+    "test:search": "ts-node ./script/testVectorSearch.ts",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "validate": "yarn type-check && yarn lint && yarn build"

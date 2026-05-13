@@ -65,7 +65,14 @@ OPENROUTER_API_KEY=your_openrouter_api_key
 如果需要导入知识库数据：
 
 ```bash
-yarn seed
+# 导入预设问题答案（个人/项目介绍）- 推荐
+yarn seed:suggestions
+
+# 导入心理学问答数据（可选，数据量大）
+yarn seed:psychology
+
+# 测试向量搜索效果
+yarn test:search
 ```
 
 ### 5. 启动开发服务器
@@ -127,8 +134,14 @@ yarn build
 # 启动生产服务器
 yarn start
 
-# 初始化数据库
-yarn seed
+# 导入预设问题答案（个人知识库）
+yarn seed:suggestions
+
+# 导入心理学问答数据
+yarn seed:psychology
+
+# 测试向量搜索效果
+yarn test:search
 
 # 代码检查
 yarn lint
