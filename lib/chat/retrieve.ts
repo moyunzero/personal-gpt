@@ -2,6 +2,7 @@ import { DataAPIClient } from "@datastax/astra-db-ts";
 import OpenAI from "openai";
 
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 
 import {
   classifyVectorError,
@@ -70,13 +71,15 @@ export async function getRelevantContext(
   query: string,
   requestId: string,
 ): Promise<VectorSearchResult> {
+  const log = logger.child({ scope: "chat.retrieve", requestId });
+
   if (!ASTRA_DB_COLLECTION || !query) {
-    console.log(`[chat][${requestId}] [Vector Search] 跳过：缺少 collection 或 query`);
+    log.debug("跳过：缺少 collection 或 query");
     return { kind: "no-docs" };
   }
 
   try {
-    console.log(`[chat][${requestId}] [Vector Search] 开始检索:`, query);
+    log.debug("开始检索", { query });
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(
@@ -94,16 +97,10 @@ export async function getRelevantContext(
       let vector = embeddingCache.get(cacheKey);
 
       if (vector) {
-        console.log(`[METRIC] embedding.cache.hit`, {
-          requestId,
-          cacheSize: embeddingCache.size(),
-        });
+        log.metric("embedding.cache.hit", { cacheSize: embeddingCache.size() });
       } else {
-        console.log(`[METRIC] embedding.cache.miss`, {
-          requestId,
-          cacheSize: embeddingCache.size(),
-        });
-        console.log(`[chat][${requestId}] [Vector Search] 生成 embedding...`);
+        log.metric("embedding.cache.miss", { cacheSize: embeddingCache.size() });
+        log.debug("生成 embedding");
         const embeddings = await openRouterClient.embeddings.create({
           model: "nvidia/llama-nemotron-embed-vl-1b-v2:free",
           input: query,
@@ -112,25 +109,19 @@ export async function getRelevantContext(
 
         vector = embeddings.data[0]?.embedding;
         if (!vector) {
-          console.log(`[chat][${requestId}] [Vector Search] embedding 生成失败`);
+          log.warn("embedding 生成失败");
           return { kind: "no-docs" } as const;
         }
         embeddingCache.set(cacheKey, vector);
       }
 
       const sourceType = detectQuerySource(query);
-      console.log(
-        `[chat][${requestId}] [Vector Search] 检测到数据源类型:`,
-        sourceType,
-      );
+      log.debug("检测到数据源类型", { sourceType });
 
       const filter = sourceType === "all" ? {} : { source: sourceType };
       const limit = sourceType === "prompt-suggestion" ? 5 : 3;
 
-      console.log(`[chat][${requestId}] [Vector Search] 查询参数:`, {
-        filter,
-        limit,
-      });
+      log.debug("查询参数", { filter, limit });
 
       const cursor = collection.find(filter, {
         sort: { $vector: vector },
@@ -147,29 +138,26 @@ export async function getRelevantContext(
       });
 
       const docs = (await cursor.toArray()) as RetrievedDoc[];
-      console.log(
-        `[chat][${requestId}] [Vector Search] 找到文档数量:`,
-        docs.length,
-      );
-      docs.forEach((doc, i) => {
-        console.log(
-          `[chat][${requestId}] [Vector Search] 文档 ${i + 1}: 相似度=${doc.$similarity?.toFixed(3)}, 标题=${doc.title}, 来源=${doc.source}`,
-        );
+      log.debug("找到文档", {
+        count: docs.length,
+        // 把每个文档的关键信息压成一个小对象数组而不是逐行打 log，
+        // 一次 log 就够过滤分析，不再炸日志。
+        hits: docs.map((d) => ({
+          similarity: d.$similarity,
+          title: d.title,
+          source: d.source,
+        })),
       });
 
       const similarityThreshold = sourceType === "prompt-suggestion" ? 0.55 : 0.65;
-      console.log(
-        `[chat][${requestId}] [Vector Search] 相似度阈值:`,
-        similarityThreshold,
-      );
 
       const relevantDocs = docs.filter(
         (doc) => (doc.$similarity || 0) >= similarityThreshold,
       );
-      console.log(
-        `[chat][${requestId}] [Vector Search] 过滤后文档数量:`,
-        relevantDocs.length,
-      );
+      log.debug("阈值过滤", {
+        similarityThreshold,
+        kept: relevantDocs.length,
+      });
 
       if (relevantDocs.length === 0) {
         return { kind: "no-docs" } as const;
@@ -180,10 +168,7 @@ export async function getRelevantContext(
         new Set(relevantDocs.map((doc) => doc.source ?? "unknown")),
       );
 
-      console.log(
-        `[chat][${requestId}] [Vector Search] 返回上下文长度:`,
-        blocks.length,
-      );
+      log.debug("返回上下文", { length: blocks.length });
 
       return {
         kind: "ok",
@@ -197,16 +182,11 @@ export async function getRelevantContext(
   } catch (error) {
     const kind = classifyVectorError(error);
     if (kind === "timeout") {
-      // [METRIC] 前缀方便日后接 metrics 客户端按文本聚合；现在先 grep 友好。
-      console.warn(`[METRIC] vector.search.timeout`, {
-        requestId,
-        queryLength: query.length,
-      });
+      log.metric("vector.search.timeout", { queryLength: query.length });
       return { kind: "timeout" };
     }
 
-    console.error(`[METRIC] vector.search.api_error`, {
-      requestId,
+    log.metric("vector.search.api_error", {
       error: error instanceof Error ? error.message : String(error),
     });
     return { kind: "api-error", error };

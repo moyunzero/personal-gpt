@@ -2,6 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { streamText, createUIMessageStream } from "ai";
 
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 
 import type { FormattedMessage } from "./messages";
 
@@ -31,14 +32,16 @@ export interface ChatStreamOptions {
  * 首个成功的模型直接 return，全失败时写一个 error chunk。
  *
  * 错误处理：
- *   - 单个模型 throw：console.error 记录，落到下一个模型
- *   - 全部失败：服务端记录 lastError，客户端只看到 "服务暂时不可用 (requestId: ...)"
+ *   - 单个模型 throw：log.warn 记录，落到下一个模型
+ *   - 全部失败：log.error + 客户端只看到 "服务暂时不可用 (requestId: ...)"
  */
 export function createChatStream({
   systemPrompt,
   messages,
   requestId,
 }: ChatStreamOptions) {
+  const log = logger.child({ scope: "chat.stream", requestId });
+
   return createUIMessageStream({
     execute: async ({ writer }) => {
       const messageId = `msg-${Date.now()}`;
@@ -77,7 +80,8 @@ export function createChatStream({
           // 成功跳出
           return;
         } catch (error) {
-          console.error(`Model ${modelName} failed:`, error);
+          // 单个模型失败用 warn：fallback 还在继续，不算请求级故障
+          log.warn("model failed, falling back", { modelName, err: error });
           lastError = error instanceof Error ? error : new Error(String(error));
           // 不是最后一个模型就继续 fallback
           if (modelName !== MODELS[MODELS.length - 1]) {
@@ -87,7 +91,7 @@ export function createChatStream({
       }
 
       // 所有模型都失败了：服务端记录详细错误，客户端只看到通用文案 + requestId
-      console.error(`[chat][${requestId}] 所有模型均失败:`, lastError);
+      log.error("all models failed", { err: lastError });
       writer.write({
         type: "error",
         errorText: `服务暂时不可用，请稍后重试 (requestId: ${requestId})`,
@@ -95,7 +99,7 @@ export function createChatStream({
     },
     onError: (error) => {
       // onError 的返回值会被序列化到流里给客户端看，因此不能透出原始 message
-      console.error(`[chat][${requestId}] stream onError:`, error);
+      log.error("stream onError", { err: error });
       return `服务暂时不可用，请稍后重试 (requestId: ${requestId})`;
     },
   });

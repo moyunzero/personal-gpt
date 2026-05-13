@@ -7,6 +7,7 @@ import { buildSystemPrompt } from "@/lib/chat/prompt";
 import { shouldUseVectorSearch } from "@/lib/chat/query-classifier";
 import { getRelevantContext } from "@/lib/chat/retrieve";
 import { createChatStream } from "@/lib/chat/stream";
+import { logger } from "@/lib/logger";
 
 /**
  * 聊天接口。本文件只做：
@@ -21,8 +22,9 @@ import { createChatStream } from "@/lib/chat/stream";
 export async function POST(req: Request) {
   // 每次请求生成一个 requestId：
   //   - 客户端只看到 requestId（不暴露 stack / message）
-  //   - 服务端 console.error 带上 requestId，便于在日志里串起故障链路
+  //   - 服务端 log 带上 requestId，便于在日志里串起故障链路
   const requestId = randomUUID();
+  const log = logger.child({ scope: "chat.route", requestId });
 
   try {
     const { messages } = await req.json();
@@ -51,16 +53,12 @@ export async function POST(req: Request) {
     // 把检索结果记一条 telemetry，让 ok / no-docs / timeout / api-error 在
     // 同一个 [METRIC] 命名空间下，便于 grep 与未来接入 metrics 客户端。
     if (contextResult.kind === "ok") {
-      console.log(`[METRIC] vector.search.ok`, {
-        requestId,
+      log.metric("vector.search.ok", {
         docCount: contextResult.docCount,
         sources: contextResult.sources,
       });
     } else if (contextResult.kind === "no-docs" && needsContext) {
-      console.log(`[METRIC] vector.search.no_docs`, {
-        requestId,
-        queryLength: lastContent.length,
-      });
+      log.metric("vector.search.no_docs", { queryLength: lastContent.length });
     }
     // timeout / api-error 的日志在 getRelevantContext 里已经发过，避免重复。
 
@@ -75,7 +73,7 @@ export async function POST(req: Request) {
     return createUIMessageStreamResponse({ stream });
   } catch (error) {
     // 把详细错误留在服务端，客户端只能拿到 requestId
-    console.error(`[chat][${requestId}] 未处理异常:`, error);
+    log.error("unhandled error", { err: error });
     return new Response(
       JSON.stringify({ error: "Internal server error", requestId }),
       {
