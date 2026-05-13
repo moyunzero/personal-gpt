@@ -2,13 +2,17 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { streamText, createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { DataAPIClient } from "@datastax/astra-db-ts";
 import OpenAI from "openai";
+import { randomUUID } from "node:crypto";
+
+import { env } from "@/lib/env";
+import { detectQuerySource, shouldUseVectorSearch } from "@/lib/chat/query-classifier";
 
 const {
   ASTRA_DB_COLLECTION,
   ASTRA_DB_API_ENDPOINT,
   ASTRA_DB_APPLICATION_TOKEN,
   OPENROUTER_API_KEY,
-} = process.env;
+} = env;
 
 // ====================== 初始化（模块级单例） ======================
 const openRouterClient = new OpenAI({
@@ -31,90 +35,17 @@ let db: AstraDb | null = null;
 
 function getDb() {
   if (!db) {
-    const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN!);
-    db = client.db(ASTRA_DB_API_ENDPOINT!, {
-      token: ASTRA_DB_APPLICATION_TOKEN!,
+    const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN);
+    db = client.db(ASTRA_DB_API_ENDPOINT, {
+      token: ASTRA_DB_APPLICATION_TOKEN,
     });
   }
   return db;
 }
 
-// ====================== 智能判断是否需要向量搜索 ======================
-function shouldUseVectorSearch(query: string): boolean {
-  const lowerQuery = query.toLowerCase().trim();
-  
-  // 1. 太短的问题（可能是简单问答）
-  if (query.length < 10) {
-    return false;
-  }
-  
-  // 2. 简单的数学计算
-  if (/^[\d\s+\-*/()=？?]+$/.test(query)) {
-    return false;
-  }
-  
-  // 3. 常见的闲聊问候
-  const casualPhrases = [
-    '你好', 'hello', 'hi', '在吗', '在不在',
-    '怎么样', '干嘛', '做什么', '心情',
-    '天气', '吃了吗', '早上好', '晚上好',
-  ];
-  if (casualPhrases.some(phrase => lowerQuery.includes(phrase)) && query.length < 20) {
-    return false;
-  }
-  
-  // 4. 包含关键词，可能需要查询知识库
-  const contextKeywords = [
-    '项目', '作品', '经历', '工作', '技能',
-    '介绍', '了解', '详细', '具体', '什么时候',
-    '如何', '怎么做', '为什么', '原因',
-  ];
-  if (contextKeywords.some(keyword => lowerQuery.includes(keyword))) {
-    return true;
-  }
-  
-  // 5. 默认：中等长度的问题可能需要上下文
-  return query.length > 30;
-}
-
-// ====================== 智能判断数据源类型 ======================
-function detectQuerySource(query: string): 'prompt-suggestion' | 'psychology-qa' | 'all' {
-  const lowerQuery = query.toLowerCase().trim();
-  
-  // 个人/项目相关问题 -> 优先查询 prompt-suggestion（优先级最高）
-  const personalKeywords = [
-    '你', '你的', '你是', '介绍', '自己', '背景',
-    '心晴', 'xinqing', 'mo', '情绪记录', 'app',
-    '修仙', '欠费', 'xiuxian', '游戏', '赛博朋克',
-    '项目', '作品', '开发', '创作', '联系', 'moyun',
-  ];
-  
-  // 强匹配：如果包含项目名称，直接返回 prompt-suggestion
-  const projectNames = ['心晴', 'xinqing', '修仙', '欠费'];
-  if (projectNames.some(name => lowerQuery.includes(name))) {
-    return 'prompt-suggestion';
-  }
-  
-  // 弱匹配：其他个人相关关键词
-  if (personalKeywords.some(keyword => lowerQuery.includes(keyword))) {
-    return 'prompt-suggestion';
-  }
-  
-  // 心理学相关问题 -> 优先查询 psychology-qa
-  const psychologyKeywords = [
-    '心理', '焦虑', '抑郁', '压力',
-    '咨询', '治疗', '心态', '困扰',
-  ];
-  
-  if (psychologyKeywords.some(keyword => lowerQuery.includes(keyword))) {
-    return 'psychology-qa';
-  }
-  
-  // 默认查询所有数据源
-  return 'all';
-}
-
 // ====================== 向量检索函数 ======================
+// shouldUseVectorSearch / detectQuerySource 已抽离到 lib/chat/query-classifier.ts
+// 便于单元测试与后续路由拆分。
 async function getRelevantContext(query: string): Promise<string> {
   if (!ASTRA_DB_COLLECTION || !query) {
     console.log('[Vector Search] 跳过：缺少 collection 或 query');
@@ -222,6 +153,11 @@ async function getRelevantContext(query: string): Promise<string> {
 
 // ====================== 主处理函数 ======================
 export async function POST(req: Request) {
+  // 每次请求生成一个 requestId：
+  //   - 客户端只看到 requestId（不暴露 stack / message）
+  //   - 服务端 console.error 带上 requestId，便于在日志里串起故障链路
+  const requestId = randomUUID();
+
   try {
     const { messages } = await req.json();
     
@@ -360,22 +296,27 @@ ${docContext || "（无相关参考内容）"}`;
           }
         }
 
-        // 所有模型都失败了，发送错误
+        // 所有模型都失败了：服务端记录详细错误，客户端只看到通用文案 + requestId
+        console.error(`[chat][${requestId}] 所有模型均失败:`, lastError);
         writer.write({
           type: 'error',
-          errorText: `所有模型都不可用。最后的错误: ${lastError?.message || '未知错误'}`,
+          errorText: `服务暂时不可用，请稍后重试 (requestId: ${requestId})`,
         });
       },
       onError: (error) => {
-        return error instanceof Error ? error.message : String(error);
+        // onError 的返回值会被序列化到流里给客户端看，因此不能透出原始 message
+        console.error(`[chat][${requestId}] stream onError:`, error);
+        return `服务暂时不可用，请稍后重试 (requestId: ${requestId})`;
       },
     });
 
     // 返回 UI Message Stream Response
     return createUIMessageStreamResponse({ stream });
   } catch (error) {
+    // 把详细错误留在服务端，客户端只能拿到 requestId
+    console.error(`[chat][${requestId}] 未处理异常:`, error);
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: error instanceof Error ? error.message : String(error) }),
+      JSON.stringify({ error: "Internal server error", requestId }),
       {
         status: 500,
         headers: { "Content-Type": "application/json" },
