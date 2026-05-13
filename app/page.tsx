@@ -35,14 +35,14 @@ export default function Home() {
 
   return (
       <main className="flex flex-1">
-        <Image
+        {/* <Image
           className="dark:invert"
           src="/next.svg"
           alt="Next.js logo"
           width={100}
           height={20}
           priority
-        />
+        /> */}
         <section ref={sectionRef} className={noMessages? "" : "populated"}>
           {noMessages ? (
             <>
