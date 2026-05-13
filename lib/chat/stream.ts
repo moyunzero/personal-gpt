@@ -17,6 +17,7 @@ const openrouter = createOpenRouter({ apiKey: OPENROUTER_API_KEY });
  */
 const MODELS = [
   "inclusionai/ring-2.6-1t:free", // ✅ 真流式（TTFT 3.3s，持续吐字 ~3.5s）
+  "baidu/cobuddy:free", // 🟡 未测，作为次选
   "openai/gpt-oss-120b:free", // 🟡 未测，作为次选
   "nvidia/nemotron-3-super-120b-a12b:free", // ❌ 不流式（一次性 dump），最后兜底
 ] as const;
