@@ -326,7 +326,7 @@ const loadSampleData = async () => {
     console.log("API Endpoint:", ASTRA_DB_API_ENDPOINT);
     console.log("Namespace:", ASTRA_DB_NAMESPACE);
     console.log("Collection:", ASTRA_DB_COLLECTION);
-    console.log("Token:", ASTRA_DB_APPLICATION_TOKEN?.substring(0, 20) + "...");
+    console.log("Token configured:", Boolean(ASTRA_DB_APPLICATION_TOKEN));
     
     // 先尝试获取数据库管理员实例，列出所有 keyspaces
     console.log("\n正在获取可用的 keyspaces...");
