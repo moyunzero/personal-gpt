@@ -78,11 +78,15 @@ export async function getRelevantContext(
     return { kind: "no-docs" };
   }
 
+  // 把 timer id 提到 try 外面：无论 race 胜出方是谁，finally 都能 clearTimeout，
+  // 避免请求结束后 timer 仍在事件循环里挂着、最终 reject 出未处理的 Promise。
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
   try {
     log.debug("开始检索", { query });
 
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(
+      timeoutId = setTimeout(
         () => reject(new Error("Vector search timeout")),
         VECTOR_SEARCH_TIMEOUT_MS,
       );
@@ -190,5 +194,12 @@ export async function getRelevantContext(
       error: error instanceof Error ? error.message : String(error),
     });
     return { kind: "api-error", error };
+  } finally {
+    // 无论 race 由 search 先 resolve / timer 先 reject，还是 catch 走完，
+    // 都要 clearTimeout：否则 search 成功后 timer 仍会到点 reject，导致
+    // 一个无人 await 的拒绝 Promise 触发 "unhandledRejection"。
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
   }
 }
