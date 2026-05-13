@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# 同分支新 push 进来时，取消上一次还没跑完的运行，节省 Actions 配额。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Type-check, Lint, Test, Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # 给所有 step 注入哑环境变量。
+    # lib/env.ts 在模块加载时用 Zod 校验必需变量，缺一个就抛错，所以即便
+    # type-check / test / build 都不发真实请求，也得让校验过得去。
+    # 真实值由 Vercel Project 注入到 Production / Preview。
+    env:
+      ASTRA_DB_COLLECTION: ci_dummy_collection
+      ASTRA_DB_API_ENDPOINT: https://ci-dummy.example.com
+      ASTRA_DB_APPLICATION_TOKEN: AstraCS:ci-dummy-token
+      OPENROUTER_API_KEY: sk-or-ci-dummy
+      # UPSTASH_* 故意不设，触发 ratelimit 模块的 fail-open 分支。
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Validate (type-check + lint + test + build)
+        run: yarn validate
