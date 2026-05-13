@@ -28,6 +28,14 @@ const EnvSchema = z.object({
    * 设为 0 在 Zod 这里会被拒（min(1)）；想关缓存请改代码而非配置。
    */
   EMBEDDING_CACHE_SIZE: z.coerce.number().int().min(1).max(10_000).default(100),
+
+  /**
+   * Upstash Redis 用于限流（C1）。两者**全部**设置时启用，否则 fail-open（限流禁用，全部放行）。
+   * 这是有意设计：限流是降级特性，本地开发 / 缺凭据不应阻塞业务。
+   * 从 Vercel Marketplace 添加 Upstash Redis 集成会自动注入这两个变量。
+   */
+  UPSTASH_REDIS_REST_URL: z.string().min(1).optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 });
 
 function loadEnv() {

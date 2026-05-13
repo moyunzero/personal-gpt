@@ -8,14 +8,16 @@ import { shouldUseVectorSearch } from "@/lib/chat/query-classifier";
 import { getRelevantContext } from "@/lib/chat/retrieve";
 import { createChatStream } from "@/lib/chat/stream";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
 /**
  * 聊天接口。本文件只做：
- *   1. 解析 / 校验请求体
- *   2. 调 query-classifier 决定是否走向量检索
- *   3. 把检索结果交给 buildSystemPrompt
- *   4. 把 system + messages 交给 createChatStream，包成 UIMessageStreamResponse
- *   5. 顶层 try-catch + requestId 错误响应
+ *   1. 限流（按 IP，fail-open）
+ *   2. 解析 / 校验请求体
+ *   3. 调 query-classifier 决定是否走向量检索
+ *   4. 把检索结果交给 buildSystemPrompt
+ *   5. 把 system + messages 交给 createChatStream，包成 UIMessageStreamResponse
+ *   6. 顶层 try-catch + requestId 错误响应
  *
  * 业务细节（检索、prompt 文案、模型 fallback、流式协议）全在 lib/chat/* 各自模块里。
  */
@@ -27,6 +29,30 @@ export async function POST(req: Request) {
   const log = logger.child({ scope: "chat.route", requestId });
 
   try {
+    // ====================== 限流（C1） ======================
+    // 按客户端 IP 限流 10 req / 60s 滑动窗口。
+    // checkRateLimit 内部对 Upstash 故障已做 fail-open，不会抛错。
+    const rl = await checkRateLimit(getClientIp(req), requestId);
+    if (!rl.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded",
+          retryAfter: rl.retryAfterSeconds,
+          requestId,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(rl.retryAfterSeconds),
+            "X-RateLimit-Limit": String(rl.limit),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": String(rl.reset),
+          },
+        },
+      );
+    }
+
     const { messages } = await req.json();
 
     if (!messages || messages.length === 0) {
