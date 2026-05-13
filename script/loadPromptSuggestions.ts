@@ -239,8 +239,10 @@ const splitter = new RecursiveCharacterTextSplitter({
     separators: ["\n## ", "\n### ", "\n\n", "\n", " ", ""], // 优先按标题切分
 });
 
+type AstraCollection = ReturnType<typeof db.collection>;
+
 // 删除旧文档
-async function deleteOldDocuments(collection: any, fileName: string) {
+async function deleteOldDocuments(collection: AstraCollection, fileName: string) {
   try {
     console.log(`  🗑️  删除旧版本: ${fileName}`);
     
@@ -351,7 +353,7 @@ const loadPromptSuggestions = async () => {
     
     // 准备插入数据
     const docId = `prompt-${doc.category}-${Date.now()}`;
-    const insertPromises: Promise<any>[] = [];
+    const insertPromises: Promise<unknown>[] = [];
     
     for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
       const vectorDoc: VectorDocument = {
