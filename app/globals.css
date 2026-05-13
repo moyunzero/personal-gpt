@@ -1,317 +1,581 @@
-* {
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
+/* ============================================================
+ * Personal-Emotion-GPT — Claude 风格设计系统
+ * 基于 DESIGN.md 提取的 design tokens
+ * 字体替代：Copernicus → EB Garamond；StyreneB → Inter
+ * ============================================================ */
+
+:root {
+  /* ---------- 颜色 token（来源：DESIGN.md › colors） ---------- */
+  --color-primary: #cc785c;
+  --color-primary-active: #a9583e;
+  --color-primary-disabled: #e6dfd8;
+  --color-ink: #141413;
+  --color-body: #3d3d3a;
+  --color-body-strong: #252523;
+  --color-muted: #6c6a64;
+  --color-muted-soft: #8e8b82;
+  --color-hairline: #e6dfd8;
+  --color-hairline-soft: #ebe6df;
+  --color-canvas: #faf9f5;
+  --color-surface-soft: #f5f0e8;
+  --color-surface-card: #efe9de;
+  --color-surface-cream-strong: #e8e0d2;
+  --color-surface-dark: #181715;
+  --color-surface-dark-elevated: #252320;
+  --color-on-primary: #ffffff;
+  --color-on-dark: #faf9f5;
+  --color-error: #c64545;
+
+  /* ---------- 字体 token ---------- */
+  /* next/font 在 layout.tsx 中注入 --font-serif / --font-sans / --font-mono */
+  --font-display: var(--font-serif, "EB Garamond", "Tiempos Headline", Garamond, "Times New Roman", serif);
+  --font-body: var(--font-sans, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif);
+  --font-mono: var(--font-jet, "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace);
+
+  /* ---------- 圆角 ---------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* ---------- 间距 ---------- */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+
+  /* ---------- 布局尺寸 ---------- */
+  --header-height: 60px;
+  --content-max: 760px;        /* 编辑栏目宽度——比营销端 1200 窄，聚焦阅读 */
 }
 
-body{
+/* ============================================================
+ * Reset & 基础排版
+ * ============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
   margin: 0;
   padding: 0;
+  height: 100%;
+  background-color: var(--color-canvas);
+  color: var(--color-body);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  /* background-image: url("assets/backgroud"); */
+  min-height: 100vh;
+  /* 在不支持 dvh 的浏览器中 100vh 也可接受；dvh 在移动端 URL 栏伸缩时更准确 */
+  min-height: 100dvh;
 }
 
-main{
-  width: 80vw;
-  height: 80vh;
-  max-height: 80vh;
-  background: linear-gradient(to bottom,#f8f8f8,#cfcfcf);
-  border-radius: 15px;
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-  text-align: center;
-  color: #383838;
-  overflow: hidden;
-}
-
-main > img {
-  flex-shrink: 0;
-  margin-bottom: 10px;
-}
-
-section{
-  width: 100%;
+/* ============================================================
+ * 应用骨架：header / chat-stream / composer
+ * 经典聊天机器人三段式布局
+ * ============================================================ */
+main {
   flex: 1;
-  min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  width: 100%;
+  /* 高度由 body min-height 撑满；内部 chat-stream flex:1 拿剩余空间 */
 }
 
-section.populated{
-  overflow-y: auto !important;
+.chat-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-lg);
+  background-color: var(--color-canvas);
+  border-bottom: 1px solid var(--color-hairline-soft);
+  /* 当消息列表滚动时，header 不一起滚 */
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.chat-header-inner {
+  width: 100%;
+  max-width: var(--content-max);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Anthropic 风格 spike-mark（4 叶径向星号） */
+.spike-mark {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--color-ink);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-ink);
+  letter-spacing: -0.2px;
+}
+
+/* ---------- chat-stream：消息滚动区 ---------- */
+.chat-stream {
+  flex: 1;
+  min-height: 0;             /* flex child 内能正确 overflow */
+  overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
-  justify-content: flex-start;
-  align-items: stretch;
-  -webkit-overflow-scrolling: touch; /* iOS 平滑滚动 */
+  -webkit-overflow-scrolling: touch;
+  background-color: var(--color-canvas);
 }
 
-.messages-container {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: min-content;
-  padding-bottom: 10px;
-}
-
-/* 调试：确保有足够的内容高度 */
-section.populated {
-  position: relative;
-}
-
-section.populated::after {
-  content: '';
-  display: block;
-  height: 1px;
-  width: 100%;
-}
-
-/* 自定义滚动条样式（可选，让滚动条更美观） */
-section.populated::-webkit-scrollbar {
+.chat-stream::-webkit-scrollbar {
   width: 8px;
 }
-
-section.populated::-webkit-scrollbar-track {
+.chat-stream::-webkit-scrollbar-track {
   background: transparent;
 }
-
-section.populated::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+.chat-stream::-webkit-scrollbar-thumb {
+  background: var(--color-hairline);
+  border-radius: var(--radius-sm);
+}
+.chat-stream::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-soft);
 }
 
-section.populated::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+.chat-stream-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
 }
 
-.starter-text{
-  padding: 0 80px;
-}
-
-form.input-form {
-  width: 100%;
-  padding-top: 20px;
-  border-top: #828282 solid 2px;
-  flex-shrink: 0;
-  margin-top: auto;
+/* 空状态：居中编辑风显示 */
+.empty-state {
+  /* chat-stream-inner 内的居中容器 */
+  min-height: calc(100dvh - var(--header-height) - 200px); /* 200 ≈ composer 高度 */
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  text-align: center;
+  padding: var(--space-xl) 0;
 }
 
-.input-container {
-  position: relative;
-  width: 100%;
-  max-width: 700px; /* 限制最大宽度，类似 ChatGPT */
+.starter-headline {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  color: var(--color-ink);
+  margin: 0 0 var(--space-md);
+  max-width: 520px;
+}
+
+.starter-sub {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--color-muted);
+  margin: 0 0 var(--space-xl);
+  max-width: 440px;
+}
+
+/* ---------- composer：底部固定输入区 ---------- */
+.composer {
+  flex-shrink: 0;
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+  background: linear-gradient(
+    to bottom,
+    rgba(250, 249, 245, 0) 0%,
+    var(--color-canvas) 30%
+  );
+}
+
+.composer-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.composer-shell {
   display: flex;
   align-items: center;
-  background-color: #fff;
-  border-radius: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 8px;
-  gap: 8px;
-  transition: box-shadow 0.2s ease;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  padding-left: var(--space-md);
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* 响应式：小屏幕上减少最大宽度 */
-@media (max-width: 768px) {
-  .input-container {
-    max-width: 100%;
-    margin: 0 10px;
-  }
+.composer-shell:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.15);
 }
 
-.input-container:focus-within {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-input.question-box {
+.composer-input {
   flex: 1;
-  padding: 10px 12px;
-  font-size: 15px;
-  color: #383838;
+  min-width: 0;
   border: none;
   background: transparent;
   outline: none;
+  font-family: var(--font-body);
+  font-size: 16px;
   line-height: 1.5;
-  min-width: 0; /* 防止 flex 子元素溢出 */
+  color: var(--color-ink);
+  padding: var(--space-sm) 0;
 }
 
-input.question-box::placeholder {
-  color: #999;
+.composer-input::placeholder {
+  color: var(--color-muted-soft);
 }
 
-input.question-box:disabled {
+.composer-input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.send-button {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
+.composer-send {
   flex-shrink: 0;
-  border-radius: 50%;
-  border: none;
-  background-color: #411b8d;
-  color: #fff;
-  display: flex;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
   cursor: pointer;
-  transition: all 0.2s ease;
   padding: 0;
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
-.send-button:hover:not(:disabled) {
-  background-color: #5a2bb8;
-  transform: scale(1.05);
+.composer-send:hover:not(:disabled) {
+  background-color: var(--color-primary-active);
 }
 
-.send-button:active:not(:disabled) {
-  transform: scale(0.95);
+.composer-send:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
-.send-button:disabled {
-  background-color: #ccc;
+.composer-send:disabled {
+  background-color: var(--color-primary-disabled);
+  color: var(--color-muted);
   cursor: not-allowed;
-  opacity: 0.5;
 }
 
-.send-button svg {
-  width: 20px;
-  height: 20px;
+.composer-send svg {
+  width: 18px;
+  height: 18px;
 }
 
-.send-button .spinner {
-  animation: spin 1s linear infinite;
+.composer-send .spinner {
+  animation: spin 0.9s linear infinite;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
-.bubble{
-  margin: 8px;
-  padding: 12px 16px;
-  font-size: 15px;
-  line-height: 1.6;
-  border: none;
-  color: #383838;
-  box-shadow: #959da533 0 8px 24px;
-  width: 80%;
-  text-align: left;
-  /* 临时：确保有足够高度测试滚动 */
-  min-height: 60px;
+.composer-hint {
+  margin: var(--space-xs) 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-muted-soft);
 }
 
-.bubble.user{
-  border-radius: 20px 20px 0 20px;
-  background-color: #E1F4FFFF;
-  margin-left: auto;
+/* ============================================================
+ * 消息气泡（Claude 风：助手左对齐无气泡 + spike-mark；用户右气泡）
+ * ============================================================ */
+.messages-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  /* 给底部留呼吸空间，最后一条消息不会贴在 composer 上 */
+  padding-bottom: var(--space-md);
 }
 
-.bubble.assistant{
-  border-radius: 20px 20px 20px 0 ;
-  background-color: #dce7ff;
+.message {
+  display: flex;
+  width: 100%;
+  /* 单条消息按 role 在 .message-user / .message-assistant 中决定方向 */
 }
 
-/* Markdown 样式优化 */
-.bubble p {
-  margin: 0 0 0.5em 0;
+/* 助手：左侧带 spike-mark 头像 + 段落文字，最克制的"Claude 在说话"形态 */
+.message-assistant {
+  align-items: flex-start;
+  gap: var(--space-sm);
 }
 
-.bubble p:last-child {
+.assistant-avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-card);
+  color: var(--color-ink);
+  margin-top: 2px;             /* 与首行文字光学对齐 */
+}
+
+.assistant-avatar svg {
+  width: 14px;
+  height: 14px;
+}
+
+.message-assistant .message-body {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--color-body-strong);
+}
+
+/* 用户：右对齐 cream-strong 气泡 */
+.message-user {
+  justify-content: flex-end;
+}
+
+.message-user .message-body {
+  max-width: 80%;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-surface-cream-strong);
+  color: var(--color-ink);
+  border-radius: var(--radius-lg);
+  /* 右下角微 squared，营造"信息来自右侧"的方向感 */
+  border-bottom-right-radius: var(--radius-xs);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+/* ============================================================
+ * Markdown 子元素：让 ReactMarkdown 渲染出的 p/ul/code 都遵守 token
+ * ============================================================ */
+.message-body p {
+  margin: 0 0 0.75em;
+}
+.message-body p:last-child {
   margin-bottom: 0;
 }
 
-.bubble strong {
+.message-body strong {
   font-weight: 600;
-  color: #2c2c2c;
+  color: var(--color-ink);
 }
 
-.bubble ul, .bubble ol {
-  margin: 0.5em 0;
+.message-body em {
+  font-style: italic;
+}
+
+.message-body a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.message-body a:hover {
+  color: var(--color-primary-active);
+}
+
+.message-body ul,
+.message-body ol {
+  margin: 0.5em 0 0.75em;
   padding-left: 1.5em;
 }
 
-.bubble li {
+.message-body li {
   margin: 0.25em 0;
 }
 
-.bubble h1, .bubble h2, .bubble h3 {
-  margin: 0.8em 0 0.4em 0;
-  line-height: 1.3;
+.message-body h1,
+.message-body h2,
+.message-body h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.3px;
+  color: var(--color-ink);
+  line-height: 1.25;
+  margin: 1em 0 0.5em;
 }
-
-.bubble h1:first-child,
-.bubble h2:first-child,
-.bubble h3:first-child {
+.message-body h1 { font-size: 24px; }
+.message-body h2 { font-size: 20px; }
+.message-body h3 { font-size: 18px; }
+.message-body h1:first-child,
+.message-body h2:first-child,
+.message-body h3:first-child {
   margin-top: 0;
 }
 
-.bubble hr {
+.message-body hr {
   margin: 1em 0;
   border: none;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--color-hairline);
 }
 
-.bubble code {
-  font-family: 'Courier New', Courier, monospace;
+.message-body code {
+  font-family: var(--font-mono);
   font-size: 0.9em;
+  padding: 1px 5px;
+  background-color: var(--color-surface-card);
+  border-radius: var(--radius-xs);
+  color: var(--color-body-strong);
 }
 
-.bubble pre {
-  margin: 0.5em 0;
+.message-body pre {
+  margin: 0.75em 0;
+  padding: var(--space-md);
+  background-color: var(--color-surface-dark);
+  color: var(--color-on-dark);
+  border-radius: var(--radius-md);
   overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
-.bubble pre code {
+.message-body pre code {
   display: block;
   padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
 }
 
-.prompt-suggestion-row{
+.message-body blockquote {
+  margin: 0.75em 0;
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--color-primary);
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+/* 用户气泡内的 markdown 用稍弱的强调色（cream 底上的暗色文字） */
+.message-user .message-body code {
+  background-color: rgba(20, 20, 19, 0.08);
+}
+
+/* ============================================================
+ * Prompt 建议按钮（空状态下的引导卡片）
+ * 风格：feature-card → 米色卡片 + 左对齐文字 + hairline 边
+ * ============================================================ */
+.suggestion-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm);
   width: 100%;
+  max-width: 520px;
 }
 
-.prompt-suggestion-button{
-  margin: 8px;
-  padding: 8px;
-  font-size: 15px;
-  border: none;
-  background-color: #fff;
-  border-radius: 10px;
-  color: #383838;
-  box-shadow: #959da533 0 8px 24px;
+.suggestion-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-md);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-body-strong);
+  background-color: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+              transform 0.1s ease;
 }
 
-.loader{
-  margin: 10px;
-  width: 60px;
-  aspect-ratio: 4;
-  background: 
-    no-repeat radial-gradient(circle closest-side, #383838 90%,#0000) 0% 50%,
-     no-repeat radial-gradient(circle closest-side, #383838 90%,#0000) 50% 50%,
-      no-repeat radial-gradient(circle closest-side, #383838 90%,#0000) 100% 50%,
-    ;
-    background-size: calc(100%/3) 100%;
-    animation: loading 1s infinite linear;
+.suggestion-card:hover {
+  background-color: var(--color-surface-card);
+  border-color: var(--color-surface-cream-strong);
 }
 
-@keyframes loading{
-  33% { background-size: calc(100%/3) 0,calc(100%/3) 100%,calc(100%/3) 100%;}
-  50% { background-size: calc(100%/3) 100%,calc(100%/3) 0,calc(100%/3) 100%;}
-  66% { background-size: calc(100%/3) 100%,calc(100%/3) 100%,calc(100%/3) 0;}
+.suggestion-card:active {
+  transform: translateY(1px);
 }
 
+/* ============================================================
+ * Loading 三点动画（品牌色 ink）
+ * ============================================================ */
+.loading-dots {
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.loading-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--color-muted);
+  animation: dot-bounce 1.2s infinite ease-in-out;
+}
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes dot-bounce {
+  0%, 60%, 100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* ============================================================
+ * 响应式
+ * ============================================================ */
+@media (max-width: 640px) {
+  .chat-stream-inner,
+  .composer-inner,
+  .chat-header-inner {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
+
+  .starter-headline {
+    font-size: 28px;
+    letter-spacing: -0.3px;
+  }
+
+  .suggestion-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .message-user .message-body {
+    max-width: 90%;
+  }
+}
+
+/* ============================================================
+ * 工具类（保留给 error.tsx 兜底使用）
+ * ============================================================ */
+.flex { display: flex; }
+.flex-1 { flex: 1; }

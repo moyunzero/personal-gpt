@@ -6,7 +6,7 @@ import { useEffect } from "react";
  * 路由段错误边界（Next.js App Router 原生 file convention）。
  *
  * 触发场景：app/page.tsx 及其子组件（Bubble / LoadingBubble /
- * PromptSuggestionsRow / ReactMarkdown）在渲染期间抛出未捕获错误时，
+ * PromptSuggestionsRow / ReactMarkdown）在渲染期间抛出未捕获错误时,
  * Next.js 会自动用这个组件替换路由段输出，避免出现完全空白页。
  *
  * 注意：本文件不包裹 app/layout.tsx 自身的错误（root layout 仅做 html
@@ -32,9 +32,10 @@ export default function ChatError({
   }, [error]);
 
   return (
-    <main className="flex flex-1" role="alert" aria-live="assertive">
+    <main role="alert" aria-live="assertive">
       <section
         style={{
+          flex: 1,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -42,10 +43,30 @@ export default function ChatError({
           gap: 16,
           padding: 24,
           textAlign: "center",
+          fontFamily: "var(--font-body)",
         }}
       >
-        <h2 style={{ fontSize: 20, margin: 0 }}>出了点小问题 😿</h2>
-        <p style={{ margin: 0, color: "#666", maxWidth: 360, lineHeight: 1.6 }}>
+        <h2
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 28,
+            fontWeight: 400,
+            letterSpacing: "-0.3px",
+            margin: 0,
+            color: "var(--color-ink)",
+          }}
+        >
+          出了点小问题
+        </h2>
+        <p
+          style={{
+            margin: 0,
+            color: "var(--color-muted)",
+            maxWidth: 420,
+            lineHeight: 1.6,
+            fontSize: 15,
+          }}
+        >
           页面没能正常加载。可能是网络抖动，也可能是我这边代码偶发出错。
           点下面的按钮可以再试一次；如果一直失败，刷新整页也行。
         </p>
@@ -53,20 +74,32 @@ export default function ChatError({
           type="button"
           onClick={() => unstable_retry()}
           style={{
-            padding: "10px 24px",
+            padding: "10px 20px",
             borderRadius: 8,
-            border: "1px solid #383838",
-            background: "#383838",
-            color: "#fff",
+            border: "none",
+            background: "var(--color-primary)",
+            color: "var(--color-on-primary)",
             cursor: "pointer",
             fontSize: 14,
+            fontWeight: 500,
+            fontFamily: "var(--font-body)",
+            height: 40,
           }}
         >
           再试一次
         </button>
         {error.digest ? (
-          <p style={{ margin: 0, fontSize: 12, color: "#999" }}>
-            报错码：<code>{error.digest}</code>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              color: "var(--color-muted-soft)",
+            }}
+          >
+            报错码：
+            <code style={{ fontFamily: "var(--font-mono)" }}>
+              {error.digest}
+            </code>
           </p>
         ) : null}
       </section>
