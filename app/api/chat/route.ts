@@ -12,12 +12,15 @@ import {
   type RetrievedDoc,
   type VectorSearchResult,
 } from "@/lib/chat/context";
+import { EmbeddingCache, makeEmbeddingCacheKey } from "@/lib/chat/embedding-cache";
 
 const {
   ASTRA_DB_COLLECTION,
   ASTRA_DB_API_ENDPOINT,
   ASTRA_DB_APPLICATION_TOKEN,
   OPENROUTER_API_KEY,
+  VECTOR_SEARCH_TIMEOUT_MS,
+  EMBEDDING_CACHE_SIZE,
 } = env;
 
 // ====================== 初始化（模块级单例） ======================
@@ -27,6 +30,10 @@ const openRouterClient = new OpenAI({
 });
 
 const openrouter = createOpenRouter({ apiKey: OPENROUTER_API_KEY });
+
+// 模块级 embedding 缓存：进程内复用，冷启重建即可（无 TTL、无序列化）。
+// 4 个 prompt-suggestion 按钮的 query 是固定文本，命中后省下 1-3s embedding API 调用。
+const embeddingCache = new EmbeddingCache(EMBEDDING_CACHE_SIZE);
 
 interface AstraCollection {
   find: (query: object, options: object) => { toArray: () => Promise<unknown[]> };
@@ -68,23 +75,43 @@ async function getRelevantContext(
     console.log(`[chat][${requestId}] [Vector Search] 开始检索:`, query);
 
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Vector search timeout")), 5000);
+      setTimeout(
+        () => reject(new Error("Vector search timeout")),
+        VECTOR_SEARCH_TIMEOUT_MS,
+      );
     });
 
     const searchPromise: Promise<VectorSearchResult> = (async () => {
       const collection = getDb().collection(ASTRA_DB_COLLECTION);
 
-      console.log(`[chat][${requestId}] [Vector Search] 生成 embedding...`);
-      const embeddings = await openRouterClient.embeddings.create({
-        model: "nvidia/llama-nemotron-embed-vl-1b-v2:free",
-        input: query,
-        encoding_format: "float",
-      });
+      // 先查缓存：命中省掉 1-3s embedding API 调用。
+      // key 用 trim 后的原 query，不做大小写归一化（embedding 对大小写敏感）。
+      const cacheKey = makeEmbeddingCacheKey(query);
+      let vector = embeddingCache.get(cacheKey);
 
-      const vector = embeddings.data[0]?.embedding;
-      if (!vector) {
-        console.log(`[chat][${requestId}] [Vector Search] embedding 生成失败`);
-        return { kind: "no-docs" } as const;
+      if (vector) {
+        console.log(`[METRIC] embedding.cache.hit`, {
+          requestId,
+          cacheSize: embeddingCache.size(),
+        });
+      } else {
+        console.log(`[METRIC] embedding.cache.miss`, {
+          requestId,
+          cacheSize: embeddingCache.size(),
+        });
+        console.log(`[chat][${requestId}] [Vector Search] 生成 embedding...`);
+        const embeddings = await openRouterClient.embeddings.create({
+          model: "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+          input: query,
+          encoding_format: "float",
+        });
+
+        vector = embeddings.data[0]?.embedding;
+        if (!vector) {
+          console.log(`[chat][${requestId}] [Vector Search] embedding 生成失败`);
+          return { kind: "no-docs" } as const;
+        }
+        embeddingCache.set(cacheKey, vector);
       }
 
       const sourceType = detectQuerySource(query);
