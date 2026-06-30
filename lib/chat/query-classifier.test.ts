@@ -39,6 +39,11 @@ describe("detectQuerySource", () => {
     expect(detectQuerySource("心晴 app 是什么")).toBe("prompt-suggestion");
     expect(detectQuerySource("修仙游戏怎么玩")).toBe("prompt-suggestion");
     expect(detectQuerySource("xinqing 项目介绍")).toBe("prompt-suggestion");
+    expect(detectQuerySource("MoCode 是什么")).toBe("prompt-suggestion");
+    expect(detectQuerySource("Blueprint AI 怎么用")).toBe("prompt-suggestion");
+    expect(detectQuerySource("傻了么有什么玩法")).toBe("prompt-suggestion");
+    expect(detectQuerySource("LookJob 求职助手介绍")).toBe("prompt-suggestion");
+    expect(detectQuerySource("薪时宝小程序是什么")).toBe("prompt-suggestion");
   });
 
   it("命中个人关键词返回 prompt-suggestion", () => {

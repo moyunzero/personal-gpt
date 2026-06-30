@@ -61,6 +61,11 @@ const CATEGORY_MAPPING: Record<string, string> = {
   '个人简介.md': 'personal',
   '心晴MO.md': 'project-xinqing',
   '欠费修仙中.md': 'project-xiuxian',
+  'MoCode-TUI.md': 'project-mocode',
+  'Blueprint-AI.md': 'project-blueprint',
+  '傻了么.md': 'project-foolish-you',
+  'LookJob.md': 'project-lookjob',
+  '薪时宝.md': 'project-salary-record',
 };
 
 // 相关问题映射
@@ -88,6 +93,38 @@ const QUESTION_MAPPING: Record<string, string[]> = {
     '修仙欠费中的核心玩法',
     '如何玩修仙欠费中',
     '修仙欠费中的游戏机制',
+  ],
+  'MoCode-TUI.md': [
+    '介绍一下 MoCode',
+    'MoCode 是什么',
+    'MoCode-TUI 有什么功能',
+    'MoCode 怎么用',
+    '终端 AI 编程 Agent 是什么',
+  ],
+  'Blueprint-AI.md': [
+    '介绍一下 Blueprint AI',
+    'Blueprint AI 是什么',
+    'Blueprint AI 有什么功能',
+    'UI 转开发蓝图是什么',
+  ],
+  '傻了么.md': [
+    '傻了么是什么',
+    '介绍一下傻了么',
+    'Brainfool 是什么',
+    '傻了么有什么玩法',
+    '傻了么支持哪些谜题',
+  ],
+  'LookJob.md': [
+    '介绍一下 LookJob',
+    'LookJob 是什么',
+    'LookJob 有什么功能',
+    'AI 求职助手是什么',
+  ],
+  '薪时宝.md': [
+    '薪时宝是什么',
+    '介绍一下薪时宝',
+    '付费上班吗是什么',
+    '薪时宝有什么功能',
   ],
 };
 

@@ -47,3 +47,5 @@ data/
 
 .planning/
 .env*.local
+
+docs/

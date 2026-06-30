@@ -6,8 +6,8 @@ interface PromptSuggestionsRowProps {
 
 const PromptSuggestionsRow = ({ onPromptClick }: PromptSuggestionsRowProps) => {
   const prompts = [
-    "介绍一下「心晴 MO」",
-    "介绍一下「修仙欠费中」",
+    "介绍一下 MoCode",
+    "LookJob 怎么帮你找工作",
     "介绍一下你自己",
     "心情不好怎么办",
   ];

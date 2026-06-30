@@ -62,11 +62,19 @@ export function detectQuerySource(query: string): "prompt-suggestion" | "psychol
     "你", "你的", "你是", "介绍", "自己", "背景",
     "心晴", "xinqing", "mo", "情绪记录", "app",
     "修仙", "欠费", "xiuxian", "游戏", "赛博朋克",
+    "mocode", "blueprint", "傻了么", "brainfool", "foolish",
+    "lookjob", "薪时宝", "付费上班", "salary-record",
     "项目", "作品", "开发", "创作", "联系", "moyun",
   ];
 
   // 强匹配：如果包含项目名称，直接返回 prompt-suggestion
-  const projectNames = ["心晴", "xinqing", "修仙", "欠费"];
+  const projectNames = [
+    "心晴", "xinqing", "修仙", "欠费",
+    "mocode", "blueprint",
+    "傻了么", "brainfool", "foolish-you",
+    "lookjob", "look-job",
+    "薪时宝", "付费上班", "salary-record",
+  ];
   if (projectNames.some((name) => lowerQuery.includes(name))) {
     return "prompt-suggestion";
   }
