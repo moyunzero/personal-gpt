@@ -14,7 +14,9 @@
     "seed:psychology": "ts-node ./script/loadPsychologyData.ts",
     "seed:suggestions": "ts-node ./script/loadPromptSuggestions.ts",
     "migrate:legacy": "yarn workspace web migrate:legacy",
-    "validate": "yarn workspace web validate && yarn workspace ingest-worker validate && yarn workspace @personal-gpt/shared validate"
+    "validate": "yarn workspace web validate && yarn workspace ingest-worker validate && yarn workspace @personal-gpt/shared validate",
+    "test": "vitest run",
+    "test:regression": "vitest run tests/regression/phase-1"
   },
   "devDependencies": {
     "@datastax/astra-db-ts": "2.2.1",
@@ -26,6 +28,7 @@
     "openai": "6.37.0",
     "playwright": "1.59.1",
     "ts-node": "10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.6"
   }
 }

@@ -48,3 +48,29 @@ jobs:
 
       - name: Validate ${{ matrix.workspace }}
         run: yarn workspace ${{ matrix.workspace }} ${{ matrix.command }}
+
+  regression-phase-1:
+    name: Phase 1 regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ASTRA_DB_COLLECTION: ci_dummy_collection
+      ASTRA_DB_API_ENDPOINT: https://ci-dummy.example.com
+      ASTRA_DB_APPLICATION_TOKEN: AstraCS:ci-dummy-token
+      OPENROUTER_API_KEY: sk-or-ci-dummy
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run Phase 1 regression suite
+        run: yarn test tests/regression/phase-1

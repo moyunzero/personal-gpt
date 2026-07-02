@@ -4547,6 +4547,13 @@ keyv@^4.5.4:
   dependencies:
     json-buffer "3.0.1"
 
+langsmith@0.7.15:
+  version "0.7.15"
+  resolved "https://registry.npmmirror.com/langsmith/-/langsmith-0.7.15.tgz#8855b1bfb450cd906b4edaaa87a058edaaa402b1"
+  integrity sha512-huRfzLKcREE+ABkqKEriXK8Ax9V+xuV3d3x4PINEGi+hi4qyTvB4Nc2dpLSyfW/Ioj6+6d7T8majjWCe7mXc8A==
+  dependencies:
+    p-queue "6.6.2"
+
 "langsmith@>=0.4.0 <1.0.0", "langsmith@>=0.5.0 <1.0.0":
   version "0.6.3"
   resolved "https://registry.npmmirror.com/langsmith/-/langsmith-0.6.3.tgz#a3d8ad58d66a47d3697e3c69b2be3f6df5233190"
