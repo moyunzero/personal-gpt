@@ -1,0 +1,47 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate": "yarn type-check && yarn lint && yarn test && yarn build"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "3.0.179",
+    "@datastax/astra-db-ts": "2.2.1",
+    "@openrouter/ai-sdk-provider": "2.9.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
+    "ai": "6.0.177",
+    "next": "16.2.6",
+    "openai": "6.37.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@langchain/community": "1.1.28",
+    "@langchain/core": "1.1.45",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "cheerio": "1.2.0",
+    "dotenv": "17.4.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "playwright": "1.59.1",
+    "tailwindcss": "^4",
+    "ts-node": "10.9.2",
+    "typescript": "^5",
+    "vitest": "^4.1.6"
+  }
+}

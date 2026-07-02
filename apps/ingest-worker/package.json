@@ -1,0 +1,24 @@
+{
+  "name": "ingest-worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "type-check": "tsc --noEmit",
+    "validate": "yarn type-check && yarn build"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.1.27",
+    "@nestjs/core": "11.1.27",
+    "@nestjs/platform-express": "11.1.27",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "11.0.16",
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}
