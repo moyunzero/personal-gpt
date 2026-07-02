@@ -1,9 +1,31 @@
 import { UIMessage } from "@ai-sdk/react";
+import type { Citation } from "@personal-gpt/shared/types/kb";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import CitationCards from "./CitationCards";
+
 interface BubbleProps {
   message: UIMessage;
+  /** 当前消息仍在流式输出时不展示引用区（D-07） */
+  isStreaming?: boolean;
+}
+
+function extractCitations(message: UIMessage): Citation[] {
+  for (const part of message.parts) {
+    if (
+      "type" in part &&
+      part.type === "data-citations" &&
+      "data" in part &&
+      part.data &&
+      typeof part.data === "object" &&
+      "citations" in part.data &&
+      Array.isArray((part.data as { citations: unknown }).citations)
+    ) {
+      return (part.data as { citations: Citation[] }).citations;
+    }
+  }
+  return [];
 }
 
 /**
@@ -18,7 +40,7 @@ const AssistantAvatar = () => (
   </span>
 );
 
-const Bubble = ({ message }: BubbleProps) => {
+const Bubble = ({ message, isStreaming = false }: BubbleProps) => {
   // 从 AI SDK 5+ 的 parts 数组中提取文本内容
   const content = message.parts
     .filter(
@@ -28,6 +50,7 @@ const Bubble = ({ message }: BubbleProps) => {
     .join("");
 
   const { role } = message;
+  const citations = role === "assistant" && !isStreaming ? extractCitations(message) : [];
 
   if (!content) {
     return null;
@@ -40,6 +63,7 @@ const Bubble = ({ message }: BubbleProps) => {
         <AssistantAvatar />
         <div className="message-body">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          {citations.length > 0 ? <CitationCards citations={citations} /> : null}
         </div>
       </div>
     );

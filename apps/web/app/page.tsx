@@ -56,6 +56,11 @@ export default function Home() {
                 <Bubble
                   key={message.id || `message-${index}`}
                   message={message}
+                  isStreaming={
+                    isLoading &&
+                    index === messages.length - 1 &&
+                    message.role === "assistant"
+                  }
                 />
               ))}
               {isLoading && <LoadingBubble />}

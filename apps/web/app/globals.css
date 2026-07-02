@@ -478,6 +478,104 @@ main {
 }
 
 /* ============================================================
+ * Citation 引用卡片（Perplexity 风格折叠区，D-05~D-07）
+ * ============================================================ */
+.citation-cards {
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-hairline-soft);
+}
+
+.citation-cards-label {
+  margin: 0 0 var(--space-xs);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted-soft);
+}
+
+.citation-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.citation-card {
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+  overflow: hidden;
+}
+
+.citation-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  border: 0;
+  background: transparent;
+  color: var(--color-body-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.citation-card-header:hover {
+  background: var(--color-surface-card);
+}
+
+.citation-card-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.citation-card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.citation-card-similarity {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.citation-card-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--color-muted-soft);
+  transition: transform 0.18s ease;
+}
+
+.citation-card-chevron-open {
+  transform: rotate(180deg);
+}
+
+.citation-card-snippet {
+  margin: 0;
+  padding: 0 var(--space-md) var(--space-md);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ============================================================
  * Prompt 建议按钮（空状态下的引导卡片）
  * 风格：feature-card → 米色卡片 + 左对齐文字 + hairline 边
  * ============================================================ */
