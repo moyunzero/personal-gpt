@@ -1,4 +1,4 @@
-import { getIngestJobById } from "@/lib/kb/documents.service";
+import { getIngestJobById } from "@/lib/kb/ingest-jobs.service";
 import { getIngestQueueEvents } from "@/lib/kb/queue";
 
 type RouteContext = { params: Promise<{ id: string }> };

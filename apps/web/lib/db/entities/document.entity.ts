@@ -9,10 +9,10 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 
-import type { DocumentStatus } from "@personal-gpt/shared";
+import type { DocumentStatus } from "@personal-gpt/shared/types/kb";
 
-import { IngestJobEntity } from "./ingest-job.entity";
-import { WorkspaceEntity } from "./workspace.entity";
+import type { IngestJobEntity } from "./ingest-job.entity";
+import type { WorkspaceEntity } from "./workspace.entity";
 
 @Entity("documents")
 export class DocumentEntity {
@@ -22,9 +22,11 @@ export class DocumentEntity {
   @Column({ name: "workspace_id", type: "uuid" })
   workspaceId!: string;
 
-  @ManyToOne(() => WorkspaceEntity, (workspace) => workspace.documents, {
-    onDelete: "CASCADE",
-  })
+  @ManyToOne(
+    () => require("./workspace.entity").WorkspaceEntity,
+    (workspace: WorkspaceEntity) => workspace.documents,
+    { onDelete: "CASCADE" },
+  )
   @JoinColumn({ name: "workspace_id" })
   workspace!: WorkspaceEntity;
 
@@ -58,6 +60,9 @@ export class DocumentEntity {
   @UpdateDateColumn({ name: "updated_at", type: "timestamptz" })
   updatedAt!: Date;
 
-  @OneToMany(() => IngestJobEntity, (job) => job.document)
+  @OneToMany(
+    () => require("./ingest-job.entity").IngestJobEntity,
+    (job: IngestJobEntity) => job.document,
+  )
   ingestJobs!: IngestJobEntity[];
 }

@@ -6,8 +6,8 @@ import {
   PrimaryColumn,
 } from "typeorm";
 
-import { DocumentEntity } from "./document.entity";
-import { IngestJobEntity } from "./ingest-job.entity";
+import type { DocumentEntity } from "./document.entity";
+import type { IngestJobEntity } from "./ingest-job.entity";
 
 @Entity("workspaces")
 export class WorkspaceEntity {
@@ -23,9 +23,15 @@ export class WorkspaceEntity {
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 
-  @OneToMany(() => DocumentEntity, (doc) => doc.workspace)
+  @OneToMany(
+    () => require("./document.entity").DocumentEntity,
+    (doc: DocumentEntity) => doc.workspace,
+  )
   documents!: DocumentEntity[];
 
-  @OneToMany(() => IngestJobEntity, (job) => job.workspace)
+  @OneToMany(
+    () => require("./ingest-job.entity").IngestJobEntity,
+    (job: IngestJobEntity) => job.workspace,
+  )
   ingestJobs!: IngestJobEntity[];
 }

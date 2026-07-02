@@ -3,7 +3,7 @@ import { Queue, QueueEvents } from "bullmq";
 import {
   INGEST_DEFAULT_JOB_OPTIONS,
   INGEST_QUEUE_NAME,
-} from "@personal-gpt/shared";
+} from "@personal-gpt/shared/constants/queue";
 
 let ingestQueue: Queue | null = null;
 let ingestQueueEvents: QueueEvents | null = null;

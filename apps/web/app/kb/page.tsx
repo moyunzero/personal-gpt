@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import AppHeader from "../components/AppHeader";
 import KbDocumentList, {
@@ -25,29 +25,38 @@ export default function KbPage() {
   const [status, setStatus] = useState("");
   const [tags, setTags] = useState("");
 
-  const fetchList = useCallback(async () => {
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (search.trim()) params.set("search", search.trim());
-      if (category.trim()) params.set("category", category.trim());
-      if (status) params.set("status", status);
-      if (tags.trim()) params.set("tags", tags.trim());
-
-      const res = await fetch(`/api/kb/documents?${params.toString()}`);
-      const data = (await res.json()) as ListResponse & { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "加载失败");
-      setItems(data.items);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "加载失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [search, category, status, tags]);
-
+  // 筛选变化时拉列表；setState 仅在 fetch 异步回调中，避免 effect 内同步 setState
   useEffect(() => {
-    void fetchList();
-  }, [fetchList]);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const params = new URLSearchParams();
+        if (search.trim()) params.set("search", search.trim());
+        if (category.trim()) params.set("category", category.trim());
+        if (status) params.set("status", status);
+        if (tags.trim()) params.set("tags", tags.trim());
+
+        const res = await fetch(`/api/kb/documents?${params.toString()}`);
+        const data = (await res.json()) as ListResponse & { error?: string };
+        if (!res.ok) throw new Error(data.error ?? "加载失败");
+        if (!cancelled) {
+          setError(null);
+          setItems(data.items);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "加载失败");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [search, category, status, tags]);
 
   const handleUploaded = (doc: KbDocumentItem) => {
     // D-10：上传后立即出现在列表顶部
@@ -89,6 +98,7 @@ export default function KbPage() {
           />
           <select
             className="kb-filter-select"
+            aria-label="按状态筛选"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >

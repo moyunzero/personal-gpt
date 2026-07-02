@@ -8,10 +8,10 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 
-import type { IngestJobStatus } from "@personal-gpt/shared";
+import type { IngestJobStatus } from "@personal-gpt/shared/types/kb";
 
-import { DocumentEntity } from "./document.entity";
-import { WorkspaceEntity } from "./workspace.entity";
+import type { DocumentEntity } from "./document.entity";
+import type { WorkspaceEntity } from "./workspace.entity";
 
 @Entity("ingest_jobs")
 export class IngestJobEntity {
@@ -21,18 +21,22 @@ export class IngestJobEntity {
   @Column({ name: "workspace_id", type: "uuid" })
   workspaceId!: string;
 
-  @ManyToOne(() => WorkspaceEntity, (workspace) => workspace.ingestJobs, {
-    onDelete: "CASCADE",
-  })
+  @ManyToOne(
+    () => require("./workspace.entity").WorkspaceEntity,
+    (workspace: WorkspaceEntity) => workspace.ingestJobs,
+    { onDelete: "CASCADE" },
+  )
   @JoinColumn({ name: "workspace_id" })
   workspace!: WorkspaceEntity;
 
   @Column({ name: "document_id", type: "uuid" })
   documentId!: string;
 
-  @ManyToOne(() => DocumentEntity, (document) => document.ingestJobs, {
-    onDelete: "CASCADE",
-  })
+  @ManyToOne(
+    () => require("./document.entity").DocumentEntity,
+    (document: DocumentEntity) => document.ingestJobs,
+    { onDelete: "CASCADE" },
+  )
   @JoinColumn({ name: "document_id" })
   document!: DocumentEntity;
 

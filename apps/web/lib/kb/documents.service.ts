@@ -3,7 +3,7 @@ import * as fs from "node:fs/promises";
 import path from "node:path";
 
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
-import type { IngestJobPayload } from "@personal-gpt/shared";
+import type { IngestJobPayload } from "@personal-gpt/shared/types/kb";
 import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 
 import { DocumentEntity } from "@/lib/db/entities/document.entity";
@@ -387,14 +387,6 @@ export async function reindexDocument(
 }
 
 /** 按 ingest_job id 查 job（SSE 鉴权：必须属于 default workspace） */
-export async function getIngestJobById(
-  jobId: string,
-): Promise<IngestJobEntity | null> {
-  const ds = await getDataSource();
-  const jobRepo = ds.getRepository(IngestJobEntity);
-  return jobRepo.findOne({
-    where: { id: jobId, workspaceId: DEFAULT_WORKSPACE_ID },
-  });
-}
+export { getIngestJobById } from "./ingest-jobs.service";
 
 export { parseTagsParam };

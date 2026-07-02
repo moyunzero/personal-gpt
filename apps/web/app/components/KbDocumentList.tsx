@@ -43,8 +43,8 @@ function KbDocumentRow({
   onUpdate: (next: KbDocumentItem) => void;
   onRemove: (id: string) => void;
 }) {
-  const [progress, setProgress] = useState(item.latestJob?.progress ?? 0);
-  const [jobError, setJobError] = useState(item.latestJob?.error ?? null);
+  const [streamProgress, setStreamProgress] = useState<number | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [reindexing, setReindexing] = useState(false);
@@ -52,36 +52,40 @@ function KbDocumentRow({
   const [editTitle, setEditTitle] = useState(item.title);
 
   const jobId = item.latestJob?.id;
+
+  // 终态从 props 推导；进行中用 SSE 流式进度
+  const progress =
+    item.status === "ready"
+      ? 100
+      : (streamProgress ?? item.latestJob?.progress ?? 0);
+  const jobError = item.latestJob?.error ?? streamError;
+
   const showProgress =
     item.status === "pending" ||
     item.status === "processing" ||
     (item.status === "failed" && progress < 100);
 
-  // SSE 订阅导入进度（D-11）
+  // SSE 订阅导入进度（D-11）；setState 仅在 EventSource 回调中
   useEffect(() => {
     if (!jobId) return;
-    if (item.status === "ready" || item.status === "failed") {
-      setProgress(item.latestJob?.progress ?? (item.status === "ready" ? 100 : progress));
-      setJobError(item.latestJob?.error ?? null);
-      return;
-    }
+    if (item.status === "ready" || item.status === "failed") return;
 
     const es = new EventSource(`/api/kb/jobs/${jobId}/stream`);
 
     es.addEventListener("progress", (event) => {
       const data = JSON.parse((event as MessageEvent).data) as { progress: number };
-      setProgress(data.progress);
+      setStreamProgress(data.progress);
     });
 
     es.addEventListener("completed", () => {
-      setProgress(100);
+      setStreamProgress(100);
       onUpdate({ ...item, status: "ready", latestJob: item.latestJob ? { ...item.latestJob, progress: 100, status: "completed" } : null });
       es.close();
     });
 
     es.addEventListener("failed", (event) => {
       const data = JSON.parse((event as MessageEvent).data) as { error?: string };
-      setJobError(data.error ?? "导入失败");
+      setStreamError(data.error ?? "导入失败");
       onUpdate({
         ...item,
         status: "failed",
@@ -110,10 +114,10 @@ function KbDocumentRow({
         throw new Error(data.error ?? "重新索引失败");
       }
       onUpdate(data.document);
-      setProgress(0);
-      setJobError(null);
+      setStreamProgress(0);
+      setStreamError(null);
     } catch (err) {
-      setJobError(err instanceof Error ? err.message : "重新索引失败");
+      setStreamError(err instanceof Error ? err.message : "重新索引失败");
     } finally {
       setReindexing(false);
     }
