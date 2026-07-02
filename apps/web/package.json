@@ -13,6 +13,7 @@
     "validate": "yarn type-check && yarn lint && yarn test && yarn build"
   },
   "dependencies": {
+    "@personal-gpt/shared": "*",
     "@ai-sdk/react": "3.0.179",
     "@datastax/astra-db-ts": "2.2.1",
     "@openrouter/ai-sdk-provider": "2.9.0",
