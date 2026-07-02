@@ -1,9 +1,11 @@
+import "dotenv/config";
+import "reflect-metadata";
+
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 
 /**
- * ingest-worker 进程入口。
- * Phase 1 仅提供健康检查占位；BullMQ 消费逻辑在后续 plan 实现。
+ * ingest-worker 进程入口：消费 BullMQ ingest 队列。
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

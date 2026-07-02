@@ -16,6 +16,6 @@
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../web/lib/db/entities/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

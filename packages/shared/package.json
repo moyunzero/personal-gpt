@@ -10,6 +10,7 @@
     "./schemas/env": "./src/schemas/env.ts",
     "./utils/ingest": "./src/utils/ingest.ts",
     "./constants/workspace": "./src/constants/workspace.ts",
+    "./constants/queue": "./src/constants/queue.ts",
     "./stores/vector-store": "./src/stores/vector-store.ts",
     "./stores/vector-store.astra": "./src/stores/vector-store.astra.ts"
   },

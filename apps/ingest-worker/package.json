@@ -7,19 +7,32 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "type-check": "tsc --noEmit",
-    "validate": "yarn type-check && yarn build"
+    "test": "vitest run",
+    "validate": "yarn type-check && yarn test && yarn build"
   },
   "dependencies": {
     "@personal-gpt/shared": "*",
+    "@langchain/textsplitters": "1.0.1",
+    "@nestjs/bullmq": "11.0.4",
     "@nestjs/common": "11.1.27",
+    "@nestjs/config": "4.0.2",
     "@nestjs/core": "11.1.27",
     "@nestjs/platform-express": "11.1.27",
+    "@nestjs/typeorm": "11.0.3",
+    "bullmq": "5.56.0",
+    "dotenv": "17.4.2",
+    "ioredis": "5.11.1",
+    "mammoth": "1.12.0",
+    "pdf-parse": "2.4.5",
+    "pg": "8.22.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "typeorm": "0.3.28"
   },
   "devDependencies": {
     "@nestjs/cli": "11.0.16",
     "@types/node": "^20",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.6"
   }
 }
