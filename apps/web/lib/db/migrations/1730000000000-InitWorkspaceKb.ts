@@ -1,4 +1,4 @@
-import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared";
+import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import type { MigrationInterface, QueryRunner } from "typeorm";
 
 export class InitWorkspaceKb1730000000000 implements MigrationInterface {

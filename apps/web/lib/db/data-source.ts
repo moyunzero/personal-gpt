@@ -13,13 +13,13 @@ if (!databaseUrl) {
   );
 }
 
-export const AppDataSource = new DataSource({
+const AppDataSource = new DataSource({
   type: "postgres",
   url: databaseUrl,
   synchronize: false,
   logging: false,
   entities: [WorkspaceEntity, DocumentEntity, IngestJobEntity],
-  migrations: [`${__dirname}/migrations/*.{ts,js}`],
+  migrations: [`${__dirname}/migrations/[0-9]*-*.{ts,js}`],
 });
 
 export default AppDataSource;

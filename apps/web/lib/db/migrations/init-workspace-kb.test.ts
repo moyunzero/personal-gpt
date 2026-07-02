@@ -1,12 +1,8 @@
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const migrationPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "1730000000000-InitWorkspaceKb.ts",
-);
+const migrationPath = join(__dirname, "1730000000000-InitWorkspaceKb.ts");
 
 describe("InitWorkspaceKb migration", () => {
   const source = readFileSync(migrationPath, "utf-8");

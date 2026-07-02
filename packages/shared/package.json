@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./types/kb": "./src/types/kb.ts",
     "./schemas/env": "./src/schemas/env.ts",
-    "./utils/ingest": "./src/utils/ingest.ts"
+    "./utils/ingest": "./src/utils/ingest.ts",
+    "./constants/workspace": "./src/constants/workspace.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
