@@ -9,17 +9,22 @@
     "./types/kb": "./src/types/kb.ts",
     "./schemas/env": "./src/schemas/env.ts",
     "./utils/ingest": "./src/utils/ingest.ts",
-    "./constants/workspace": "./src/constants/workspace.ts"
+    "./constants/workspace": "./src/constants/workspace.ts",
+    "./stores/vector-store": "./src/stores/vector-store.ts",
+    "./stores/vector-store.astra": "./src/stores/vector-store.astra.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
-    "validate": "yarn type-check"
+    "test": "vitest run",
+    "validate": "yarn type-check && yarn test"
   },
   "dependencies": {
+    "@datastax/astra-db-ts": "2.2.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.6"
   }
 }

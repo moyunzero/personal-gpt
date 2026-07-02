@@ -1,14 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2021",
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "declaration": true,
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
     "strict": true,
-    "skipLibCheck": true,
     "esModuleInterop": true,
-    "noEmit": true,
-    "isolatedModules": true
+    "skipLibCheck": true,
+    "declaration": false,
+    "outDir": "dist"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*.ts"]
 }

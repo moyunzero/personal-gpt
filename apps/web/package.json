@@ -13,7 +13,8 @@
     "validate": "yarn type-check && yarn lint && yarn test && yarn build",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d lib/db/data-source.ts",
-    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d lib/db/data-source.ts"
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d lib/db/data-source.ts",
+    "migrate:legacy": "ts-node --project tsconfig.json script/migrateLegacy.ts"
   },
   "dependencies": {
     "@personal-gpt/shared": "*",

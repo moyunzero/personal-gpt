@@ -13,6 +13,7 @@
     "seed": "ts-node ./script/loadDB.ts",
     "seed:psychology": "ts-node ./script/loadPsychologyData.ts",
     "seed:suggestions": "ts-node ./script/loadPromptSuggestions.ts",
+    "migrate:legacy": "yarn workspace web migrate:legacy",
     "validate": "yarn workspace web validate && yarn workspace ingest-worker validate && yarn workspace @personal-gpt/shared validate"
   },
   "devDependencies": {
