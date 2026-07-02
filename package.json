@@ -9,6 +9,7 @@
   "scripts": {
     "dev:web": "yarn workspace web dev",
     "dev:worker": "yarn workspace ingest-worker start:dev",
+    "dev:agent": "yarn workspace agent-service start:dev",
     "docker:up": "docker compose up -d",
     "seed": "ts-node ./script/loadDB.ts",
     "seed:psychology": "ts-node ./script/loadPsychologyData.ts",
