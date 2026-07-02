@@ -8,6 +8,7 @@
     "start:dev": "nest start --watch",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
+    "verify:parse": "DOTENV_CONFIG_PATH=../../.env ts-node -r dotenv/config --project tsconfig.json script/verify-parse.ts",
     "validate": "yarn type-check && yarn test && yarn build"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@nestjs/cli": "11.0.16",
     "@types/node": "^20",
+    "ts-node": "10.9.2",
     "typescript": "^5",
     "vitest": "^4.1.6"
   }
