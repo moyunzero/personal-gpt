@@ -1,3 +1,4 @@
+import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createUIMessageStreamResponse } from "ai";
 import { randomUUID } from "node:crypto";
 
@@ -143,8 +144,15 @@ export async function POST(req: Request) {
     const needsContext = shouldUseVectorSearch(lastContent);
     let contextResult: VectorSearchResult = { kind: "no-docs" };
     if (needsContext) {
-      contextResult = await getRelevantContext(lastContent, requestId);
+      contextResult = await getRelevantContext(
+        lastContent,
+        requestId,
+        DEFAULT_WORKSPACE_ID,
+      );
     }
+
+    const citations =
+      contextResult.kind === "ok" ? contextResult.citations : [];
 
     // 把检索结果记一条 telemetry，让 ok / no-docs / timeout / api-error 在
     // 同一个 [METRIC] 命名空间下，便于 grep 与未来接入 metrics 客户端。
@@ -164,6 +172,7 @@ export async function POST(req: Request) {
       systemPrompt,
       messages: formattedMessages,
       requestId,
+      citations,
     });
 
     // SSE 响应默认只有 text/event-stream，需要手动注入 CORS 头（空值的不写）

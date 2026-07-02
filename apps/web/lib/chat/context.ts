@@ -8,6 +8,8 @@
  *    打 telemetry、并决定要不要在 system prompt 里告知 LLM。
  */
 
+import type { Citation } from "@personal-gpt/shared/types/kb";
+
 export interface RetrievedDoc {
   $similarity?: number;
   content: string;
@@ -15,15 +17,35 @@ export interface RetrievedDoc {
   category?: string;
   title?: string;
   keywords?: string[];
+  documentId?: string;
+  chunkIndex?: number;
 }
 
 export type VectorErrorKind = "timeout" | "api-error";
 
 export type VectorSearchResult =
-  | { kind: "ok"; blocks: string; docCount: number; sources: string[] }
+  | { kind: "ok"; blocks: string; docCount: number; sources: string[]; citations: Citation[] }
   | { kind: "no-docs" }
   | { kind: "timeout" }
   | { kind: "api-error"; error: unknown };
+
+const SNIPPET_MAX_LENGTH = 280;
+
+/** 检索文档 → 前端 citation 卡片（snippet 为纯文本，React 侧不做 HTML 注入） */
+export function mapDocsToCitations(docs: RetrievedDoc[]): Citation[] {
+  return docs.map((doc, index) => ({
+    documentId: doc.documentId ?? `unknown-${index}`,
+    title: doc.title ?? "未命名文档",
+    similarity: doc.$similarity ?? 0,
+    snippet:
+      doc.content.length > SNIPPET_MAX_LENGTH
+        ? `${doc.content.slice(0, SNIPPET_MAX_LENGTH)}…`
+        : doc.content,
+    source: doc.source,
+    category: doc.category,
+    chunkIndex: doc.chunkIndex,
+  }));
+}
 
 const SOURCE_LABEL: Record<string, string> = {
   "prompt-suggestion": "个人知识库",

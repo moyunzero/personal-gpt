@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import {
   classifyVectorError,
   formatContextBlocks,
+  mapDocsToCitations,
   type RetrievedDoc,
   type VectorSearchResult,
 } from "./context";
@@ -37,6 +38,10 @@ export async function getRelevantContext(
   workspaceId: string = DEFAULT_WORKSPACE_ID,
 ): Promise<VectorSearchResult> {
   const log = logger.child({ scope: "chat.retrieve", requestId });
+
+  if (!workspaceId?.trim()) {
+    throw new Error("getRelevantContext requires workspaceId");
+  }
 
   if (!ASTRA_DB_COLLECTION || !query) {
     log.debug("跳过：缺少 collection 或 query");
@@ -106,9 +111,12 @@ export async function getRelevantContext(
         title: hit.title,
         keywords: hit.keywords,
         $similarity: hit.similarity,
+        documentId: hit.documentId,
+        chunkIndex: hit.chunkIndex,
       }));
 
       const blocks = formatContextBlocks(relevantDocs);
+      const citations = mapDocsToCitations(relevantDocs);
       const sources = Array.from(
         new Set(relevantDocs.map((doc) => doc.source ?? "unknown")),
       );
@@ -120,6 +128,7 @@ export async function getRelevantContext(
         blocks,
         docCount: relevantDocs.length,
         sources,
+        citations,
       } as const;
     })();
 

@@ -19,6 +19,7 @@ export interface Citation {
   snippet: string;
   source?: string;
   category?: string;
+  chunkIndex?: number;
 }
 
 /** PostgreSQL documents 表元数据子集 */

@@ -1,4 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import type { Citation } from "@personal-gpt/shared/types/kb";
 import { streamText, createUIMessageStream } from "ai";
 
 import { env } from "@/lib/env";
@@ -26,20 +27,20 @@ export interface ChatStreamOptions {
   systemPrompt: string;
   messages: FormattedMessage[];
   requestId: string;
+  citations?: Citation[];
 }
 
 /**
  * 构造与 useChat() 兼容的 UI Message Stream，按 MODELS 顺序尝试，
  * 首个成功的模型直接 return，全失败时写一个 error chunk。
  *
- * 错误处理：
- *   - 单个模型 throw：log.warn 记录，落到下一个模型
- *   - 全部失败：log.error + 客户端只看到 "服务暂时不可用 (requestId: ...)"
+ * 文本流全部 flush 后，若 citations 非空则追加 data-citations part（D-07/D-09）。
  */
 export function createChatStream({
   systemPrompt,
   messages,
   requestId,
+  citations = [],
 }: ChatStreamOptions) {
   const log = logger.child({ scope: "chat.stream", requestId });
 
@@ -76,6 +77,14 @@ export function createChatStream({
             } else if (part.type === "error") {
               throw part.error;
             }
+          }
+
+          if (citations.length > 0) {
+            writer.write({
+              type: "data-citations",
+              id: `citations-${messageId}`,
+              data: { citations },
+            });
           }
 
           // 成功跳出

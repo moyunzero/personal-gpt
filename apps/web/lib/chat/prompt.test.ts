@@ -9,6 +9,7 @@ describe("buildSystemPrompt", () => {
       blocks: '<context source="prompt-suggestion" trusted="false">MoYun 是前端</context>',
       docCount: 1,
       sources: ["prompt-suggestion"],
+      citations: [],
     });
 
     expect(prompt).toContain("MoYun 是前端");
@@ -53,6 +54,7 @@ describe("buildSystemPrompt", () => {
         blocks: "x",
         docCount: 1,
         sources: ["x"],
+        citations: [],
       }),
     ];
 
