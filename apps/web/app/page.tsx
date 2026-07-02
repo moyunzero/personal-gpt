@@ -2,24 +2,10 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useState, useEffect, useRef } from "react";
+import AppHeader from "./components/AppHeader";
 import Bubble from "./components/Bubble";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
-
-/**
- * Anthropic 风格 4 叶径向"火花"标记（spike-mark）。
- * DESIGN.md 提到这是品牌 wordmark 前缀，本组件用作 header 标识与助手头像。
- */
-const SpikeMark = ({ className = "" }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden="true"
-  >
-    <path d="M12 2 L13 11 L22 12 L13 13 L12 22 L11 13 L2 12 L11 11 Z" />
-  </svg>
-);
 
 export default function Home() {
   const { messages, sendMessage, status } = useChat();
@@ -49,13 +35,7 @@ export default function Home() {
 
   return (
     <main>
-      {/* ===== Header：spike-mark + wordmark ===== */}
-      <header className="chat-header">
-        <div className="chat-header-inner">
-          <SpikeMark className="spike-mark" />
-          <span className="wordmark">Personal · Emotion GPT</span>
-        </div>
-      </header>
+      <AppHeader activePage="chat" />
 
       {/* ===== 消息滚动区 ===== */}
       <section ref={streamRef} className="chat-stream">
