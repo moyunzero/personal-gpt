@@ -13,7 +13,7 @@
     "seed": "ts-node ./script/loadDB.ts",
     "seed:psychology": "ts-node ./script/loadPsychologyData.ts",
     "seed:suggestions": "ts-node ./script/loadPromptSuggestions.ts",
-    "validate": "yarn workspaces foreach -A run validate"
+    "validate": "yarn workspace web validate && yarn workspace ingest-worker validate && yarn workspace @personal-gpt/shared validate"
   },
   "devDependencies": {
     "@datastax/astra-db-ts": "2.2.1",
