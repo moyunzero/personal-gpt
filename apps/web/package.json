@@ -10,7 +10,10 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "validate": "yarn type-check && yarn lint && yarn test && yarn build"
+    "validate": "yarn type-check && yarn lint && yarn test && yarn build",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:run": "typeorm-ts-node-commonjs migration:run -d lib/db/data-source.ts",
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d lib/db/data-source.ts"
   },
   "dependencies": {
     "@personal-gpt/shared": "*",
@@ -25,10 +28,14 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
+    "reflect-metadata": "^0.2.2",
     "remark-gfm": "^4.0.1",
+    "typeorm": "0.3.28",
+    "pg": "8.22.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@nestjs/typeorm": "11.0.3",
     "@langchain/community": "1.1.28",
     "@langchain/core": "1.1.45",
     "@tailwindcss/postcss": "^4",
