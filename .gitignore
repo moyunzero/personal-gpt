@@ -23,6 +23,7 @@ packages/*/node_modules
 # production
 /build
 /apps/ingest-worker/dist
+/apps/agent-service/dist
 
 # misc
 .DS_Store
