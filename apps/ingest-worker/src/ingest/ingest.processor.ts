@@ -14,6 +14,7 @@ import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity"
 import { embedChunks } from "./pipeline/embed";
 import { parseDocument } from "./pipeline/parse";
 import { splitText, toChunkRecords } from "./pipeline/split";
+import { traceIngestStep } from "./pipeline/tracing";
 import { upsertChunks } from "./pipeline/upsert";
 
 @Injectable()
@@ -54,16 +55,26 @@ export class IngestProcessor extends WorkerHost {
     );
     await job.updateProgress(0);
 
+    const traceCtx = {
+      workspaceId,
+      documentId,
+      requestId: bullJobId,
+    };
+
     try {
-      const text = await parseDocument(filePath, mimeType);
+      const text = await traceIngestStep("parse", traceCtx, () =>
+        parseDocument(filePath, mimeType),
+      );
       await job.updateProgress(25);
       await this.updateIngestJob(ingestJob?.id, { progress: 25 });
 
-      const chunks = await splitText(text);
+      const chunks = await traceIngestStep("split", traceCtx, () => splitText(text));
       await job.updateProgress(50);
       await this.updateIngestJob(ingestJob?.id, { progress: 50 });
 
-      const vectors = await embedChunks(chunks);
+      const vectors = await traceIngestStep("embed", traceCtx, () =>
+        embedChunks(chunks),
+      );
       await job.updateProgress(75);
       await this.updateIngestJob(ingestJob?.id, { progress: 75 });
 
@@ -79,7 +90,7 @@ export class IngestProcessor extends WorkerHost {
         tags: tags ?? document?.tags,
       });
 
-      await upsertChunks(records);
+      await traceIngestStep("upsert", traceCtx, () => upsertChunks(records));
       await job.updateProgress(100);
 
       await this.documentRepo.update(

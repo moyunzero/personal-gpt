@@ -14,6 +14,7 @@ import {
   type RetrievedDoc,
   type VectorSearchResult,
 } from "./context";
+import { traceRetrieveStep } from "./tracing";
 import { EmbeddingCache, makeEmbeddingCacheKey } from "./embedding-cache";
 import {
   ENABLE_HYDE,
@@ -194,6 +195,8 @@ export async function getRelevantContext(
 
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
+  const traceCtx = { workspaceId, requestId };
+
   try {
     log.debug("开始检索", { query, workspaceId });
 
@@ -204,19 +207,26 @@ export async function getRelevantContext(
       );
     });
 
-    const searchPromise: Promise<VectorSearchResult> = (async () => {
+    const searchPromise: Promise<VectorSearchResult> = traceRetrieveStep(
+      "retrieve",
+      traceCtx,
+      async () => {
       const searchQueries = await buildSearchQueries(query);
       let mergedHits: RetrievedChunk[] = [];
 
       for (const searchQuery of searchQueries) {
         const embeddingInput = await buildEmbeddingInput(searchQuery);
-        const vector = await embedText(embeddingInput, log);
+        const vector = await traceRetrieveStep("embed", traceCtx, () =>
+          embedText(embeddingInput, log),
+        );
         if (!vector) {
           log.warn("embedding 生成失败");
           continue;
         }
 
-        const hits = await searchWorkspace(workspaceId, vector);
+        const hits = await traceRetrieveStep("search", traceCtx, () =>
+          searchWorkspace(workspaceId, vector),
+        );
         mergedHits = mergeHits(mergedHits, hits);
       }
 
@@ -251,7 +261,8 @@ export async function getRelevantContext(
         sources,
         citations,
       } as const;
-    })();
+      },
+    );
 
     return await Promise.race([searchPromise, timeoutPromise]);
   } catch (error) {
