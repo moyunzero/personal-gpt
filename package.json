@@ -19,7 +19,8 @@
     "validate": "yarn workspace web validate && yarn workspace ingest-worker validate && yarn workspace agent-service validate && yarn workspace @personal-gpt/shared validate",
     "test": "vitest run",
     "test:regression": "vitest run tests/regression/phase-1",
-    "acceptance:phase-1": "node tests/acceptance/phase-1/run.mjs"
+    "acceptance:phase-1": "node tests/acceptance/phase-1/run.mjs",
+    "vercel-build": "yarn workspace web build"
   },
   "devDependencies": {
     "@datastax/astra-db-ts": "2.2.1",

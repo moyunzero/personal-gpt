@@ -205,10 +205,15 @@ DOTENV_CONFIG_PATH=../../.env yarn workspace web migration:run
 ### Vercel 部署（推荐）
 
 1. 将代码推送到 GitHub
-2. 在 [Vercel](https://vercel.com) 导入项目
-3. **Root Directory 设为 `apps/web`**（monorepo 必需；否则会在仓库根目录找 `app/` 导致构建失败）
+2. 在 [Vercel](https://vercel.com) 导入项目（或打开已有项目 `personal-gpt`）
+3. **设置 Root Directory（monorepo 必需）**
+   - 进入项目 → 左侧 **Settings** → **Build and Deployment**（不是 General）
+   - 找到 **Root Directory** → 点 **Edit** → 填入 `apps/web` → **Save**
+   - 若是首次导入：在 Deploy 前的配置页，Framework 选 Next.js，Root Directory 点 **Edit** 填 `apps/web`
 4. 配置环境变量（至少 `GROQ_API_KEY`、`NIM_API_KEY`、`ASTRA_DB_*`；知识库功能还需 `DATABASE_URL`、`REDIS_URL`）
-5. 部署
+5. 重新部署（Settings 保存后需手动 Redeploy 一次）
+
+> 找不到 Root Directory？路径是 **Settings → Build and Deployment**，向下滚动。改完后必须 Redeploy，仅 push 代码不会自动应用该设置。
 
 ### 其他平台
 
