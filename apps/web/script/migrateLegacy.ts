@@ -24,12 +24,12 @@ const psychologyLimit = process.env.LEGACY_PSYCHOLOGY_LIMIT
 async function upsertLegacyDocument(
   dataSource: typeof AppDataSourceType,
   params: {
-  title: string;
-  source: string;
-  category: string;
-  filePath: string;
-  chunks: string[];
-  tags?: string[];
+    title: string;
+    source: string;
+    category: string;
+    filePath: string;
+    chunks: string[];
+    tags?: string[];
   },
 ): Promise<void> {
   const { title, source, category, filePath, chunks, tags = [] } = params;
@@ -124,11 +124,14 @@ async function migratePsychology(dataSource: typeof AppDataSourceType): Promise<
 
   const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 512, chunkOverlap: 100 });
   const lines = fs.readFileSync(PSYCHOLOGY_FILE, "utf-8").trim().split("\n");
-  const qaData = lines.slice(0, psychologyLimit).map((line) => JSON.parse(line) as {
-    input: string;
-    content: string;
-    reasoning_content: string;
-  });
+  const qaData = lines.slice(0, psychologyLimit).map(
+    (line) =>
+      JSON.parse(line) as {
+        input: string;
+        content: string;
+        reasoning_content: string;
+      },
+  );
 
   let count = 0;
   for (const [index, qa] of qaData.entries()) {

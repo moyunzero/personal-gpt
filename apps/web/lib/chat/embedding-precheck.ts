@@ -4,10 +4,7 @@ import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astr
 import { logger } from "@/lib/logger";
 
 import { embedQueryText } from "./embedding-service";
-import {
-  ROUTE_DIRECT_SIMILARITY,
-  ROUTE_RETRIEVE_SIMILARITY,
-} from "./rag-options";
+import { ROUTE_DIRECT_SIMILARITY, ROUTE_RETRIEVE_SIMILARITY } from "./rag-options";
 
 export interface EmbeddingPrecheckResult {
   topSimilarity: number;

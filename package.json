@@ -16,13 +16,18 @@
     "seed:suggestions": "ts-node --project tsconfig.scripts.json ./script/loadPromptSuggestions.ts",
     "astra:init-embedding": "ts-node --project tsconfig.scripts.json ./script/initEmbeddingCollection.ts",
     "migrate:legacy": "yarn workspace web migrate:legacy",
-    "validate": "yarn workspace web validate && yarn workspace ingest-worker validate && yarn workspace agent-service validate && yarn workspace @personal-gpt/shared validate",
+    "lint": "eslint packages apps/ingest-worker apps/agent-service script tests && yarn workspace web lint",
+    "lint:fix": "eslint packages apps/ingest-worker apps/agent-service script tests --fix && yarn workspace web lint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "validate": "yarn format:check && yarn lint && yarn workspace web validate && yarn workspace ingest-worker validate && yarn workspace agent-service validate && yarn workspace @personal-gpt/shared validate",
     "test": "vitest run",
     "test:regression": "vitest run tests/regression/phase-1",
     "acceptance:phase-1": "node tests/acceptance/phase-1/run.mjs",
     "vercel-build": "yarn workspace web build"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@datastax/astra-db-ts": "2.2.1",
     "@langchain/community": "1.1.28",
     "@langchain/core": "1.1.45",
@@ -30,11 +35,16 @@
     "@personal-gpt/shared": "*",
     "cheerio": "1.2.0",
     "dotenv": "17.4.2",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.5.0",
     "openai": "6.37.0",
+    "prettier": "^3.6.2",
     "playwright": "1.59.1",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
     "typescript": "^5",
+    "typescript-eslint": "^8.46.4",
     "vitest": "^4.1.6"
   }
 }

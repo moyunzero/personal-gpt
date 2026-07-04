@@ -32,8 +32,7 @@ export class IngestProcessor extends WorkerHost {
   }
 
   async process(job: Job<IngestJobPayload>): Promise<void> {
-    const { workspaceId, documentId, filePath, mimeType, title, category, tags } =
-      job.data;
+    const { workspaceId, documentId, filePath, mimeType, title, category, tags } = job.data;
 
     const maxBytes = Number(process.env.UPLOAD_MAX_BYTES ?? 20_971_520);
     const stat = await fs.stat(filePath);
@@ -49,10 +48,7 @@ export class IngestProcessor extends WorkerHost {
       progress: 0,
       bullJobId: String(job.id ?? job.name),
     });
-    await this.documentRepo.update(
-      { id: documentId, workspaceId },
-      { status: "processing" },
-    );
+    await this.documentRepo.update({ id: documentId, workspaceId }, { status: "processing" });
     await job.updateProgress(0);
 
     const traceCtx = {
@@ -72,9 +68,7 @@ export class IngestProcessor extends WorkerHost {
       await job.updateProgress(50);
       await this.updateIngestJob(ingestJob?.id, { progress: 50 });
 
-      const vectors = await traceIngestStep("embed", traceCtx, () =>
-        embedChunks(chunks),
-      );
+      const vectors = await traceIngestStep("embed", traceCtx, () => embedChunks(chunks));
       await job.updateProgress(75);
       await this.updateIngestJob(ingestJob?.id, { progress: 75 });
 
@@ -106,10 +100,7 @@ export class IngestProcessor extends WorkerHost {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Ingest failed for document ${documentId}: ${message}`);
 
-      await this.documentRepo.update(
-        { id: documentId, workspaceId },
-        { status: "failed" },
-      );
+      await this.documentRepo.update({ id: documentId, workspaceId }, { status: "failed" });
       await this.updateIngestJob(ingestJob?.id, {
         status: "failed",
         error: message,

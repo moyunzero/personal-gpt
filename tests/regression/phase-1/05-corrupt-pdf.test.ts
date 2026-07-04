@@ -13,8 +13,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 });
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/tracing", () => ({
-  traceIngestStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) =>
-    fn(),
+  traceIngestStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) => fn(),
 }));
 
 import { IngestProcessor } from "../../../apps/ingest-worker/src/ingest/ingest.processor";
@@ -51,9 +50,7 @@ describe("Phase 1 regression #5: corrupt PDF → failed job with visible error",
     const buffer = await fs.readFile(CORRUPT_PDF);
     expect(buffer.length).toBeGreaterThan(0);
 
-    await expect(
-      parseDocumentUnsafe(CORRUPT_PDF, "application/pdf"),
-    ).rejects.toThrow();
+    await expect(parseDocumentUnsafe(CORRUPT_PDF, "application/pdf")).rejects.toThrow();
   });
 
   it("ingest processor marks document failed and persists error message", async () => {

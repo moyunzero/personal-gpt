@@ -42,8 +42,7 @@ function isOriginAllowed(req: Request): boolean {
   const origin = req.headers.get("origin");
   const referer = req.headers.get("referer");
   if (origin && ALLOWED_ORIGINS.has(origin)) return true;
-  if (referer && [...ALLOWED_ORIGINS].some((o) => referer.startsWith(o)))
-    return true;
+  if (referer && [...ALLOWED_ORIGINS].some((o) => referer.startsWith(o))) return true;
   return false;
 }
 
@@ -83,13 +82,10 @@ export async function POST(req: Request) {
       origin: req.headers.get("origin") ?? "<none>",
       referer: req.headers.get("referer") ?? "<none>",
     });
-    return new Response(
-      JSON.stringify({ error: "Forbidden origin", requestId }),
-      {
-        status: 403,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Forbidden origin", requestId }), {
+      status: 403,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 
   try {
@@ -130,8 +126,7 @@ export async function POST(req: Request) {
     const formattedMessages = formatMessages(messages as InputMessage[]);
 
     // 取最后一条做向量搜索 + 长度校验
-    const lastContent =
-      formattedMessages[formattedMessages.length - 1]?.content || "";
+    const lastContent = formattedMessages[formattedMessages.length - 1]?.content || "";
 
     if (lastContent.length > 8000) {
       return new Response("Message too long", {
@@ -153,15 +148,10 @@ export async function POST(req: Request) {
 
     let contextResult: VectorSearchResult = { kind: "no-docs" };
     if (routeDecision.route === "retrieve") {
-      contextResult = await getRelevantContext(
-        lastContent,
-        requestId,
-        DEFAULT_WORKSPACE_ID,
-      );
+      contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID);
     }
 
-    const citations =
-      contextResult.kind === "ok" ? contextResult.citations : [];
+    const citations = contextResult.kind === "ok" ? contextResult.citations : [];
 
     // 把检索结果记一条 telemetry，让 ok / no-docs / timeout / api-error 在
     // 同一个 [METRIC] 命名空间下，便于 grep 与未来接入 metrics 客户端。
@@ -193,12 +183,9 @@ export async function POST(req: Request) {
   } catch (error) {
     // 把详细错误留在服务端，客户端只能拿到 requestId
     log.error("unhandled error", { err: error });
-    return new Response(
-      JSON.stringify({ error: "Internal server error", requestId }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Internal server error", requestId }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 }

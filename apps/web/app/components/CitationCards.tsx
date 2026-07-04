@@ -27,9 +27,7 @@ function CitationCard({ citation }: { citation: Citation }) {
       >
         <span className="citation-card-title">{citation.title}</span>
         <span className="citation-card-meta">
-          <span className="citation-card-similarity">
-            {formatSimilarity(citation.similarity)}
-          </span>
+          <span className="citation-card-similarity">{formatSimilarity(citation.similarity)}</span>
           <svg
             className={`citation-card-chevron${expanded ? " citation-card-chevron-open" : ""}`}
             viewBox="0 0 16 16"

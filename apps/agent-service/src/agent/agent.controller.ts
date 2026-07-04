@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Req,
-  Res,
-  ServiceUnavailableException,
-} from "@nestjs/common";
+import { Body, Controller, Post, Req, Res, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { Request, Response } from "express";
 import { Readable } from "node:stream";
@@ -39,11 +32,7 @@ export class AgentController {
   constructor(private readonly config: ConfigService) {}
 
   @Post("chat")
-  async chat(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Body() body: unknown,
-  ): Promise<void> {
+  async chat(@Req() req: Request, @Res() res: Response, @Body() body: unknown): Promise<void> {
     const webUrl = this.config.get<string>("WEB_URL") ?? "http://localhost:3000";
     const upstreamUrl = `${webUrl.replace(/\/$/, "")}/api/chat`;
 
@@ -58,8 +47,7 @@ export class AgentController {
 
     res.status(upstream.status);
 
-    const contentType =
-      upstream.headers.get("content-type") ?? "text/event-stream";
+    const contentType = upstream.headers.get("content-type") ?? "text/event-stream";
     res.setHeader("Content-Type", contentType);
 
     const cacheControl = upstream.headers.get("cache-control");

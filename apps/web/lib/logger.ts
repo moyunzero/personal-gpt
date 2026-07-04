@@ -57,11 +57,7 @@ function formatFields(fields: LogFields | undefined): string {
   }
 }
 
-function emit(
-  level: LogLevel | "metric",
-  msg: string,
-  mergedFields: LogFields | undefined,
-): void {
+function emit(level: LogLevel | "metric", msg: string, mergedFields: LogFields | undefined): void {
   const prefix = level === "metric" ? "[METRIC]" : `[${level}]`;
   const line = `${prefix} ${msg}${formatFields(mergedFields)}`;
   switch (level) {

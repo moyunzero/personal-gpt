@@ -61,11 +61,13 @@ const ALLOWED = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
-function makeFile(overrides: Partial<{
-  name: string;
-  type: string;
-  size: number;
-}> = {}) {
+function makeFile(
+  overrides: Partial<{
+    name: string;
+    type: string;
+    size: number;
+  }> = {},
+) {
   return {
     name: overrides.name ?? "sample.pdf",
     type: overrides.type ?? "application/pdf",
@@ -183,10 +185,7 @@ describe("uploadDocument enqueue contract", () => {
         mimeType: "application/pdf",
       }),
     );
-    expect(jobUpdateMock).toHaveBeenCalledWith(
-      { id: "job-uuid" },
-      { bullJobId: "bull-123" },
-    );
+    expect(jobUpdateMock).toHaveBeenCalledWith({ id: "job-uuid" }, { bullJobId: "bull-123" });
   });
 
   it("passes category and tags into ingest queue payload", async () => {
@@ -339,9 +338,7 @@ describe("updateDocumentMetadata (KB-02)", () => {
     const result = await updateDocumentMetadata("doc-meta", { category: null });
 
     expect(result?.category).toBeNull();
-    expect(saveMock).toHaveBeenCalledWith(
-      expect.objectContaining({ category: null }),
-    );
+    expect(saveMock).toHaveBeenCalledWith(expect.objectContaining({ category: null }));
   });
 });
 
@@ -397,9 +394,6 @@ describe("listDocuments tags filter (KB-03)", () => {
   it("applies tags OR filter via query builder", async () => {
     await listDocuments({ tags: ["python"] });
 
-    expect(andWhereMock).toHaveBeenCalledWith(
-      "doc.tags ?| array[:...tags]",
-      { tags: ["python"] },
-    );
+    expect(andWhereMock).toHaveBeenCalledWith("doc.tags ?| array[:...tags]", { tags: ["python"] });
   });
 });

@@ -82,9 +82,7 @@ describe("createChatStream citations", () => {
     });
 
     const parts = await collectStreamParts(stream);
-    const textEndIndex = parts.findIndex(
-      (part) => (part as { type: string }).type === "text-end",
-    );
+    const textEndIndex = parts.findIndex((part) => (part as { type: string }).type === "text-end");
     const citationsIndex = parts.findIndex(
       (part) => (part as { type: string }).type === "data-citations",
     );
@@ -120,9 +118,7 @@ describe("createChatStream citations", () => {
 
     const parts = await collectStreamParts(stream);
 
-    expect(
-      parts.some((part) => (part as { type: string }).type === "data-citations"),
-    ).toBe(false);
+    expect(parts.some((part) => (part as { type: string }).type === "data-citations")).toBe(false);
   });
 
   it("strips Qwen think blocks from streamed text", async () => {

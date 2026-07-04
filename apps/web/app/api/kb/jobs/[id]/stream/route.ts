@@ -28,9 +28,7 @@ export async function GET(req: Request, context: RouteContext) {
 
       const send = (event: string, data: unknown) => {
         if (closed) return;
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-        );
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       };
 
       const closeStream = () => {
@@ -66,11 +64,7 @@ export async function GET(req: Request, context: RouteContext) {
         send("progress", { progress: toProgressNumber(args.data) });
       };
 
-      const onCompleted = ({
-        jobId: eventJobId,
-      }: {
-        jobId: string;
-      }) => {
+      const onCompleted = ({ jobId: eventJobId }: { jobId: string }) => {
         if (String(eventJobId) !== bullJobId) return;
         send("completed", { progress: 100 });
         cleanup();

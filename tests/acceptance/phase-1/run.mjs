@@ -10,10 +10,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, "screenshots");
 const FIXTURE = path.join(__dirname, "fixtures/mocode-acceptance.md");
-const CORRUPT_PDF = path.join(
-  __dirname,
-  "../../regression/phase-1/fixtures/corrupt.pdf",
-);
+const CORRUPT_PDF = path.join(__dirname, "../../regression/phase-1/fixtures/corrupt.pdf");
 const BASE = process.env.ACCEPTANCE_BASE_URL ?? "http://localhost:3000";
 
 const results = [];
@@ -91,7 +88,10 @@ async function run() {
     // ── 03 知识库页面 ──
     await page.goto(`${BASE}/kb`, { waitUntil: "networkidle" });
     await page.locator(".kb-page-title").waitFor();
-    await page.locator(".kb-loading").waitFor({ state: "detached", timeout: 15_000 }).catch(() => {});
+    await page
+      .locator(".kb-loading")
+      .waitFor({ state: "detached", timeout: 15_000 })
+      .catch(() => {});
     await shot(page, "03-kb-page");
     log("03-kb-page", "PASS", "知识库页加载");
 
@@ -121,7 +121,11 @@ async function run() {
     await page.goto(BASE, { waitUntil: "networkidle" });
     await sendChat(page, "介绍一下 MoCode");
     await waitAssistantReply(page, 180_000);
-    await page.locator(".citation-card").first().waitFor({ timeout: 30_000 }).catch(() => {});
+    await page
+      .locator(".citation-card")
+      .first()
+      .waitFor({ timeout: 30_000 })
+      .catch(() => {});
     const citationCount = await page.locator(".citation-card").count();
     await shot(page, "06-chat-with-citations");
     if (citationCount >= 1) {
@@ -132,7 +136,10 @@ async function run() {
 
     // ── 07 删除文档 ──
     await page.goto(`${BASE}/kb`, { waitUntil: "networkidle" });
-    await page.locator(".kb-loading").waitFor({ state: "detached", timeout: 15_000 }).catch(() => {});
+    await page
+      .locator(".kb-loading")
+      .waitFor({ state: "detached", timeout: 15_000 })
+      .catch(() => {});
     const rowCountBefore = await page.locator(".kb-doc-row").count();
     if (rowCountBefore === 0) {
       await shot(page, "07-kb-delete-skip");

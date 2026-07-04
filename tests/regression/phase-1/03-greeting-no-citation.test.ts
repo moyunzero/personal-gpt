@@ -79,8 +79,6 @@ describe("Phase 1 regression #3: greeting skips retrieval and citations", () => 
     });
 
     const parts = await collectStreamParts(stream);
-    expect(
-      parts.some((part) => (part as { type: string }).type === "data-citations"),
-    ).toBe(false);
+    expect(parts.some((part) => (part as { type: string }).type === "data-citations")).toBe(false);
   });
 });

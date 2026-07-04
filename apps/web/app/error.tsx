@@ -97,9 +97,7 @@ export default function ChatError({
             }}
           >
             报错码：
-            <code style={{ fontFamily: "var(--font-mono)" }}>
-              {error.digest}
-            </code>
+            <code style={{ fontFamily: "var(--font-mono)" }}>{error.digest}</code>
           </p>
         ) : null}
       </section>

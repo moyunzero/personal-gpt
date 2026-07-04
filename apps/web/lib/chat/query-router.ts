@@ -16,15 +16,8 @@ import {
   precheckSuggestsDirect,
   precheckSuggestsRetrieve,
 } from "./embedding-precheck";
-import {
-  isEmptyQuery,
-  isGreetingOnly,
-  isPureMathExpression,
-} from "./query-intent";
-import {
-  ENABLE_EMBEDDING_ROUTE_PRECHECK,
-  ENABLE_LLM_QUERY_ROUTER,
-} from "./rag-options";
+import { isEmptyQuery, isGreetingOnly, isPureMathExpression } from "./query-intent";
+import { ENABLE_EMBEDDING_ROUTE_PRECHECK, ENABLE_LLM_QUERY_ROUTER } from "./rag-options";
 
 export type QueryRoute = "direct" | "retrieve";
 
@@ -94,8 +87,7 @@ async function routeWithLlm(query: string): Promise<QueryRouteDecision> {
 }
 
 type EmbeddingPrecheckOutcome =
-  | { kind: "decided"; decision: QueryRouteDecision }
-  | { kind: "skip" };
+  { kind: "decided"; decision: QueryRouteDecision } | { kind: "skip" };
 
 async function routeWithEmbeddingPrecheck(
   query: string,

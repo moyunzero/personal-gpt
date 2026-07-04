@@ -12,7 +12,9 @@ export interface AstraCollectionHandle {
   deleteMany: (filter: Record<string, unknown>) => Promise<{ deletedCount?: number }>;
 }
 
-export function assertSearchWorkspaceId(workspaceId: string | undefined): asserts workspaceId is string {
+export function assertSearchWorkspaceId(
+  workspaceId: string | undefined,
+): asserts workspaceId is string {
   if (!workspaceId?.trim()) {
     throw new Error("VectorStore.search requires workspaceId");
   }
@@ -123,27 +125,22 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
       };
 
       const workspaceFilter = { workspaceId: { $eq: params.workspaceId } };
-      const filter = params.filter
-        ? { $and: [workspaceFilter, params.filter] }
-        : workspaceFilter;
+      const filter = params.filter ? { $and: [workspaceFilter, params.filter] } : workspaceFilter;
 
       // Phase 1 多租户隔离：先按 workspaceId（+ 可选 filter）过滤
-      let docs = (await collection!
-        .find(filter, searchOptions)
-        .toArray()) as Record<string, unknown>[];
+      let docs = (await collection!.find(filter, searchOptions).toArray()) as Record<
+        string,
+        unknown
+      >[];
 
       // v0.1 写入的 chunk 无 workspaceId 字段；隔离查询会返回空，回退到无过滤检索
       if (docs.length === 0 && !params.filter) {
-        docs = (await collection!
-          .find({}, searchOptions)
-          .toArray()) as Record<string, unknown>[];
+        docs = (await collection!.find({}, searchOptions).toArray()) as Record<string, unknown>[];
       }
 
       const threshold = params.similarityThreshold ?? 0;
 
-      return docs
-        .map(mapAstraDoc)
-        .filter((doc) => doc.similarity >= threshold);
+      return docs.map(mapAstraDoc).filter((doc) => doc.similarity >= threshold);
     },
   };
 }

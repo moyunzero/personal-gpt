@@ -40,7 +40,10 @@ export async function POST(req: Request) {
     const tagsRaw = formData.get("tags");
     const tags =
       typeof tagsRaw === "string" && tagsRaw.trim()
-        ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean)
+        ? tagsRaw
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
         : undefined;
 
     const category =
@@ -48,9 +51,7 @@ export async function POST(req: Request) {
         ? (formData.get("category") as string)
         : undefined;
     const title =
-      typeof formData.get("title") === "string"
-        ? (formData.get("title") as string)
-        : undefined;
+      typeof formData.get("title") === "string" ? (formData.get("title") as string) : undefined;
 
     const { document, job } = await uploadDocument(file, {
       title,
@@ -74,10 +75,7 @@ export async function POST(req: Request) {
     );
   } catch (error) {
     if (error instanceof UploadValidationError) {
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
     }
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: message }, { status: 500 });

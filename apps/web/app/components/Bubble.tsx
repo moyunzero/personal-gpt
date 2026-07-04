@@ -43,9 +43,7 @@ const AssistantAvatar = () => (
 const Bubble = ({ message, isStreaming = false }: BubbleProps) => {
   // 从 AI SDK 5+ 的 parts 数组中提取文本内容
   const content = message.parts
-    .filter(
-      (part) => "type" in part && part.type === "text" && "text" in part,
-    )
+    .filter((part) => "type" in part && part.type === "text" && "text" in part)
     .map((part) => ("text" in part ? (part.text as string) : ""))
     .join("");
 

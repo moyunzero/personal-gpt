@@ -8,15 +8,17 @@ import { PlaywrightWebBaseLoader } from "@langchain/community/document_loaders/w
 import { embedTexts } from "@personal-gpt/shared/ai/embeddings";
 import { EMBEDDING_DIMENSION } from "@personal-gpt/shared/ai/embedding-models";
 
-const { 
-    ASTRA_DB_NAMESPACE,
-    ASTRA_DB_COLLECTION,
-    ASTRA_DB_API_ENDPOINT,
-    ASTRA_DB_APPLICATION_TOKEN,
+const {
+  ASTRA_DB_NAMESPACE,
+  ASTRA_DB_COLLECTION,
+  ASTRA_DB_API_ENDPOINT,
+  ASTRA_DB_APPLICATION_TOKEN,
 } = process.env;
 
 if (!ASTRA_DB_API_ENDPOINT || !ASTRA_DB_APPLICATION_TOKEN) {
-  throw new Error('Missing required environment variables: ASTRA_DB_API_ENDPOINT and ASTRA_DB_APPLICATION_TOKEN');
+  throw new Error(
+    "Missing required environment variables: ASTRA_DB_API_ENDPOINT and ASTRA_DB_APPLICATION_TOKEN",
+  );
 }
 
 // NVIDIA NIM llama-nemotron-embed-1b-v2（经 @ai-sdk/openai-compatible）
@@ -27,26 +29,26 @@ const getEmbedding = async (text: string, retries = 3): Promise<number[]> => {
     } catch (error) {
       const isLastAttempt = attempt === retries;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      
+
       if (isLastAttempt) {
         throw new Error(`生成 embedding 失败 (已重试 ${retries} 次): ${errorMsg}`);
       }
-      
+
       const delay = 2000 * attempt;
       console.log(`\n  ⚠ Embedding 生成失败 (尝试 ${attempt}/${retries}): ${errorMsg}`);
       console.log(`  ⏳ ${delay / 1000}秒后重试...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  
-  throw new Error('生成 embedding 失败');
+
+  throw new Error("生成 embedding 失败");
 };
 
 const completionData: (string | { url: string; useBrowser: boolean })[] = [
-    // 测试自动检测：先用 Cheerio，内容不足时自动切换到 Playwright
-    "https://zh.wikipedia.org/wiki/%E5%BF%83%E7%90%86%E5%AD%A6",
-    "https://github.com/moyunzero/personalWeb",
-    "https://www.bilibili.com/?spm_id_from=333.1365.0.0",
+  // 测试自动检测：先用 Cheerio，内容不足时自动切换到 Playwright
+  "https://zh.wikipedia.org/wiki/%E5%BF%83%E7%90%86%E5%AD%A6",
+  "https://github.com/moyunzero/personalWeb",
+  "https://www.bilibili.com/?spm_id_from=333.1365.0.0",
 ];
 
 const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN);
@@ -55,14 +57,17 @@ const db = client.db(ASTRA_DB_API_ENDPOINT, {
 });
 
 const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 512,
-    chunkOverlap: 100,
+  chunkSize: 512,
+  chunkOverlap: 100,
 });
 
 // 速率限制：避免请求过快
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const createCollection = async (similarityMetric: "dot_product" | "cosine" | "euclidean" = "dot_product", retries = 3) => {
+const createCollection = async (
+  similarityMetric: "dot_product" | "cosine" | "euclidean" = "dot_product",
+  retries = 3,
+) => {
   for (let i = 0; i < retries; i++) {
     try {
       console.log(`尝试创建集合... (${i + 1}/${retries})`);
@@ -78,7 +83,7 @@ const createCollection = async (similarityMetric: "dot_product" | "cosine" | "eu
     } catch (error) {
       if (i === retries - 1) throw error;
       console.log(`创建失败，${2}秒后重试...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
 };
@@ -92,15 +97,15 @@ const scrapePageSmart = async (
     debug?: boolean;
     useBrowser?: boolean;
     minContentLength?: number;
-  }
+  },
 ): Promise<string> => {
-  const { 
+  const {
     selector = "p, h1, h2, h3, h4, h5, h6, li, article",
     retries = 3,
     retryDelay = 2000,
     debug = false,
     useBrowser,
-    minContentLength = 200
+    minContentLength = 200,
   } = options || {};
 
   // 如果没有明确指定，先尝试 Cheerio（快速）
@@ -110,7 +115,7 @@ const scrapePageSmart = async (
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       let docs: unknown[] = [];
-      
+
       // 策略:先尝试 Cheerio，如果内容不足则自动切换到 Playwright
       if (!forceBrowser && shouldTryCheerioFirst) {
         try {
@@ -119,27 +124,27 @@ const scrapePageSmart = async (
             // @ts-expect-error - CheerioWebBaseLoader selector type is overly restrictive
             selector,
           });
-          
+
           docs = await loader.load();
-          
+
           interface Doc {
             pageContent: string;
           }
-          
+
           const content = (docs as Doc[])
             .map((doc) => doc.pageContent)
             .join("\n")
             .replace(/\n\s*\n/g, "\n")
             .replace(/\s+/g, " ")
             .trim();
-          
+
           // 如果内容太少，说明可能需要 JavaScript 渲染
           if (content.length < minContentLength) {
             console.log(`  ⚠ Cheerio 提取内容不足 (${content.length} 字符)，切换到 Playwright...`);
             forceBrowser = true;
-            throw new Error('Content too short, switching to browser mode');
+            throw new Error("Content too short, switching to browser mode");
           }
-          
+
           console.log(`  ✓ Cheerio 成功提取内容`);
         } catch (error) {
           if (!forceBrowser) {
@@ -148,7 +153,7 @@ const scrapePageSmart = async (
           // 如果已经决定使用浏览器，继续下面的逻辑
         }
       }
-      
+
       if (forceBrowser || useBrowser === true) {
         // 使用 Playwright 抓取动态网站
         console.log(`  🌐 使用 Playwright 浏览器模式抓取...`);
@@ -163,7 +168,7 @@ const scrapePageSmart = async (
           evaluate: async (page) => {
             // 等待页面加载完成
             await page.waitForTimeout(2000);
-            
+
             // 提取文本内容
             const content = await page.evaluate(() => {
               const scripts = document.querySelectorAll("script, style, nav, footer, header");
@@ -179,14 +184,14 @@ const scrapePageSmart = async (
 
               return document.body.textContent || "";
             });
-            
+
             return content;
           },
         });
-        
+
         docs = await loader.load();
       }
-      
+
       if (debug && docs.length > 0) {
         interface Doc {
           pageContent: string;
@@ -196,7 +201,7 @@ const scrapePageSmart = async (
         console.log(`  [调试] 第一个文档内容长度: ${firstDoc.pageContent.length}`);
         console.log(`  [调试] 前 200 字符: ${firstDoc.pageContent.substring(0, 200)}`);
       }
-      
+
       // 清理内容：去除多余空白、空行
       interface Doc {
         pageContent: string;
@@ -216,23 +221,23 @@ const scrapePageSmart = async (
     } catch (error) {
       const isLastAttempt = attempt === retries;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      
+
       // 如果是因为内容太少而切换到浏览器模式，不算作失败
-      if (errorMsg.includes('switching to browser mode')) {
+      if (errorMsg.includes("switching to browser mode")) {
         continue;
       }
-      
+
       if (isLastAttempt) {
         console.error(`  ✖ 抓取失败 (已重试 ${retries} 次): ${errorMsg}`);
         throw new Error(`无法抓取页面 ${url}: ${errorMsg}`);
       }
-      
+
       console.log(`  ⚠ 抓取失败 (尝试 ${attempt}/${retries}): ${errorMsg}`);
       console.log(`  ⏳ ${retryDelay / 1000}秒后重试...`);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
     }
   }
-  
+
   throw new Error(`无法抓取页面 ${url}`);
 };
 
@@ -242,21 +247,23 @@ const loadSampleData = async () => {
 
   for (let i = 0; i < completionData.length; i++) {
     const item = completionData[i];
-    
+
     // 支持两种格式：字符串 或 { url, useBrowser }
-    const url = typeof item === 'string' ? item : item.url;
-    const useBrowser = typeof item === 'string' ? undefined : item.useBrowser;
-    
+    const url = typeof item === "string" ? item : item.url;
+    const useBrowser = typeof item === "string" ? undefined : item.useBrowser;
+
     console.log(`\n[${i + 1}/${total}] 正在抓取页面: ${url}`);
     if (useBrowser !== undefined) {
-      console.log(`  模式: ${useBrowser ? 'Playwright (强制浏览器)' : 'Cheerio (强制静态)'}`);
+      console.log(`  模式: ${useBrowser ? "Playwright (强制浏览器)" : "Cheerio (强制静态)"}`);
     } else {
       console.log(`  模式: 自动检测 (先尝试 Cheerio，必要时切换到 Playwright)`);
     }
 
     const scrapeStart = Date.now();
     const content = await scrapePageSmart(url, { useBrowser });
-    console.log(`  ✔ 抓取完成 (${((Date.now() - scrapeStart) / 1000).toFixed(1)}s), 内容长度: ${content.length} 字符`);
+    console.log(
+      `  ✔ 抓取完成 (${((Date.now() - scrapeStart) / 1000).toFixed(1)}s), 内容长度: ${content.length} 字符`,
+    );
 
     const chunks = await splitter.splitText(content);
     console.log(`  ✔ 分块完成, 共 ${chunks.length} 个块，开始生成向量并写入...`);
@@ -268,14 +275,14 @@ const loadSampleData = async () => {
       if (inserted > 0) {
         await sleep(100); // 每个请求间隔 100ms
       }
-      
+
       // 使用 OpenRouter 的 NVIDIA 嵌入模型生成向量
       const embedding = await getEmbedding(chunk);
 
       // 插入到 AstraDB
       await collection.insertOne({
         $vector: embedding,
-        content: chunk,  // 改为 content，与 API 保持一致
+        content: chunk, // 改为 content，与 API 保持一致
         source: url,
       });
 
@@ -285,7 +292,9 @@ const loadSampleData = async () => {
       const filled = Math.floor(pct / 5);
       const bar = "█".repeat(filled) + "░".repeat(20 - filled);
       const elapsed = ((Date.now() - embedStart) / 1000).toFixed(0);
-      process.stdout.write(`\r  [${bar}] ${pct}% (${inserted}/${chunks.length} 块, 已用 ${elapsed}s)`);
+      process.stdout.write(
+        `\r  [${bar}] ${pct}% (${inserted}/${chunks.length} 块, 已用 ${elapsed}s)`,
+      );
     }
     console.log(`\n  ✔ 全部插入完成 (${((Date.now() - embedStart) / 1000).toFixed(1)}s)`);
   }
@@ -301,14 +310,14 @@ const loadSampleData = async () => {
     console.log("Namespace:", ASTRA_DB_NAMESPACE);
     console.log("Collection:", ASTRA_DB_COLLECTION);
     console.log("Token configured:", Boolean(ASTRA_DB_APPLICATION_TOKEN));
-    
+
     // 先尝试获取数据库管理员实例，列出所有 keyspaces
     console.log("\n正在获取可用的 keyspaces...");
     try {
       const dbAdmin = db.admin();
       const keyspaces = await dbAdmin.listKeyspaces();
       console.log("可用的 keyspaces:", keyspaces);
-      
+
       if (!keyspaces.includes(ASTRA_DB_NAMESPACE!)) {
         console.log(`\n⚠️  警告: Keyspace '${ASTRA_DB_NAMESPACE}' 不存在！`);
         console.log("请使用以下 keyspace 之一:", keyspaces);
@@ -317,16 +326,17 @@ const loadSampleData = async () => {
     } catch {
       console.log("无法获取 keyspaces 列表，尝试直接连接...");
     }
-    
+
     // 1. 检查集合是否存在
     console.log("\n正在连接到 AstraDB...");
     const collections = await db.listCollections();
-    console.log("连接成功！现有集合:", collections.map(c => c.name));
-    
-    const collectionExists = collections.some(
-      (col) => col.name === ASTRA_DB_COLLECTION
+    console.log(
+      "连接成功！现有集合:",
+      collections.map((c) => c.name),
     );
-    
+
+    const collectionExists = collections.some((col) => col.name === ASTRA_DB_COLLECTION);
+
     if (!collectionExists) {
       console.log(`\n集合 ${ASTRA_DB_COLLECTION} 不存在，正在创建...`);
       await createCollection();
@@ -334,14 +344,14 @@ const loadSampleData = async () => {
     } else {
       console.log(`\n集合 ${ASTRA_DB_COLLECTION} 已存在`);
     }
-    
+
     // 2. 加载数据
     await loadSampleData();
-    
+
     console.log("\n✅ 所有操作完成！");
   } catch (error) {
     console.error("\n❌ 错误:", error);
-    
+
     if (error instanceof Error && error.message.includes("403")) {
       console.error("\n可能的原因:");
       console.error("1. Token 已过期或无效");
@@ -355,7 +365,7 @@ const loadSampleData = async () => {
       console.error("- 确认 Namespace 名称（可能是 'default_keyspace' 或其他）");
       console.error("- 检查网络连接（关闭 VPN 或代理）");
     }
-    
+
     process.exit(1);
   }
 })();

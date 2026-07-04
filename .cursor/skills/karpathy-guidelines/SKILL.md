@@ -119,4 +119,4 @@ You should see:
 
 ## Interaction with Project-Specific Rules
 
-These are general behavioral principles. They are **additive** to project-specific instructions in `AGENTS.md`, `.cursor/rules/`, and similar locations. When project rules conflict, project rules win — but the four principles still apply to *how* you follow them.
+These are general behavioral principles. They are **additive** to project-specific instructions in `AGENTS.md`, `.cursor/rules/`, and similar locations. When project rules conflict, project rules win — but the four principles still apply to _how_ you follow them.

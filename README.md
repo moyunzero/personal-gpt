@@ -53,11 +53,11 @@ cp .env.example .env
 
 编辑仓库根目录的 `.env`，至少填入：
 
-| 变量 | 获取方式 |
-| --- | --- |
-| `ASTRA_DB_*` | [Astra Portal](https://astra.datastax.com/) → Connect |
+| 变量           | 获取方式                                               |
+| -------------- | ------------------------------------------------------ |
+| `ASTRA_DB_*`   | [Astra Portal](https://astra.datastax.com/) → Connect  |
 | `GROQ_API_KEY` | [console.groq.com/keys](https://console.groq.com/keys) |
-| `NIM_API_KEY` | [build.nvidia.com](https://build.nvidia.com/) |
+| `NIM_API_KEY`  | [build.nvidia.com](https://build.nvidia.com/)          |
 
 > 所有 app 共用根目录 `.env`；`yarn dev:web` 会通过 `DOTENV_CONFIG_PATH=../../.env` 加载。
 
@@ -141,10 +141,10 @@ personal-gpt/
 
 应用采用**混合 RAG**（对齐 `reference/advanced-rag/rag-query-router.mjs`）：
 
-| 路由 | 含义 | 行为 |
-| --- | --- | --- |
-| `direct` | 通用知识 / 闲聊 | 不走向量检索，模型直接回答 |
-| `retrieve` | 需要私有资料 | 检索知识库 → 有命中则引用，无命中仍可用通用知识 |
+| 路由       | 含义            | 行为                                            |
+| ---------- | --------------- | ----------------------------------------------- |
+| `direct`   | 通用知识 / 闲聊 | 不走向量检索，模型直接回答                      |
+| `retrieve` | 需要私有资料    | 检索知识库 → 有命中则引用，无命中仍可用通用知识 |
 
 **三层路由**（对齐 `reference/advanced-rag/rag-query-router.mjs`）：
 
@@ -223,37 +223,37 @@ DOTENV_CONFIG_PATH=../../.env yarn workspace web migration:run
 
 ### 聊天运行时必需
 
-| 变量名 | 说明 | 必需 |
-| --- | --- | --- |
-| `ASTRA_DB_API_ENDPOINT` | Astra DB Data API 端点 | ✅ |
-| `ASTRA_DB_APPLICATION_TOKEN` | Astra DB 访问令牌 | ✅ |
-| `ASTRA_DB_COLLECTION` | 向量集合名称（须为 2048 维，见 `yarn astra:init-embedding`） | ✅ |
-| `GROQ_API_KEY` | Groq API 密钥，聊天主模型 + RAG 辅助 | ✅ |
-| `NIM_API_KEY` | NVIDIA NIM API 密钥，embedding | ✅ |
+| 变量名                       | 说明                                                         | 必需 |
+| ---------------------------- | ------------------------------------------------------------ | ---- |
+| `ASTRA_DB_API_ENDPOINT`      | Astra DB Data API 端点                                       | ✅   |
+| `ASTRA_DB_APPLICATION_TOKEN` | Astra DB 访问令牌                                            | ✅   |
+| `ASTRA_DB_COLLECTION`        | 向量集合名称（须为 2048 维，见 `yarn astra:init-embedding`） | ✅   |
+| `GROQ_API_KEY`               | Groq API 密钥，聊天主模型 + RAG 辅助                         | ✅   |
+| `NIM_API_KEY`                | NVIDIA NIM API 密钥，embedding                               | ✅   |
 
 ### 知识库 / 入库 Worker 需要
 
-| 变量名 | 说明 | 必需场景 |
-| --- | --- | --- |
-| `DATABASE_URL` | PostgreSQL 连接串 | `/kb` 文档 CRUD、异步入库 |
-| `REDIS_URL` | Redis 连接串 | BullMQ 任务队列 |
-| `ASTRA_DB_NAMESPACE` | Astra DB Keyspace 名称 | 运行 `yarn seed*` 时需要 |
+| 变量名               | 说明                   | 必需场景                  |
+| -------------------- | ---------------------- | ------------------------- |
+| `DATABASE_URL`       | PostgreSQL 连接串      | `/kb` 文档 CRUD、异步入库 |
+| `REDIS_URL`          | Redis 连接串           | BullMQ 任务队列           |
+| `ASTRA_DB_NAMESPACE` | Astra DB Keyspace 名称 | 运行 `yarn seed*` 时需要  |
 
 ### 可选配置
 
-| 变量名 | 说明 | 默认值 |
-| --- | --- | --- |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | 备用（当前默认未使用） | — |
-| `VECTOR_SEARCH_TIMEOUT_MS` | 向量检索主超时（毫秒），含 embedding 与 Astra 查询；超时后另有 10s 宽限期 | `12000` |
-| `EMBEDDING_CACHE_SIZE` | 进程内 embedding LRU 缓存容量 | `100` |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST 地址，用于限流 | 未配置则禁用限流 |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST Token | 未配置则禁用限流 |
-| `ENABLE_LLM_QUERY_ROUTER` | 模糊问法 LLM 路由 | `true` |
-| `ENABLE_EMBEDDING_ROUTE_PRECHECK` | 路由前 embedding Top-1 预检 | `true` |
-| `ENABLE_HYDE` / `ENABLE_MULTI_QUERY` / `ENABLE_RERANKER` | RAG 增强开关 | `false` |
-| `LANGSMITH_API_KEY` | LangSmith 追踪（检索 + ingest） | 未配置则关闭 |
-| `LANGSMITH_TRACING` | 设为 `true` 启用 LangSmith | `false` |
-| `LANGSMITH_PROJECT` | LangSmith 项目名 | `personal-gpt-v1.0` |
+| 变量名                                                   | 说明                                                                      | 默认值              |
+| -------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------- |
+| `GOOGLE_GENERATIVE_AI_API_KEY`                           | 备用（当前默认未使用）                                                    | —                   |
+| `VECTOR_SEARCH_TIMEOUT_MS`                               | 向量检索主超时（毫秒），含 embedding 与 Astra 查询；超时后另有 10s 宽限期 | `12000`             |
+| `EMBEDDING_CACHE_SIZE`                                   | 进程内 embedding LRU 缓存容量                                             | `100`               |
+| `UPSTASH_REDIS_REST_URL`                                 | Upstash Redis REST 地址，用于限流                                         | 未配置则禁用限流    |
+| `UPSTASH_REDIS_REST_TOKEN`                               | Upstash Redis REST Token                                                  | 未配置则禁用限流    |
+| `ENABLE_LLM_QUERY_ROUTER`                                | 模糊问法 LLM 路由                                                         | `true`              |
+| `ENABLE_EMBEDDING_ROUTE_PRECHECK`                        | 路由前 embedding Top-1 预检                                               | `true`              |
+| `ENABLE_HYDE` / `ENABLE_MULTI_QUERY` / `ENABLE_RERANKER` | RAG 增强开关                                                              | `false`             |
+| `LANGSMITH_API_KEY`                                      | LangSmith 追踪（检索 + ingest）                                           | 未配置则关闭        |
+| `LANGSMITH_TRACING`                                      | 设为 `true` 启用 LangSmith                                                | `false`             |
+| `LANGSMITH_PROJECT`                                      | LangSmith 项目名                                                          | `personal-gpt-v1.0` |
 
 ## 产品路线图 (Product Roadmap)
 
@@ -303,15 +303,15 @@ DOTENV_CONFIG_PATH=../../.env yarn workspace web migration:run
 
 **目标**：企业知识库数据层——文档上传、异步入库、知识库 CRUD、聊天引用溯源。
 
-| 模块 | 状态 |
-| --- | --- |
-| 基础设施 | ✅ Monorepo + Docker Compose + BullMQ Worker |
-| 数据模型 | ✅ workspaceId 全链路 |
-| 文档导入 | ✅ PDF/MD/TXT/DOCX |
-| 知识库 UI | ✅ `/kb` 上传/列表/筛选/CRUD |
-| RAG | ✅ 引用 + 三层路由 + 可选 HyDE/Multi-Query/Reranker |
-| 工程 | ✅ CI + 回归 8 项 + LangSmith 就绪 |
-| Agent 骨架 | ✅ `yarn dev:agent` 透传 |
+| 模块       | 状态                                                |
+| ---------- | --------------------------------------------------- |
+| 基础设施   | ✅ Monorepo + Docker Compose + BullMQ Worker        |
+| 数据模型   | ✅ workspaceId 全链路                               |
+| 文档导入   | ✅ PDF/MD/TXT/DOCX                                  |
+| 知识库 UI  | ✅ `/kb` 上传/列表/筛选/CRUD                        |
+| RAG        | ✅ 引用 + 三层路由 + 可选 HyDE/Multi-Query/Reranker |
+| 工程       | ✅ CI + 回归 8 项 + LangSmith 就绪                  |
+| Agent 骨架 | ✅ `yarn dev:agent` 透传                            |
 
 **延期项**：SemanticChunker、MinIO、agent-service Docker 镜像 → v3.0/v4.0
 

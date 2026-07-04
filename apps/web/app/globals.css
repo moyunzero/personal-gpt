@@ -28,8 +28,25 @@
 
   /* ---------- 字体 token ---------- */
   /* next/font 在 layout.tsx 中注入 --font-serif / --font-sans / --font-mono */
-  --font-display: var(--font-serif, "EB Garamond", "Tiempos Headline", Garamond, "Times New Roman", serif);
-  --font-body: var(--font-sans, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif);
+  --font-display: var(
+    --font-serif,
+    "EB Garamond",
+    "Tiempos Headline",
+    Garamond,
+    "Times New Roman",
+    serif
+  );
+  --font-body: var(
+    --font-sans,
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    Roboto,
+    sans-serif
+  );
   --font-mono: var(--font-jet, "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace);
 
   /* ---------- 圆角 ---------- */
@@ -51,7 +68,7 @@
 
   /* ---------- 布局尺寸 ---------- */
   --header-height: 60px;
-  --content-max: 760px;        /* 编辑栏目宽度——比营销端 1200 窄，聚焦阅读 */
+  --content-max: 760px; /* 编辑栏目宽度——比营销端 1200 窄，聚焦阅读 */
 }
 
 /* ============================================================
@@ -139,7 +156,7 @@ main {
 /* ---------- chat-stream：消息滚动区 ---------- */
 .chat-stream {
   flex: 1;
-  min-height: 0;             /* flex child 内能正确 overflow */
+  min-height: 0; /* flex child 内能正确 overflow */
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
@@ -203,11 +220,7 @@ main {
 .composer {
   flex-shrink: 0;
   padding: var(--space-md) var(--space-lg) var(--space-lg);
-  background: linear-gradient(
-    to bottom,
-    rgba(250, 249, 245, 0) 0%,
-    var(--color-canvas) 30%
-  );
+  background: linear-gradient(to bottom, rgba(250, 249, 245, 0) 0%, var(--color-canvas) 30%);
 }
 
 .composer-inner {
@@ -224,7 +237,9 @@ main {
   background-color: var(--color-canvas);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .composer-shell:focus-within {
@@ -267,7 +282,9 @@ main {
   color: var(--color-on-primary);
   cursor: pointer;
   padding: 0;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .composer-send:hover:not(:disabled) {
@@ -294,7 +311,9 @@ main {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .composer-hint {
@@ -337,7 +356,7 @@ main {
   border-radius: var(--radius-md);
   background-color: var(--color-surface-card);
   color: var(--color-ink);
-  margin-top: 2px;             /* 与首行文字光学对齐 */
+  margin-top: 2px; /* 与首行文字光学对齐 */
 }
 
 .assistant-avatar svg {
@@ -420,9 +439,15 @@ main {
   line-height: 1.25;
   margin: 1em 0 0.5em;
 }
-.message-body h1 { font-size: 24px; }
-.message-body h2 { font-size: 20px; }
-.message-body h3 { font-size: 18px; }
+.message-body h1 {
+  font-size: 24px;
+}
+.message-body h2 {
+  font-size: 20px;
+}
+.message-body h3 {
+  font-size: 18px;
+}
 .message-body h1:first-child,
 .message-body h2:first-child,
 .message-body h3:first-child {
@@ -600,8 +625,10 @@ main {
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease,
-              transform 0.1s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .suggestion-card:hover {
@@ -637,7 +664,9 @@ main {
 }
 
 @keyframes dot-bounce {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     opacity: 0.3;
     transform: translateY(0);
   }
@@ -708,7 +737,9 @@ main {
   text-decoration: none;
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-md);
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .app-header-link:hover {
@@ -861,7 +892,9 @@ main {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .kb-card-accordion:hover {
@@ -1060,7 +1093,9 @@ main {
   background: transparent;
   color: var(--color-muted);
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .kb-combobox-chevron {
@@ -1183,7 +1218,9 @@ main {
   border: 1px solid var(--color-hairline-soft);
   border-radius: var(--radius-lg);
   background: var(--color-canvas);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .kb-doc-row:hover {
@@ -1321,7 +1358,9 @@ main {
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .kb-btn-ghost {
@@ -1415,5 +1454,9 @@ main {
 /* ============================================================
  * 工具类（保留给 error.tsx 兜底使用）
  * ============================================================ */
-.flex { display: flex; }
-.flex-1 { flex: 1; }
+.flex {
+  display: flex;
+}
+.flex-1 {
+  flex: 1;
+}

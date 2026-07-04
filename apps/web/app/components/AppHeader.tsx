@@ -2,12 +2,7 @@ import Link from "next/link";
 
 /** Anthropic 风格 spike-mark（与 chat 页一致） */
 export const SpikeMark = ({ className = "" }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden="true"
-  >
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M12 2 L13 11 L22 12 L13 13 L12 22 L11 13 L2 12 L11 11 Z" />
   </svg>
 );

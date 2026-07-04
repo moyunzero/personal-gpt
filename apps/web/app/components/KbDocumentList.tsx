@@ -37,9 +37,7 @@ const STATUS_LABEL: Record<KbDocumentItem["status"], string> = {
 };
 
 /** SSE 终态后从 REST 拉权威 document（含 chunkCount） */
-async function fetchDocumentById(
-  documentId: string,
-): Promise<KbDocumentItem | null> {
+async function fetchDocumentById(documentId: string): Promise<KbDocumentItem | null> {
   const res = await fetch(`/api/kb/documents/${documentId}`);
   const data = (await res.json()) as { document?: KbDocumentItem };
   if (!res.ok || !data.document) return null;
@@ -68,7 +66,10 @@ function KbDocumentRow({
   const [editTags, setEditTags] = useState(item.tags.join(", "));
 
   const parseTags = (raw: string) =>
-    raw.split(",").map((t) => t.trim()).filter(Boolean);
+    raw
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
 
   const resetEditState = () => {
     setEditTitle(item.title);
@@ -90,9 +91,7 @@ function KbDocumentRow({
 
   // 终态从 props 推导；进行中用 SSE 流式进度
   const progress =
-    item.status === "ready"
-      ? 100
-      : (streamProgress ?? item.latestJob?.progress ?? 0);
+    item.status === "ready" ? 100 : (streamProgress ?? item.latestJob?.progress ?? 0);
   const jobError = item.latestJob?.error ?? streamError;
 
   const showProgress =
@@ -272,21 +271,13 @@ function KbDocumentRow({
                 >
                   保存
                 </button>
-                <button
-                  type="button"
-                  className="kb-btn kb-btn-ghost"
-                  onClick={cancelEditing}
-                >
+                <button type="button" className="kb-btn kb-btn-ghost" onClick={cancelEditing}>
                   取消
                 </button>
               </div>
             </div>
           ) : (
-            <button
-              type="button"
-              className="kb-doc-title"
-              onClick={startEditing}
-            >
+            <button type="button" className="kb-doc-title" onClick={startEditing}>
               {item.title}
             </button>
           )}
@@ -295,9 +286,7 @@ function KbDocumentRow({
             <span className={`kb-status kb-status-${item.status}`}>
               {STATUS_LABEL[item.status]}
             </span>
-            {item.category ? (
-              <span className="kb-doc-tag">{item.category}</span>
-            ) : null}
+            {item.category ? <span className="kb-doc-tag">{item.category}</span> : null}
             {item.tags?.map((tag) => (
               <span key={tag} className="kb-doc-tag">
                 {tag}
@@ -318,9 +307,7 @@ function KbDocumentRow({
             </div>
           ) : null}
 
-          {item.status === "failed" && jobError ? (
-            <p className="kb-doc-error">{jobError}</p>
-          ) : null}
+          {item.status === "failed" && jobError ? <p className="kb-doc-error">{jobError}</p> : null}
         </div>
 
         <div className="kb-doc-actions">
@@ -334,11 +321,7 @@ function KbDocumentRow({
               {reindexing ? "索引中…" : item.status === "failed" ? "重试" : "重新索引"}
             </button>
           )}
-          <button
-            type="button"
-            className="kb-btn kb-btn-ghost"
-            onClick={() => setDeleteOpen(true)}
-          >
+          <button type="button" className="kb-btn kb-btn-ghost" onClick={() => setDeleteOpen(true)}>
             删除
           </button>
         </div>
@@ -376,9 +359,7 @@ export default function KbDocumentList({
   );
 
   if (items.length === 0) {
-    return (
-      <p className="kb-empty-list">暂无文档。上传第一个文件开始构建知识库。</p>
-    );
+    return <p className="kb-empty-list">暂无文档。上传第一个文件开始构建知识库。</p>;
   }
 
   return (

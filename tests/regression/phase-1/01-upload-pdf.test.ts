@@ -39,8 +39,7 @@ vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/upsert", () => ({
 }));
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/tracing", () => ({
-  traceIngestStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) =>
-    fn(),
+  traceIngestStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) => fn(),
 }));
 
 import { IngestProcessor } from "../../../apps/ingest-worker/src/ingest/ingest.processor";
@@ -111,9 +110,7 @@ describe("Phase 1 regression #1: upload PDF → ready with chunks", () => {
     expect(embedMock).toHaveBeenCalledWith(["chunk-a", "chunk-b", "chunk-c"]);
     expect(upsertMock).toHaveBeenCalled();
 
-    const readyUpdate = documentUpdateMock.mock.calls.find(
-      (call) => call[1]?.status === "ready",
-    );
+    const readyUpdate = documentUpdateMock.mock.calls.find((call) => call[1]?.status === "ready");
     expect(readyUpdate).toBeDefined();
     expect(readyUpdate?.[1]?.chunkCount).toBeGreaterThan(0);
 

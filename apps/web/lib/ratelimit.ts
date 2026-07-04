@@ -16,10 +16,7 @@ const WINDOW = "60 s" as const;
  * 抽成接收参数的函数是为了让单测能独立验证 null 分支，
  * 而不必通过 vi.stubEnv + resetModules 这类绕弯路径。
  */
-export function buildLimiter(
-  url: string | undefined,
-  token: string | undefined,
-): Ratelimit | null {
+export function buildLimiter(url: string | undefined, token: string | undefined): Ratelimit | null {
   if (!url || !token) return null;
   return new Ratelimit({
     redis: new Redis({ url, token }),
@@ -38,10 +35,7 @@ export function buildLimiter(
  * 这是有意为之：限流是降级特性，本地开发 / Marketplace 未配 / Upstash 临时挂了
  * 都不应卡用户。
  */
-const limiter = buildLimiter(
-  env.UPSTASH_REDIS_REST_URL,
-  env.UPSTASH_REDIS_REST_TOKEN,
-);
+const limiter = buildLimiter(env.UPSTASH_REDIS_REST_URL, env.UPSTASH_REDIS_REST_TOKEN);
 
 export interface RateLimitResult {
   success: boolean;
@@ -86,9 +80,7 @@ export async function checkRateLimit(
 
   try {
     const { success, limit, remaining, reset } = await limiter.limit(identifier);
-    const retryAfterSeconds = success
-      ? 0
-      : Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+    const retryAfterSeconds = success ? 0 : Math.max(1, Math.ceil((reset - Date.now()) / 1000));
 
     if (success) {
       log.metric("ratelimit.allowed", { identifier, remaining });

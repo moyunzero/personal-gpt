@@ -42,9 +42,7 @@ export default function Home() {
         <div className="chat-stream-inner">
           {noMessages ? (
             <div className="empty-state">
-              <h1 className="starter-headline">
-                做个树洞吧～
-              </h1>
+              <h1 className="starter-headline">做个树洞吧～</h1>
               <p className="starter-sub">
                 也可以了解我的经历和作品。挑一个话题开始，或者直接告诉我你最近在想什么。
               </p>
@@ -57,9 +55,7 @@ export default function Home() {
                   key={message.id || `message-${index}`}
                   message={message}
                   isStreaming={
-                    isLoading &&
-                    index === messages.length - 1 &&
-                    message.role === "assistant"
+                    isLoading && index === messages.length - 1 && message.role === "assistant"
                   }
                 />
               ))}
@@ -88,12 +84,7 @@ export default function Home() {
               aria-label="发送消息"
             >
               {isLoading ? (
-                <svg
-                  className="spinner"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden="true"
-                >
+                <svg className="spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <circle
                     cx="12"
                     cy="12"
@@ -119,9 +110,7 @@ export default function Home() {
               )}
             </button>
           </div>
-          <p className="composer-hint">
-            按 Enter 发送 · 内容可能不准确，仅供参考
-          </p>
+          <p className="composer-hint">按 Enter 发送 · 内容可能不准确，仅供参考</p>
         </div>
       </form>
     </main>

@@ -75,7 +75,11 @@ describe("VectorStore workspace isolation", () => {
     });
 
     expect(find).toHaveBeenCalledTimes(2);
-    expect(find).toHaveBeenNthCalledWith(1, { workspaceId: { $eq: "00000000-0000-4000-8000-000000000001" } }, expect.any(Object));
+    expect(find).toHaveBeenNthCalledWith(
+      1,
+      { workspaceId: { $eq: "00000000-0000-4000-8000-000000000001" } },
+      expect.any(Object),
+    );
     expect(find).toHaveBeenNthCalledWith(2, {}, expect.any(Object));
     expect(hits).toHaveLength(1);
     expect(hits[0]?.text).toBe("legacy");

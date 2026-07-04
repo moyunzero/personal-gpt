@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import {
-  classifyVectorError,
-  formatContextBlock,
-  formatContextBlocks,
-} from "./context";
+import { classifyVectorError, formatContextBlock, formatContextBlocks } from "./context";
 
 describe("formatContextBlock", () => {
   it("把文档包成带 source + trusted=false 的 <context> 标签", () => {
@@ -75,22 +71,16 @@ describe("formatContextBlocks", () => {
 
 describe("classifyVectorError", () => {
   it("识别 Vector search timeout", () => {
-    expect(classifyVectorError(new Error("Vector search timeout"))).toBe(
-      "timeout",
-    );
+    expect(classifyVectorError(new Error("Vector search timeout"))).toBe("timeout");
   });
 
   it("识别大小写不同的 timeout", () => {
-    expect(classifyVectorError(new Error("Request TIMEOUT after 5s"))).toBe(
-      "timeout",
-    );
+    expect(classifyVectorError(new Error("Request TIMEOUT after 5s"))).toBe("timeout");
   });
 
   it("其他错误分类为 api-error", () => {
     expect(classifyVectorError(new Error("ECONNREFUSED"))).toBe("api-error");
-    expect(classifyVectorError(new Error("embeddings failed"))).toBe(
-      "api-error",
-    );
+    expect(classifyVectorError(new Error("embeddings failed"))).toBe("api-error");
   });
 
   it("非 Error 也走 api-error", () => {

@@ -25,18 +25,14 @@ const EXT_TO_MIME: Record<string, string> = {
   ".md": "text/markdown",
   ".markdown": "text/markdown",
   ".txt": "text/plain",
-  ".docx":
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 
 /**
  * 浏览器/Playwright 上传时 `file.type` 常为 application/octet-stream；
  * 按扩展名回退到白名单 MIME。
  */
-export function normalizeUploadMime(
-  fileName: string,
-  reportedType: string,
-): string {
+export function normalizeUploadMime(fileName: string, reportedType: string): string {
   const trimmed = reportedType?.trim() ?? "";
   if (trimmed && trimmed !== "application/octet-stream") {
     return trimmed;

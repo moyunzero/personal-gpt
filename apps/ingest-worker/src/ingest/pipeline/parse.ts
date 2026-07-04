@@ -21,10 +21,7 @@ function assertAllowedMime(mimeType: string): void {
 function resolveSafeFilePath(filePath: string): string {
   const resolved = path.resolve(filePath);
   const uploadsResolved = path.resolve(UPLOADS_ROOT);
-  if (
-    resolved !== uploadsResolved &&
-    !resolved.startsWith(`${uploadsResolved}${path.sep}`)
-  ) {
+  if (resolved !== uploadsResolved && !resolved.startsWith(`${uploadsResolved}${path.sep}`)) {
     throw new Error(`filePath outside uploads directory: ${filePath}`);
   }
   return resolved;
@@ -100,10 +97,7 @@ export async function parseDocument(filePath: string, mimeType: string): Promise
 }
 
 /** 测试/ fixture 用：跳过 uploads 路径校验 */
-export async function parseDocumentUnsafe(
-  filePath: string,
-  mimeType: string,
-): Promise<string> {
+export async function parseDocumentUnsafe(filePath: string, mimeType: string): Promise<string> {
   assertAllowedMime(mimeType);
 
   const parse = async (): Promise<string> => {

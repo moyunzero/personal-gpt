@@ -2,10 +2,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { FetchFunction } from "@ai-sdk/provider-utils";
 import { embed, embedMany } from "ai";
 
-import {
-  NVIDIA_EMBEDDING_MODEL,
-  NVIDIA_NIM_BASE_URL,
-} from "./embedding-models";
+import { NVIDIA_EMBEDDING_MODEL, NVIDIA_NIM_BASE_URL } from "./embedding-models";
 
 type NimInputType = "query" | "passage";
 type EmbeddingModel = Parameters<typeof embed>[0]["model"];

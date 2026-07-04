@@ -4,16 +4,16 @@
 **结果**：**8/8 通过** ✅  
 **封板状态**：v1.0 核心功能已封板（见 `docs/enterprise-roadmap.md` v1.0 状态）
 
-| # | 环节 | 结果 |
-|---|------|------|
-| 1 | 聊天首页 | ✅ |
-| 2 | 问候无 citation | ✅ |
-| 3 | 知识库页 | ✅ |
-| 4 | 上传文档 | ✅ |
-| 5 | 导入→就绪 | ✅ |
-| 6 | MoCode + 引用卡片 | ✅ |
-| 7 | 删除文档 | ✅ |
-| 8 | 损坏 PDF 失败态 | ✅ |
+| #   | 环节              | 结果 |
+| --- | ----------------- | ---- |
+| 1   | 聊天首页          | ✅   |
+| 2   | 问候无 citation   | ✅   |
+| 3   | 知识库页          | ✅   |
+| 4   | 上传文档          | ✅   |
+| 5   | 导入→就绪         | ✅   |
+| 6   | MoCode + 引用卡片 | ✅   |
+| 7   | 删除文档          | ✅   |
+| 8   | 损坏 PDF 失败态   | ✅   |
 
 ## 自动化命令
 
@@ -25,14 +25,14 @@ yarn acceptance:phase-1    # v1.0 Playwright E2E（脚本名保留兼容；需 d
 
 ## 回归测试清单（`tests/regression/phase-1/`，v1.0 回归集）
 
-| # | 文件 | 覆盖 |
-|---|------|------|
-| 1 | `01-upload-pdf.test.ts` | PDF 上传入库 |
-| 2 | `02-citation-question.test.ts` | 知识类问题 citation |
-| 3 | `03-greeting-no-citation.test.ts` | 寒暄不检索 |
-| 4 | `04-delete-no-citation.test.ts` | 删除后无 citation |
-| 5 | `05-corrupt-pdf.test.ts` | 损坏 PDF 失败态 |
-| 6 | `06-general-knowledge-direct.test.ts` | 通用知识 direct 路由 |
+| #   | 文件                                  | 覆盖                 |
+| --- | ------------------------------------- | -------------------- |
+| 1   | `01-upload-pdf.test.ts`               | PDF 上传入库         |
+| 2   | `02-citation-question.test.ts`        | 知识类问题 citation  |
+| 3   | `03-greeting-no-citation.test.ts`     | 寒暄不检索           |
+| 4   | `04-delete-no-citation.test.ts`       | 删除后无 citation    |
+| 5   | `05-corrupt-pdf.test.ts`              | 损坏 PDF 失败态      |
+| 6   | `06-general-knowledge-direct.test.ts` | 通用知识 direct 路由 |
 
 ## 环境要点
 

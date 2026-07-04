@@ -22,8 +22,7 @@ vi.mock("@personal-gpt/shared/ai/embeddings", () => ({
 }));
 
 vi.mock("@/lib/chat/tracing", () => ({
-  traceRetrieveStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) =>
-    fn(),
+  traceRetrieveStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) => fn(),
 }));
 
 vi.mock("@ai-sdk/google", () => ({
@@ -81,10 +80,7 @@ describe("Phase 1 regression #2: citation on relevant question", () => {
       },
     ]);
 
-    const result = await getRelevantContext(
-      "请介绍一下 Personal GPT 项目的核心功能",
-      "reg-2",
-    );
+    const result = await getRelevantContext("请介绍一下 Personal GPT 项目的核心功能", "reg-2");
 
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") return;
@@ -102,9 +98,7 @@ describe("Phase 1 regression #2: citation on relevant question", () => {
 
     const stream = createChatStream({
       systemPrompt: "system",
-      messages: [
-        { role: "user", content: "请介绍一下 Personal GPT 项目的核心功能" },
-      ],
+      messages: [{ role: "user", content: "请介绍一下 Personal GPT 项目的核心功能" }],
       requestId: "reg-2",
       citations: result.citations as Citation[],
     });

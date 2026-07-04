@@ -23,11 +23,7 @@ describe("traceRetrieveStep (ENG-01)", () => {
     const fn = vi.fn().mockResolvedValue({ hits: 3 });
 
     await expect(
-      traceRetrieveStep(
-        "search",
-        { workspaceId: "ws-1", requestId: "req-1" },
-        fn,
-      ),
+      traceRetrieveStep("search", { workspaceId: "ws-1", requestId: "req-1" }, fn),
     ).resolves.toEqual({ hits: 3 });
 
     expect(fn).toHaveBeenCalledOnce();
@@ -58,11 +54,7 @@ describe("traceRetrieveStep (ENG-01)", () => {
     const fn = vi.fn().mockResolvedValue("embedded");
 
     await expect(
-      traceRetrieveStep(
-        "embed",
-        { workspaceId: "ws-1", requestId: "req-1" },
-        fn,
-      ),
+      traceRetrieveStep("embed", { workspaceId: "ws-1", requestId: "req-1" }, fn),
     ).resolves.toBe("embedded");
 
     expect(traceableMock).toHaveBeenCalledOnce();

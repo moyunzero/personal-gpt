@@ -45,16 +45,12 @@ describe("getClientIp", () => {
   }
 
   it("优先取 x-forwarded-for 首项", () => {
-    const ip = getClientIp(
-      makeReq({ "x-forwarded-for": "203.0.113.7, 10.0.0.1, 10.0.0.2" }),
-    );
+    const ip = getClientIp(makeReq({ "x-forwarded-for": "203.0.113.7, 10.0.0.1, 10.0.0.2" }));
     expect(ip).toBe("203.0.113.7");
   });
 
   it("x-forwarded-for 单值也支持", () => {
-    expect(getClientIp(makeReq({ "x-forwarded-for": "198.51.100.42" }))).toBe(
-      "198.51.100.42",
-    );
+    expect(getClientIp(makeReq({ "x-forwarded-for": "198.51.100.42" }))).toBe("198.51.100.42");
   });
 
   it("x-forwarded-for 缺失时 fallback 到 x-real-ip", () => {
@@ -71,8 +67,6 @@ describe("getClientIp", () => {
   });
 
   it("自动 trim 多余空格", () => {
-    expect(getClientIp(makeReq({ "x-forwarded-for": "  203.0.113.7  " }))).toBe(
-      "203.0.113.7",
-    );
+    expect(getClientIp(makeReq({ "x-forwarded-for": "  203.0.113.7  " }))).toBe("203.0.113.7");
   });
 });

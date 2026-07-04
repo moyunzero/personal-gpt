@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import prettier from "eslint-config-prettier";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -24,6 +25,8 @@ const eslintConfig = defineConfig([
       "no-console": ["error", { allow: ["warn", "error"] }],
     },
   },
+  // 关闭与 Prettier 冲突的 ESLint 格式化规则
+  prettier,
 ]);
 
 export default eslintConfig;

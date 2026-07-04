@@ -20,8 +20,7 @@ const MIME_EXT_MAP: Record<string, string> = {
   "application/pdf": "pdf",
   "text/markdown": "md",
   "text/plain": "txt",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-    "docx",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
 };
 
 export class UploadValidationError extends Error {
@@ -73,10 +72,7 @@ export function validateUploadFile(
     throw new UploadValidationError("empty_file", "文件为空");
   }
   if (!options.allowedMimeTypes.includes(file.type)) {
-    throw new UploadValidationError(
-      "mime_not_allowed",
-      `不支持的文件类型：${file.type}`,
-    );
+    throw new UploadValidationError("mime_not_allowed", `不支持的文件类型：${file.type}`);
   }
   if (file.size > options.maxBytes) {
     throw new UploadValidationError(
@@ -89,10 +85,7 @@ export function validateUploadFile(
 function resolveExtension(mimeType: string): string {
   const ext = MIME_EXT_MAP[mimeType];
   if (!ext) {
-    throw new UploadValidationError(
-      "mime_not_allowed",
-      `无法解析扩展名：${mimeType}`,
-    );
+    throw new UploadValidationError("mime_not_allowed", `无法解析扩展名：${mimeType}`);
   }
   return ext;
 }
@@ -106,10 +99,7 @@ function parseTagsParam(raw: string | null): string[] | undefined {
 }
 
 /** 将 document 行映射为 API JSON（含最近 ingest job） */
-export function serializeDocumentRow(
-  document: DocumentEntity,
-  job: IngestJobEntity | null,
-) {
+export function serializeDocumentRow(document: DocumentEntity, job: IngestJobEntity | null) {
   return {
     id: document.id,
     workspaceId: document.workspaceId,
@@ -134,10 +124,7 @@ export function serializeDocumentRow(
   };
 }
 
-async function saveUploadToDisk(
-  file: UploadFileInput,
-  mimeType: string,
-): Promise<string> {
+async function saveUploadToDisk(file: UploadFileInput, mimeType: string): Promise<string> {
   const ext = resolveExtension(mimeType);
   const fileName = `${randomUUID()}.${ext}`;
   const uploadsDir = getUploadsDir();
@@ -167,10 +154,7 @@ async function enqueueIngestJob(
 
   const queue = getIngestQueue();
   const bullJob = await queue.add(`ingest-${document.id}`, payload);
-  await jobRepo.update(
-    { id: ingestJob.id },
-    { bullJobId: String(bullJob.id) },
-  );
+  await jobRepo.update({ id: ingestJob.id }, { bullJobId: String(bullJob.id) });
 
   ingestJob.bullJobId = String(bullJob.id);
   return ingestJob;
@@ -227,11 +211,9 @@ export async function listDocuments(params: ListDocumentsParams = {}) {
   const docRepo = ds.getRepository(DocumentEntity);
   const jobRepo = ds.getRepository(IngestJobEntity);
 
-  const qb = docRepo
-    .createQueryBuilder("doc")
-    .where("doc.workspace_id = :workspaceId", {
-      workspaceId: DEFAULT_WORKSPACE_ID,
-    });
+  const qb = docRepo.createQueryBuilder("doc").where("doc.workspace_id = :workspaceId", {
+    workspaceId: DEFAULT_WORKSPACE_ID,
+  });
 
   if (params.category) {
     qb.andWhere("doc.category = :category", { category: params.category });
@@ -270,18 +252,14 @@ export async function listDocuments(params: ListDocumentsParams = {}) {
   }
 
   return {
-    items: documents.map((doc) =>
-      serializeDocumentRow(doc, latestJobByDoc.get(doc.id) ?? null),
-    ),
+    items: documents.map((doc) => serializeDocumentRow(doc, latestJobByDoc.get(doc.id) ?? null)),
     page,
     limit,
     total,
   };
 }
 
-export async function getDocumentById(
-  documentId: string,
-): Promise<DocumentWithJob | null> {
+export async function getDocumentById(documentId: string): Promise<DocumentWithJob | null> {
   const ds = await getDataSource();
   const docRepo = ds.getRepository(DocumentEntity);
   const jobRepo = ds.getRepository(IngestJobEntity);

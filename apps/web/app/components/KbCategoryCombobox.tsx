@@ -31,9 +31,7 @@ export default function KbCategoryCombobox({
   const listId = useId();
 
   const query = value.trim().toLowerCase();
-  const filtered = options.filter(
-    (opt) => !query || opt.toLowerCase().includes(query),
-  );
+  const filtered = options.filter((opt) => !query || opt.toLowerCase().includes(query));
 
   useEffect(() => {
     if (!open) return;
@@ -74,10 +72,7 @@ export default function KbCategoryCombobox({
   const showMenu = open && filtered.length > 0;
 
   return (
-    <div
-      className={`kb-combobox${className ? ` ${className}` : ""}`}
-      ref={containerRef}
-    >
+    <div className={`kb-combobox${className ? ` ${className}` : ""}`} ref={containerRef}>
       <div className="kb-combobox-control">
         <input
           ref={inputRef}

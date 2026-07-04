@@ -35,9 +35,7 @@ export function isLangSmithTracingActive(): boolean {
   return ensureLangSmithEnv();
 }
 
-function cleanMetadata(
-  meta: Record<string, string | undefined>,
-): Record<string, string> {
+function cleanMetadata(meta: Record<string, string | undefined>): Record<string, string> {
   return Object.fromEntries(
     Object.entries(meta).filter((entry): entry is [string, string] => !!entry[1]),
   );

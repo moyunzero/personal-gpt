@@ -12,9 +12,7 @@ let ingestQueueEvents: QueueEvents | null = null;
 function getRedisConnection(): { url: string } {
   const url = process.env.REDIS_URL;
   if (!url) {
-    throw new Error(
-      "[kb/queue] REDIS_URL 未设置。请 cp .env.example .env 并 yarn docker:up。",
-    );
+    throw new Error("[kb/queue] REDIS_URL 未设置。请 cp .env.example .env 并 yarn docker:up。");
   }
   return { url };
 }

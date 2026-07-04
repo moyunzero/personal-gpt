@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AppHeader from "../components/AppHeader";
 import KbCategoryCombobox from "../components/KbCategoryCombobox";
-import KbDocumentList, {
-  type KbDocumentItem,
-} from "../components/KbDocumentList";
+import KbDocumentList, { type KbDocumentItem } from "../components/KbDocumentList";
 import KbUploadZone from "../components/KbUploadZone";
 
 type ListResponse = {
@@ -27,12 +25,7 @@ export default function KbPage() {
   const [tags, setTags] = useState("");
 
   const categories = useMemo(
-    () =>
-      [
-        ...new Set(
-          items.map((i) => i.category).filter((c): c is string => Boolean(c)),
-        ),
-      ],
+    () => [...new Set(items.map((i) => i.category).filter((c): c is string => Boolean(c)))],
     [items],
   );
 
@@ -81,9 +74,7 @@ export default function KbPage() {
       <div className="kb-content">
         <header className="kb-page-header">
           <h1 className="kb-page-title">知识库</h1>
-          <p className="kb-page-sub">
-            上传文档后自动切块入库，聊天时可基于这些内容回答。
-          </p>
+          <p className="kb-page-sub">上传文档后自动切块入库，聊天时可基于这些内容回答。</p>
         </header>
 
         <KbUploadZone onUploaded={handleUploaded} />
@@ -132,11 +123,7 @@ export default function KbPage() {
         {loading ? <p className="kb-loading">加载中…</p> : null}
         {error ? <p className="kb-upload-error">{error}</p> : null}
 
-        <KbDocumentList
-          items={items}
-          categories={categories}
-          onItemsChange={setItems}
-        />
+        <KbDocumentList items={items} categories={categories} onItemsChange={setItems} />
       </div>
     </main>
   );

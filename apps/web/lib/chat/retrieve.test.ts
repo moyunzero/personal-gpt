@@ -69,20 +69,20 @@ describe("getRelevantContext", () => {
   });
 
   it("throws when workspaceId is missing", async () => {
-    await expect(getRelevantContext("任意问题", "req-3", "")).rejects.toThrow(
-      /workspaceId/,
-    );
+    await expect(getRelevantContext("任意问题", "req-3", "")).rejects.toThrow(/workspaceId/);
   });
 
   it("returns no-docs when top1 similarity is below pre-check threshold", async () => {
-    searchMock.mockResolvedValueOnce([
-      {
-        text: "弱相关段落",
-        similarity: 0.5,
-        source: "legacy",
-        title: "弱命中",
-      },
-    ]).mockResolvedValueOnce([]);
+    searchMock
+      .mockResolvedValueOnce([
+        {
+          text: "弱相关段落",
+          similarity: 0.5,
+          source: "legacy",
+          title: "弱命中",
+        },
+      ])
+      .mockResolvedValueOnce([]);
 
     const result = await getRelevantContext("介绍一下某个项目背景", "req-4");
 

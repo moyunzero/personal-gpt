@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 
-import {
-  reindexDocument,
-  serializeDocumentRow,
-} from "@/lib/kb/documents.service";
+import { reindexDocument, serializeDocumentRow } from "@/lib/kb/documents.service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -13,10 +10,7 @@ export async function POST(_req: Request, context: RouteContext) {
     const { id } = await context.params;
     const result = await reindexDocument(id);
     if (!result) {
-      return NextResponse.json(
-        { error: "文档不存在或缺少源文件" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "文档不存在或缺少源文件" }, { status: 404 });
     }
 
     const { job } = result;

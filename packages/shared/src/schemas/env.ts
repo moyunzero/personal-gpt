@@ -46,7 +46,12 @@ export const SharedEnvSchema = z.object({
   LANGSMITH_PROJECT: z.string().min(1).optional(),
 
   /** 单文件上传上限，默认 20MB（D-13） */
-  UPLOAD_MAX_BYTES: z.coerce.number().int().min(1).max(100 * 1024 * 1024).default(20_971_520),
+  UPLOAD_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100 * 1024 * 1024)
+    .default(20_971_520),
 
   /**
    * 允许上传的 MIME 白名单。逗号分隔，默认 PDF/MD/TXT/DOCX。
@@ -55,7 +60,10 @@ export const SharedEnvSchema = z.object({
     .string()
     .optional()
     .transform((v) =>
-      (v ?? "application/pdf,text/markdown,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+      (
+        v ??
+        "application/pdf,text/markdown,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      )
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean),

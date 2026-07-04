@@ -23,8 +23,7 @@ vi.mock("@personal-gpt/shared/ai/embeddings", () => ({
 }));
 
 vi.mock("@/lib/chat/tracing", () => ({
-  traceRetrieveStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) =>
-    fn(),
+  traceRetrieveStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) => fn(),
 }));
 
 vi.mock("node:fs/promises", () => ({
@@ -65,10 +64,7 @@ describe("Phase 1 regression #4: delete document → no citation on same questio
   it("returns no-docs after document deletion", async () => {
     const deleted = await deleteDocument(documentId);
     expect(deleted).toBe(true);
-    expect(deleteByDocumentMock).toHaveBeenCalledWith(
-      expect.any(String),
-      documentId,
-    );
+    expect(deleteByDocumentMock).toHaveBeenCalledWith(expect.any(String), documentId);
 
     const result = await getRelevantContext(query, "reg-4");
     expect(result.kind).toBe("no-docs");

@@ -43,10 +43,7 @@ export async function PATCH(req: Request, context: RouteContext) {
 
     const row = await getDocumentById(id);
     return NextResponse.json({
-      document: serializeDocumentRow(
-        row!.document,
-        row!.job,
-      ),
+      document: serializeDocumentRow(row!.document, row!.job),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

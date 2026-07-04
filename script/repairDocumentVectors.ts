@@ -12,8 +12,7 @@ import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 import { DataAPIClient } from "@datastax/astra-db-ts";
 
-const DOC_ID =
-  process.argv[2] ?? "dc3bff39-5ead-4a24-b6e4-b866e7483bb4";
+const DOC_ID = process.argv[2] ?? "dc3bff39-5ead-4a24-b6e4-b866e7483bb4";
 
 async function main() {
   const client = new DataAPIClient(process.env.ASTRA_DB_APPLICATION_TOKEN!);
@@ -44,9 +43,7 @@ async function main() {
     throw new Error(`No chunks for documentId=${DOC_ID}`);
   }
 
-  const sorted = [...chunks].sort(
-    (a, b) => Number(a.chunkIndex) - Number(b.chunkIndex),
-  );
+  const sorted = [...chunks].sort((a, b) => Number(a.chunkIndex) - Number(b.chunkIndex));
   const texts = sorted.map((c) => String(c.content ?? ""));
   const vectors = await embedTexts(texts);
 

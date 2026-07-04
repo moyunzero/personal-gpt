@@ -13,14 +13,10 @@ describe("getMonorepoRoot", () => {
 
 describe("normalizeUploadMime", () => {
   it("maps octet-stream to markdown by .md extension", () => {
-    expect(normalizeUploadMime("notes.md", "application/octet-stream")).toBe(
-      "text/markdown",
-    );
+    expect(normalizeUploadMime("notes.md", "application/octet-stream")).toBe("text/markdown");
   });
 
   it("keeps explicit allowed mime", () => {
-    expect(normalizeUploadMime("a.pdf", "application/pdf")).toBe(
-      "application/pdf",
-    );
+    expect(normalizeUploadMime("a.pdf", "application/pdf")).toBe("application/pdf");
   });
 });

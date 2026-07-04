@@ -43,10 +43,7 @@ function mergeHits(existing: RetrievedChunk[], incoming: RetrievedChunk[]): Retr
   return [...byKey.values()].sort((a, b) => b.similarity - a.similarity);
 }
 
-async function applyReranker(
-  query: string,
-  hits: RetrievedChunk[],
-): Promise<RetrievedChunk[]> {
+async function applyReranker(query: string, hits: RetrievedChunk[]): Promise<RetrievedChunk[]> {
   const candidates = hits.slice(0, RERANKER_CANDIDATE_LIMIT);
   if (!ENABLE_RERANKER) {
     return candidates.slice(0, RETRIEVAL_LIMIT);
@@ -94,18 +91,12 @@ async function buildEmbeddingInput(query: string): Promise<string> {
 
 /** KB 上传与 prompt-suggestion 优先路（有 documentId 或显式 source） */
 const USER_CORPUS_FILTER = {
-  $or: [
-    { documentId: { $exists: true } },
-    { source: { $eq: "prompt-suggestion" } },
-  ],
+  $or: [{ documentId: { $exists: true } }, { source: { $eq: "prompt-suggestion" } }],
 } as const;
 
 const SEED_PSYCHOLOGY_FILTER = { source: { $eq: "psychology-qa" } } as const;
 
-async function searchWorkspace(
-  workspaceId: string,
-  vector: number[],
-): Promise<RetrievedChunk[]> {
+async function searchWorkspace(workspaceId: string, vector: number[]): Promise<RetrievedChunk[]> {
   const vectorStore = createVectorStore();
   const limit = ENABLE_RERANKER ? RERANKER_CANDIDATE_LIMIT : RETRIEVAL_LIMIT;
 
@@ -154,10 +145,7 @@ async function awaitSearchWithGrace(
 
   try {
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(
-        () => reject(new Error("Vector search timeout")),
-        timeoutMs,
-      );
+      timeoutId = setTimeout(() => reject(new Error("Vector search timeout")), timeoutMs);
     });
     return await Promise.race([searchPromise, timeoutPromise]);
   } catch (error) {
@@ -257,9 +245,7 @@ export async function getRelevantContext(
         const relevantDocs = mapHitsToDocs(mergedHits);
         const blocks = formatContextBlocks(relevantDocs);
         const citations = mapDocsToCitations(relevantDocs);
-        const sources = Array.from(
-          new Set(relevantDocs.map((doc) => doc.source ?? "unknown")),
-        );
+        const sources = Array.from(new Set(relevantDocs.map((doc) => doc.source ?? "unknown")));
 
         return {
           kind: "ok",
@@ -271,11 +257,7 @@ export async function getRelevantContext(
       },
     );
 
-    return await awaitSearchWithGrace(
-      searchPromise,
-      VECTOR_SEARCH_TIMEOUT_MS,
-      log,
-    );
+    return await awaitSearchWithGrace(searchPromise, VECTOR_SEARCH_TIMEOUT_MS, log);
   } catch (error) {
     const kind = classifyVectorError(error);
     if (kind === "timeout") {

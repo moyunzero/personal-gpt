@@ -60,9 +60,7 @@ describe("logger", () => {
     const child = logger.child({ requestId: "req-1", scope: "chat" });
     child.info("started", { scope: "vector" });
 
-    expect(logSpy).toHaveBeenCalledWith(
-      `[info] started {"requestId":"req-1","scope":"vector"}`,
-    );
+    expect(logSpy).toHaveBeenCalledWith(`[info] started {"requestId":"req-1","scope":"vector"}`);
   });
 
   it("child 可以再 child，深度合并 baseFields", () => {
