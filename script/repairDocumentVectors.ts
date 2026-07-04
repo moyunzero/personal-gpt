@@ -12,9 +12,13 @@ import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 import { DataAPIClient } from "@datastax/astra-db-ts";
 
-const DOC_ID = process.argv[2] ?? "dc3bff39-5ead-4a24-b6e4-b866e7483bb4";
+const DOC_ID = process.argv[2];
 
 async function main() {
+  if (!DOC_ID) {
+    console.error("用法: npx ts-node --project tsconfig.scripts.json ./script/repairDocumentVectors.ts <documentId>");
+    process.exit(1);
+  }
   const client = new DataAPIClient(process.env.ASTRA_DB_APPLICATION_TOKEN!);
   const db = client.db(process.env.ASTRA_DB_API_ENDPOINT!, {
     token: process.env.ASTRA_DB_APPLICATION_TOKEN!,

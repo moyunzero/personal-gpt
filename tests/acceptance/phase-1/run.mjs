@@ -48,6 +48,12 @@ async function sendChat(page, text) {
   await page.locator(".composer-send").click();
 }
 
+async function uploadKbFile(page, filePath) {
+  await page.locator(".kb-file-input").setInputFiles(filePath);
+  await page.getByRole("button", { name: "确认上传" }).click();
+  await page.locator(".kb-doc-row").first().waitFor({ timeout: 30_000 });
+}
+
 async function waitAssistantReply(page, timeoutMs = 120_000) {
   const dots = page.locator(".loading-dots");
   if (await dots.count()) {
@@ -96,7 +102,7 @@ async function run() {
     log("03-kb-page", "PASS", "知识库页加载");
 
     // ── 04 上传 Markdown ──
-    await page.locator(".kb-file-input").setInputFiles(FIXTURE);
+    await uploadKbFile(page, FIXTURE);
     await page.locator(".kb-doc-row, .kb-empty-list").first().waitFor({ timeout: 30_000 });
     const rowVisible = (await page.locator(".kb-doc-row").count()) > 0;
     await shot(page, "04-kb-upload-started");
@@ -159,9 +165,8 @@ async function run() {
     }
 
     // ── 08 损坏 PDF 导入失败 ──
-    const fileInput = page.locator(".kb-file-input");
     if (fs.existsSync(CORRUPT_PDF)) {
-      await fileInput.setInputFiles(CORRUPT_PDF);
+      await uploadKbFile(page, CORRUPT_PDF);
       await page.locator(".kb-status-failed, .kb-doc-error").first().waitFor({ timeout: 180_000 });
       await shot(page, "08-kb-corrupt-pdf-failed");
       log("08-corrupt-pdf", "PASS", "损坏 PDF 显示失败状态");

@@ -3,6 +3,7 @@ import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astr
 
 import { logger } from "@/lib/logger";
 
+import { ROUTE_CORPUS_FILTER } from "./corpus-filters";
 import { embedQueryText } from "./embedding-service";
 import { ROUTE_DIRECT_SIMILARITY, ROUTE_RETRIEVE_SIMILARITY } from "./rag-options";
 
@@ -35,6 +36,7 @@ export async function probeKbRelevance(
     vector,
     limit: 1,
     similarityThreshold: 0,
+    filter: ROUTE_CORPUS_FILTER,
   });
 
   const top = hits[0];

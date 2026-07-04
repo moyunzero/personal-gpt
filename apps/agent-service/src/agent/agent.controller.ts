@@ -36,12 +36,17 @@ export class AgentController {
     const webUrl = this.config.get<string>("WEB_URL") ?? "http://localhost:3000";
     const upstreamUrl = `${webUrl.replace(/\/$/, "")}/api/chat`;
 
+    const proxyKey = this.config.get<string>("INTERNAL_PROXY_KEY");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (proxyKey) {
+      headers["X-Internal-Proxy-Key"] = proxyKey;
+    }
+
     const upstream = await fetch(upstreamUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Origin: "http://localhost:3000",
-      },
+      headers,
       body: JSON.stringify(body),
     });
 

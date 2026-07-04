@@ -33,6 +33,17 @@ export class UploadValidationError extends Error {
   }
 }
 
+export class ReindexBusyError extends Error {
+  constructor() {
+    super("文档正在导入中，请稍后再试");
+    this.name = "ReindexBusyError";
+  }
+}
+
+function escapeIlikePattern(raw: string): string {
+  return raw.replace(/[%_\\]/g, (ch) => `\\${ch}`);
+}
+
 export interface UploadFileInput {
   name: string;
   type: string;
@@ -222,8 +233,8 @@ export async function listDocuments(params: ListDocumentsParams = {}) {
     qb.andWhere("doc.status = :status", { status: params.status });
   }
   if (params.search?.trim()) {
-    qb.andWhere("doc.title ILIKE :search", {
-      search: `%${params.search.trim()}%`,
+    qb.andWhere("doc.title ILIKE :search ESCAPE '\\\\'", {
+      search: `%${escapeIlikePattern(params.search.trim())}%`,
     });
   }
   if (params.tags?.length) {
@@ -342,6 +353,9 @@ export async function reindexDocument(
     where: { id: documentId, workspaceId: DEFAULT_WORKSPACE_ID },
   });
   if (!document?.filePath || !document.mimeType) return null;
+  if (document.status === "processing") {
+    throw new ReindexBusyError();
+  }
 
   await docRepo.update(
     { id: documentId, workspaceId: DEFAULT_WORKSPACE_ID },

@@ -1,5 +1,6 @@
 import { getIngestJobById } from "@/lib/kb/ingest-jobs.service";
 import { getIngestQueueEvents } from "@/lib/kb/queue";
+import { guardKbRequest } from "@/lib/kb/route-guards";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -8,6 +9,9 @@ type RouteContext = { params: Promise<{ id: string }> };
  * 校验 ingest_job 属于 default workspace，防 job id 枚举（T-01-13）。
  */
 export async function GET(req: Request, context: RouteContext) {
+  const denied = await guardKbRequest(req);
+  if (denied) return denied;
+
   const { id: jobId } = await context.params;
 
   const ingestJob = await getIngestJobById(jobId);

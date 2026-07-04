@@ -276,7 +276,7 @@ const loadSampleData = async () => {
         await sleep(100); // 每个请求间隔 100ms
       }
 
-      // 使用 OpenRouter 的 NVIDIA 嵌入模型生成向量
+      // 使用 NVIDIA NIM embedding（2048 维，经 @personal-gpt/shared/ai/embeddings）
       const embedding = await getEmbedding(chunk);
 
       // 插入到 AstraDB

@@ -1,11 +1,15 @@
 import { getIngestJobById } from "@/lib/kb/ingest-jobs.service";
+import { guardKbRequest } from "@/lib/kb/route-guards";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * GET /api/kb/jobs/:id — 轮询导入进度（SSE 的 JSON 替代）。
  */
-export async function GET(_req: Request, context: RouteContext) {
+export async function GET(req: Request, context: RouteContext) {
+  const denied = await guardKbRequest(req);
+  if (denied) return denied;
+
   const { id: jobId } = await context.params;
 
   const job = await getIngestJobById(jobId);

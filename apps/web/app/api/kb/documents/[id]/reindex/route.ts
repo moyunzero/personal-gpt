@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { reindexDocument, serializeDocumentRow } from "@/lib/kb/documents.service";
+import { ReindexBusyError, reindexDocument, serializeDocumentRow } from "@/lib/kb/documents.service";
+import { guardKbRequest } from "@/lib/kb/route-guards";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /** POST /api/kb/documents/:id/reindex — 无确认，直接 processing + 入队 */
-export async function POST(_req: Request, context: RouteContext) {
+export async function POST(req: Request, context: RouteContext) {
+  const denied = await guardKbRequest(req);
+  if (denied) return denied;
+
   try {
     const { id } = await context.params;
     const result = await reindexDocument(id);
@@ -24,6 +28,9 @@ export async function POST(_req: Request, context: RouteContext) {
       },
     });
   } catch (error) {
+    if (error instanceof ReindexBusyError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -6,11 +6,15 @@ import {
   serializeDocumentRow,
   updateDocumentMetadata,
 } from "@/lib/kb/documents.service";
+import { guardKbRequest } from "@/lib/kb/route-guards";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /** GET /api/kb/documents/:id — 详情 + 最近 ingest 状态 */
-export async function GET(_req: Request, context: RouteContext) {
+export async function GET(req: Request, context: RouteContext) {
+  const denied = await guardKbRequest(req);
+  if (denied) return denied;
+
   try {
     const { id } = await context.params;
     const row = await getDocumentById(id);
@@ -28,6 +32,9 @@ export async function GET(_req: Request, context: RouteContext) {
 
 /** PATCH /api/kb/documents/:id — 编辑 title/category/tags */
 export async function PATCH(req: Request, context: RouteContext) {
+  const denied = await guardKbRequest(req);
+  if (denied) return denied;
+
   try {
     const { id } = await context.params;
     const body = (await req.json()) as {
@@ -52,7 +59,10 @@ export async function PATCH(req: Request, context: RouteContext) {
 }
 
 /** DELETE /api/kb/documents/:id — 先清向量再删元数据 */
-export async function DELETE(_req: Request, context: RouteContext) {
+export async function DELETE(req: Request, context: RouteContext) {
+  const denied = await guardKbRequest(req);
+  if (denied) return denied;
+
   try {
     const { id } = await context.params;
     const deleted = await deleteDocument(id);

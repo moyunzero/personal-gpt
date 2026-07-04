@@ -11,9 +11,17 @@ import { createChatStream } from "@/lib/chat/stream";
 import { logger } from "@/lib/logger";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
+const MAX_CHAT_MESSAGES = 50;
+
+function isTrustedInternalProxy(req: Request): boolean {
+  const expected = process.env.INTERNAL_PROXY_KEY;
+  if (!expected) return false;
+  return req.headers.get("x-internal-proxy-key") === expected;
+}
+
 // ====================== CORS 白名单（跨域作品集集成）======================
 // personalWeb-1 部署在 GitHub Pages，与本服务跨域，需在服务端补 CORS + Origin 硬校验。
-// 注意：Access-Control-Allow-Origin 不能写 *，本接口会消耗 OpenRouter token，必须配白名单。
+// 注意：Access-Control-Allow-Origin 不能写 *，本接口会消耗 Groq token，必须配白名单。
 const ALLOWED_ORIGINS = new Set<string>([
   // personal-gpt 自身（同源调用：本地 dev + Vercel 生产）
   "http://localhost:3000", // Next.js dev 同源
@@ -38,11 +46,17 @@ function buildCorsHeaders(origin: string | null): Record<string, string> {
 }
 
 function isOriginAllowed(req: Request): boolean {
-  // 双重校验：origin 命中白名单 OR referer 以白名单 origin 开头（兜底，部分浏览器场景没有 Origin）
   const origin = req.headers.get("origin");
-  const referer = req.headers.get("referer");
   if (origin && ALLOWED_ORIGINS.has(origin)) return true;
-  if (referer && [...ALLOWED_ORIGINS].some((o) => referer.startsWith(o))) return true;
+
+  const referer = req.headers.get("referer");
+  if (referer) {
+    try {
+      if (ALLOWED_ORIGINS.has(new URL(referer).origin)) return true;
+    } catch {
+      // invalid referer URL
+    }
+  }
   return false;
 }
 
@@ -77,7 +91,7 @@ export async function POST(req: Request) {
 
   // ====================== Origin 硬校验（防盗刷） ======================
   // CORS 拦不住 curl / 爬虫，必须在路由开头做服务端校验，非白名单直接 403。
-  if (!isOriginAllowed(req)) {
+  if (!isTrustedInternalProxy(req) && !isOriginAllowed(req)) {
     log.metric("origin.rejected", {
       origin: req.headers.get("origin") ?? "<none>",
       referer: req.headers.get("referer") ?? "<none>",
@@ -123,7 +137,10 @@ export async function POST(req: Request) {
       });
     }
 
-    const formattedMessages = formatMessages(messages as InputMessage[]);
+    const trimmedMessages =
+      messages.length > MAX_CHAT_MESSAGES ? messages.slice(-MAX_CHAT_MESSAGES) : messages;
+
+    const formattedMessages = formatMessages(trimmedMessages as InputMessage[]);
 
     // 取最后一条做向量搜索 + 长度校验
     const lastContent = formattedMessages[formattedMessages.length - 1]?.content || "";

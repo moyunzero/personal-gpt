@@ -8,6 +8,7 @@ vi.hoisted(() => {
   process.env.ASTRA_DB_API_ENDPOINT = "https://test.example.com";
   process.env.ASTRA_DB_APPLICATION_TOKEN = "AstraCS:test";
   process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test_key";
+  process.env.GROQ_API_KEY = "test_groq_key";
   process.env.NIM_API_KEY = "test_nim_key";
   // 故意不设 UPSTASH_*，让模块顶层的 limiter 落到 null 分支
   delete process.env.UPSTASH_REDIS_REST_URL;
@@ -18,22 +19,21 @@ import { buildLimiter, getClientIp } from "./ratelimit";
 
 describe("buildLimiter (fail-open 入口)", () => {
   it("url 缺失 → 返回 null", () => {
-    expect(buildLimiter(undefined, "tok")).toBeNull();
-    expect(buildLimiter("", "tok")).toBeNull();
+    expect(buildLimiter(undefined, "tok", "ratelimit:test", 10)).toBeNull();
+    expect(buildLimiter("", "tok", "ratelimit:test", 10)).toBeNull();
   });
 
   it("token 缺失 → 返回 null", () => {
-    expect(buildLimiter("https://x.upstash.io", undefined)).toBeNull();
-    expect(buildLimiter("https://x.upstash.io", "")).toBeNull();
+    expect(buildLimiter("https://x.upstash.io", undefined, "ratelimit:test", 10)).toBeNull();
+    expect(buildLimiter("https://x.upstash.io", "", "ratelimit:test", 10)).toBeNull();
   });
 
   it("两者都缺 → 返回 null", () => {
-    expect(buildLimiter(undefined, undefined)).toBeNull();
+    expect(buildLimiter(undefined, undefined, "ratelimit:test", 10)).toBeNull();
   });
 
   it("两者都给 → 返回 Ratelimit 实例（不实际打 Redis）", () => {
-    // 仅构造，不调用 .limit()，所以不会触网络
-    const limiter = buildLimiter("https://x.upstash.io", "tok");
+    const limiter = buildLimiter("https://x.upstash.io", "tok", "ratelimit:test", 10);
     expect(limiter).not.toBeNull();
     expect(typeof limiter?.limit).toBe("function");
   });

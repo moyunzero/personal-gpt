@@ -14,6 +14,7 @@ import {
   type VectorSearchResult,
 } from "./context";
 import { embedQueryText } from "./embedding-service";
+import { ROUTE_CORPUS_FILTER } from "./corpus-filters";
 import {
   ENABLE_HYDE,
   ENABLE_MULTI_QUERY,
@@ -91,7 +92,7 @@ async function buildEmbeddingInput(query: string): Promise<string> {
 
 /** KB 上传与 prompt-suggestion 优先路（有 documentId 或显式 source） */
 const USER_CORPUS_FILTER = {
-  $or: [{ documentId: { $exists: true } }, { source: { $eq: "prompt-suggestion" } }],
+  $or: [ROUTE_CORPUS_FILTER.$or[0], ROUTE_CORPUS_FILTER.$or[1]],
 } as const;
 
 const SEED_PSYCHOLOGY_FILTER = { source: { $eq: "psychology-qa" } } as const;

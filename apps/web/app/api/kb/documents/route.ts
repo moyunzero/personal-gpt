@@ -7,9 +7,13 @@ import {
   uploadDocument,
   UploadValidationError,
 } from "@/lib/kb/documents.service";
+import { guardKbRequest } from "@/lib/kb/route-guards";
 
 /** GET /api/kb/documents — 分页列表 + 过滤 */
 export async function GET(req: Request) {
+  const denied = await guardKbRequest(req);
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(req.url);
     const result = await listDocuments({
@@ -29,6 +33,9 @@ export async function GET(req: Request) {
 
 /** POST /api/kb/documents — multipart 上传并入队 */
 export async function POST(req: Request) {
+  const denied = await guardKbRequest(req);
+  if (denied) return denied;
+
   try {
     const formData = await req.formData();
     const file = formData.get("file");

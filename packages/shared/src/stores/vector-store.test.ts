@@ -54,7 +54,10 @@ describe("VectorStore workspace isolation", () => {
     );
   });
 
-  it("search falls back to unscoped query when workspace filter returns empty (v0.1 legacy)", async () => {
+  it("search falls back to unscoped query when legacy fallback enabled", async () => {
+    const prev = process.env.ASTRA_LEGACY_FALLBACK;
+    process.env.ASTRA_LEGACY_FALLBACK = "true";
+
     const toArray = vi
       .fn()
       .mockResolvedValueOnce([])
@@ -75,14 +78,36 @@ describe("VectorStore workspace isolation", () => {
     });
 
     expect(find).toHaveBeenCalledTimes(2);
-    expect(find).toHaveBeenNthCalledWith(
-      1,
-      { workspaceId: { $eq: "00000000-0000-4000-8000-000000000001" } },
-      expect.any(Object),
-    );
-    expect(find).toHaveBeenNthCalledWith(2, {}, expect.any(Object));
     expect(hits).toHaveLength(1);
-    expect(hits[0]?.text).toBe("legacy");
+
+    if (prev === undefined) delete process.env.ASTRA_LEGACY_FALLBACK;
+    else process.env.ASTRA_LEGACY_FALLBACK = prev;
+  });
+
+  it("search does not fall back when legacy fallback disabled", async () => {
+    const prev = process.env.ASTRA_LEGACY_FALLBACK;
+    delete process.env.ASTRA_LEGACY_FALLBACK;
+
+    const toArray = vi.fn().mockResolvedValueOnce([]);
+    const find = vi.fn().mockReturnValue({ toArray });
+    const collection: AstraCollectionHandle = {
+      find,
+      insertOne: vi.fn(),
+      insertMany: vi.fn(),
+      deleteMany: vi.fn(),
+    };
+
+    const store = createAstraVectorStore({ collection, collectionName: "test" });
+    const hits = await store.search({
+      workspaceId: "00000000-0000-4000-8000-000000000001",
+      vector: [0.1, 0.2],
+      limit: 3,
+    });
+
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(hits).toHaveLength(0);
+
+    if (prev !== undefined) process.env.ASTRA_LEGACY_FALLBACK = prev;
   });
 
   it("upsert includes workspaceId on every chunk payload", async () => {

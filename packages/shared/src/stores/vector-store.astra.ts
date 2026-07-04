@@ -82,20 +82,30 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
         });
       }
 
-      for (const chunk of chunks) {
-        const payload = {
-          $vector: chunk.vector,
-          content: chunk.text,
-          workspaceId: chunk.workspaceId,
-          documentId: chunk.documentId,
-          chunkIndex: chunk.chunkIndex,
-          title: chunk.title,
-          source: chunk.source,
-          category: chunk.category,
-          tags: chunk.tags,
-          ...chunk.metadata,
-        };
-        await collection!.insertOne(payload);
+      try {
+        for (const chunk of chunks) {
+          const payload = {
+            $vector: chunk.vector,
+            content: chunk.text,
+            workspaceId: chunk.workspaceId,
+            documentId: chunk.documentId,
+            chunkIndex: chunk.chunkIndex,
+            title: chunk.title,
+            source: chunk.source,
+            category: chunk.category,
+            tags: chunk.tags,
+            ...chunk.metadata,
+          };
+          await collection!.insertOne(payload);
+        }
+      } catch (error) {
+        for (const documentId of documentIds) {
+          await collection!.deleteMany({
+            workspaceId: { $eq: workspaceId },
+            documentId,
+          });
+        }
+        throw error;
       }
     },
 
@@ -133,8 +143,9 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
         unknown
       >[];
 
-      // v0.1 写入的 chunk 无 workspaceId 字段；隔离查询会返回空，回退到无过滤检索
-      if (docs.length === 0 && !params.filter) {
+      // v0.1 写入的 chunk 无 workspaceId 字段；仅 ASTRA_LEGACY_FALLBACK=true 时回退
+      const legacyFallback = process.env.ASTRA_LEGACY_FALLBACK === "true";
+      if (docs.length === 0 && !params.filter && legacyFallback) {
         docs = (await collection!.find({}, searchOptions).toArray()) as Record<string, unknown>[];
       }
 

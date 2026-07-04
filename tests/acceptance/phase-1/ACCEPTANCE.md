@@ -36,10 +36,12 @@ yarn acceptance:phase-1    # v1.0 Playwright E2E（脚本名保留兼容；需 d
 
 ## 环境要点
 
-1. **Google AI**：`GOOGLE_GENERATIVE_AI_API_KEY`（聊天 + embedding）
-2. **Astra 3072 维**：`ASTRA_DB_COLLECTION=db_emotion_gemini`（`yarn astra:init-gemini` + `yarn seed:suggestions`）
-3. **LangSmith（可选）**：`.env` 设 `LANGSMITH_API_KEY` + `LANGSMITH_TRACING=true`
-4. **心理学数据（可选）**：`yarn seed:psychology` 支持断点续跑（`data/.psychology-progress.json`）
+1. **Groq**：`GROQ_API_KEY`（聊天主模型 + RAG 辅助路由）
+2. **NVIDIA NIM**：`NIM_API_KEY`（embedding，`llama-nemotron-embed-1b-v2`，2048 维）
+3. **Astra 2048 维**：`ASTRA_DB_COLLECTION` 须与 NIM 对齐（首次 `yarn astra:init-embedding`；可选 `yarn seed:suggestions`）
+4. **知识库**：`DATABASE_URL` + `REDIS_URL`（`yarn docker:up`）；E2E 需同时 `yarn dev:web` 与 `yarn dev:worker`
+5. **LangSmith（可选）**：`.env` 设 `LANGSMITH_API_KEY` + `LANGSMITH_TRACING=true`
+6. **心理学数据（可选）**：`yarn seed:psychology` 支持断点续跑（`data/.psychology-progress.json`）
 
 截图：`tests/acceptance/phase-1/screenshots/`  
 JSON：`tests/acceptance/phase-1/RESULT.json`

@@ -74,7 +74,10 @@ describe("AgentController POST /agent/chat (ENG-03)", () => {
 
   it("proxies SSE from WEB_URL config to Express response", async () => {
     const controller = new AgentController(
-      new MockConfigService({ WEB_URL: "http://web.test:4000" }) as never,
+      new MockConfigService({
+        WEB_URL: "http://web.test:4000",
+        INTERNAL_PROXY_KEY: "test-proxy-key",
+      }) as never,
     );
 
     fetchMock.mockResolvedValue(
@@ -94,7 +97,7 @@ describe("AgentController POST /agent/chat (ENG-03)", () => {
     expect(init.method).toBe("POST");
     expect(init.headers).toEqual({
       "Content-Type": "application/json",
-      Origin: "http://localhost:3000",
+      "X-Internal-Proxy-Key": "test-proxy-key",
     });
     expect(JSON.parse(String(init.body))).toEqual({
       messages: [{ role: "user", content: "hello" }],

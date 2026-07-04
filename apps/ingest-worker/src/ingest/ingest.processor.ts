@@ -7,6 +7,8 @@ import { Repository } from "typeorm";
 
 import { INGEST_QUEUE_NAME } from "@personal-gpt/shared";
 import type { IngestJobPayload } from "@personal-gpt/shared";
+import { getEnv } from "@personal-gpt/shared/schemas/env";
+import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 
 import { DocumentEntity } from "../../../web/lib/db/entities/document.entity";
 import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity";
@@ -34,7 +36,7 @@ export class IngestProcessor extends WorkerHost {
   async process(job: Job<IngestJobPayload>): Promise<void> {
     const { workspaceId, documentId, filePath, mimeType, title, category, tags } = job.data;
 
-    const maxBytes = Number(process.env.UPLOAD_MAX_BYTES ?? 20_971_520);
+    const maxBytes = getEnv().UPLOAD_MAX_BYTES;
     const stat = await fs.stat(filePath);
     if (stat.size > maxBytes) {
       throw new Error(`File exceeds upload limit: ${stat.size} bytes`);
@@ -99,6 +101,16 @@ export class IngestProcessor extends WorkerHost {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Ingest failed for document ${documentId}: ${message}`);
+
+      try {
+        await createVectorStore().deleteByDocument(workspaceId, documentId);
+      } catch (cleanupErr) {
+        this.logger.warn(
+          `Vector cleanup after ingest failure failed: ${
+            cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
+          }`,
+        );
+      }
 
       await this.documentRepo.update({ id: documentId, workspaceId }, { status: "failed" });
       await this.updateIngestJob(ingestJob?.id, {

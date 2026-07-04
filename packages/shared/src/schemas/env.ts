@@ -45,6 +45,18 @@ export const SharedEnvSchema = z.object({
   LANGSMITH_API_KEY: z.string().min(1).optional(),
   LANGSMITH_PROJECT: z.string().min(1).optional(),
 
+  /** KB API Bearer 鉴权；未设则本地 dev 放行 */
+  KB_ADMIN_TOKEN: z.string().min(1).optional(),
+
+  /** agent-service → web /api/chat 内部代理密钥 */
+  INTERNAL_PROXY_KEY: z.string().min(1).optional(),
+
+  /** v0.1 无 workspaceId 的 Astra chunk 回退检索；默认关闭 */
+  ASTRA_LEGACY_FALLBACK: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
+
   /** 单文件上传上限，默认 20MB（D-13） */
   UPLOAD_MAX_BYTES: z.coerce
     .number()
