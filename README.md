@@ -206,8 +206,9 @@ DOTENV_CONFIG_PATH=../../.env yarn workspace web migration:run
 
 1. 将代码推送到 GitHub
 2. 在 [Vercel](https://vercel.com) 导入项目
-3. 配置环境变量
-4. 部署
+3. **Root Directory 设为 `apps/web`**（monorepo 必需；否则会在仓库根目录找 `app/` 导致构建失败）
+4. 配置环境变量（至少 `GROQ_API_KEY`、`NIM_API_KEY`、`ASTRA_DB_*`；知识库功能还需 `DATABASE_URL`、`REDIS_URL`）
+5. 部署
 
 ### 其他平台
 

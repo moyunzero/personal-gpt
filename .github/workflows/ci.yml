@@ -27,14 +27,17 @@ jobs:
           - workspace: agent-service
             command: validate
 
-    # lib/env.ts 在模块加载时用 Zod 校验必需变量，缺一个就抛错。
+    # lib/env.ts 在首次访问 env.* 时用 Zod 校验；next build 会收集 API route 元数据。
     # 真实值由 Vercel Project 注入到 Production / Preview。
     env:
       ASTRA_DB_COLLECTION: ci_dummy_collection
       ASTRA_DB_API_ENDPOINT: https://ci-dummy.example.com
       ASTRA_DB_APPLICATION_TOKEN: AstraCS:ci-dummy-token
       GOOGLE_GENERATIVE_AI_API_KEY: ci-dummy-google-key
+      GROQ_API_KEY: ci-dummy-groq-key
       NIM_API_KEY: ci-dummy-nim-key
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
 
     steps:
       - name: Checkout
@@ -61,7 +64,10 @@ jobs:
       ASTRA_DB_API_ENDPOINT: https://ci-dummy.example.com
       ASTRA_DB_APPLICATION_TOKEN: AstraCS:ci-dummy-token
       GOOGLE_GENERATIVE_AI_API_KEY: ci-dummy-google-key
+      GROQ_API_KEY: ci-dummy-groq-key
       NIM_API_KEY: ci-dummy-nim-key
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
 
     steps:
       - name: Checkout

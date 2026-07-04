@@ -27,8 +27,6 @@ import {
 import { rerankHitsWithLlm } from "./reranker";
 import { traceRetrieveStep } from "./tracing";
 
-const { ASTRA_DB_COLLECTION, VECTOR_SEARCH_TIMEOUT_MS } = env;
-
 function hitKey(hit: RetrievedChunk): string {
   return `${hit.documentId ?? "unknown"}:${hit.chunkIndex ?? 0}`;
 }
@@ -199,6 +197,8 @@ export async function getRelevantContext(
   if (!workspaceId?.trim()) {
     throw new Error("getRelevantContext requires workspaceId");
   }
+
+  const { ASTRA_DB_COLLECTION, VECTOR_SEARCH_TIMEOUT_MS } = env;
 
   if (!ASTRA_DB_COLLECTION || !query) {
     log.debug("跳过：缺少 collection 或 query");

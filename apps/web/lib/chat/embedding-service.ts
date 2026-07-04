@@ -5,9 +5,14 @@ import { logger } from "@/lib/logger";
 
 import { EmbeddingCache, makeEmbeddingCacheKey } from "./embedding-cache";
 
-const { EMBEDDING_CACHE_SIZE } = env;
+let embeddingCache: EmbeddingCache | undefined;
 
-const embeddingCache = new EmbeddingCache(EMBEDDING_CACHE_SIZE);
+function getEmbeddingCache(): EmbeddingCache {
+  if (!embeddingCache) {
+    embeddingCache = new EmbeddingCache(env.EMBEDDING_CACHE_SIZE);
+  }
+  return embeddingCache;
+}
 
 /**
  * 带进程内 LRU 缓存的 query embedding（retrieve 与路由预检共用）。
@@ -17,18 +22,19 @@ export async function embedQueryText(
   log: ReturnType<typeof logger.child> = logger.child({ scope: "chat.embedding" }),
 ): Promise<number[] | null> {
   const cacheKey = makeEmbeddingCacheKey(text);
-  const cached = embeddingCache.get(cacheKey);
+  const cache = getEmbeddingCache();
+  const cached = cache.get(cacheKey);
   if (cached) {
-    log.metric("embedding.cache.hit", { cacheSize: embeddingCache.size() });
+    log.metric("embedding.cache.hit", { cacheSize: cache.size() });
     return cached;
   }
 
-  log.metric("embedding.cache.miss", { cacheSize: embeddingCache.size() });
+  log.metric("embedding.cache.miss", { cacheSize: cache.size() });
   const vector = await embedText(text);
   if (!vector.length) {
     return null;
   }
 
-  embeddingCache.set(cacheKey, vector);
+  cache.set(cacheKey, vector);
   return vector;
 }
