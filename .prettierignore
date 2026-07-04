@@ -1,0 +1,23 @@
+node_modules
+.next
+dist
+build
+out
+coverage
+.vercel
+.codegraph
+uploads
+data
+.yarn
+*.lock
+pnpm-lock.yaml
+package-lock.json
+
+# 生成文件
+next-env.d.ts
+*.tsbuildinfo
+
+# 避免无关大 diff
+docs/
+reference/
+.planning/

@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+apps/*/node_modules
+packages/*/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -15,10 +17,13 @@
 
 # next.js
 /.next/
+/apps/web/.next/
 /out/
 
 # production
 /build
+/apps/ingest-worker/dist
+/apps/agent-service/dist
 
 # misc
 .DS_Store
@@ -44,8 +49,13 @@ next-env.d.ts
 .kiro/
 
 data/
+uploads/
 
 .planning/
 .env*.local
 
 docs/
+
+reference/
+
+.agents/

@@ -1,0 +1,116 @@
+import { groqChatModel } from "@personal-gpt/shared/ai/groq-chat";
+import { GROQ_CHAT_MODELS } from "@personal-gpt/shared/ai/groq-models";
+import type { Citation } from "@personal-gpt/shared/types/kb";
+import { streamText, createUIMessageStream } from "ai";
+
+import { logger } from "@/lib/logger";
+
+import type { FormattedMessage } from "./messages";
+import { ThinkStripFilter } from "./think-strip";
+
+/** 模型 fallback：Qwen（中文）→ Llama 70B → Llama 8B（高配额） */
+const MODELS = GROQ_CHAT_MODELS;
+
+export interface ChatStreamOptions {
+  systemPrompt: string;
+  messages: FormattedMessage[];
+  requestId: string;
+  citations?: Citation[];
+}
+
+/**
+ * 构造与 useChat() 兼容的 UI Message Stream，按 MODELS 顺序尝试，
+ * 首个成功的模型直接 return，全失败时写一个 error chunk。
+ *
+ * 文本流全部 flush 后，若 citations 非空则追加 data-citations part（D-07/D-09）。
+ */
+export function createChatStream({
+  systemPrompt,
+  messages,
+  requestId,
+  citations = [],
+}: ChatStreamOptions) {
+  const log = logger.child({ scope: "chat.stream", requestId });
+
+  return createUIMessageStream({
+    execute: async ({ writer }) => {
+      const messageId = `msg-${Date.now()}`;
+      let hasStarted = false;
+      let lastError: Error | null = null;
+
+      for (const modelName of MODELS) {
+        try {
+          const result = streamText({
+            model: groqChatModel(modelName),
+            system: systemPrompt,
+            messages,
+            temperature: 0.7,
+            maxRetries: 0,
+          });
+
+          const thinkFilter = new ThinkStripFilter();
+
+          for await (const part of result.fullStream) {
+            if (part.type === "text-delta") {
+              const visible = thinkFilter.feed(part.text);
+              if (!visible) continue;
+              if (!hasStarted) {
+                writer.write({ type: "text-start", id: messageId });
+                hasStarted = true;
+              }
+              writer.write({
+                type: "text-delta",
+                delta: visible,
+                id: messageId,
+              });
+            } else if (part.type === "finish") {
+              const trailing = thinkFilter.flush();
+              if (trailing) {
+                if (!hasStarted) {
+                  writer.write({ type: "text-start", id: messageId });
+                  hasStarted = true;
+                }
+                writer.write({
+                  type: "text-delta",
+                  delta: trailing,
+                  id: messageId,
+                });
+              }
+              if (hasStarted) {
+                writer.write({ type: "text-end", id: messageId });
+              }
+            } else if (part.type === "error") {
+              throw part.error;
+            }
+          }
+
+          if (citations.length > 0) {
+            writer.write({
+              type: "data-citations",
+              id: `citations-${messageId}`,
+              data: { citations },
+            });
+          }
+
+          return;
+        } catch (error) {
+          log.warn("model failed, falling back", { modelName, err: error });
+          lastError = error instanceof Error ? error : new Error(String(error));
+          if (modelName !== MODELS[MODELS.length - 1]) {
+            continue;
+          }
+        }
+      }
+
+      log.error("all models failed", { err: lastError });
+      writer.write({
+        type: "error",
+        errorText: `服务暂时不可用，请稍后重试 (requestId: ${requestId})`,
+      });
+    },
+    onError: (error) => {
+      log.error("stream onError", { err: error });
+      return `服务暂时不可用，请稍后重试 (requestId: ${requestId})`;
+    },
+  });
+}

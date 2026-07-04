@@ -1,29 +1,55 @@
+import eslint from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import prettier from "eslint-config-prettier";
+import globals from "globals";
+import tseslint from "typescript-eslint";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
+/** 非 Next.js 工作区：shared / NestJS apps / scripts / tests */
+const tsFiles = [
+  "packages/**/*.{ts,tsx}",
+  "apps/ingest-worker/**/*.{ts,tsx}",
+  "apps/agent-service/**/*.{ts,tsx}",
+  "script/**/*.{ts,tsx}",
+  "tests/**/*.{ts,tsx}",
+];
+
+export default defineConfig([
   globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.next/**",
+    "**/out/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.vercel/**",
+    "**/.codegraph/**",
   ]),
-  // 应用层（app/）禁止裸 console.log/info/debug —— 这些应该走 lib/logger.ts
-  // 的结构化日志器，便于 Vercel 端按 scope/requestId 过滤。仍放行 console.warn
-  // 和 console.error 作为最后一道兜底（比如 logger 自身崩了的边界场景）。
-  // lib/ 和 script/ 不受此限制：logger 实现本身需要 console，seed 脚本依赖
-  // console 输出进度。
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
+  prettier,
   {
-    files: ["app/**/*.{ts,tsx}"],
+    files: ["**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: globals.node,
+    },
+  },
+  {
+    files: tsFiles,
     rules: {
-      "no-console": ["error", { allow: ["warn", "error"] }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      // 现有代码基线：不因 lint 引入大规模逻辑改动
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
     },
   },
 ]);
-
-export default eslintConfig;
