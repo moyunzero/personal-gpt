@@ -244,7 +244,7 @@ DOTENV_CONFIG_PATH=../../.env yarn workspace web migration:run
 | 变量名                                                   | 说明                                                                      | 默认值              |
 | -------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------- |
 | `GOOGLE_GENERATIVE_AI_API_KEY`                           | 备用（当前默认未使用）                                                    | —                   |
-| `VECTOR_SEARCH_TIMEOUT_MS`                               | 向量检索主超时（毫秒），含 embedding 与 Astra 查询；超时后另有 10s 宽限期 | `12000`             |
+| `VECTOR_SEARCH_TIMEOUT_MS`                               | 向量检索主超时（毫秒），含 embedding 与 Astra 查询；超时后另有 10s 宽限期；上限 60000 | `12000`             |
 | `EMBEDDING_CACHE_SIZE`                                   | 进程内 embedding LRU 缓存容量                                             | `100`               |
 | `UPSTASH_REDIS_REST_URL`                                 | Upstash Redis REST 地址，用于限流                                         | 未配置则禁用限流    |
 | `UPSTASH_REDIS_REST_TOKEN`                               | Upstash Redis REST Token                                                  | 未配置则禁用限流    |

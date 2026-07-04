@@ -26,7 +26,7 @@ export const SharedEnvSchema = z.object({
   /**
    * 向量检索总超时（毫秒），从「调 embedding API」到「Astra 查完返回」算一段。
    */
-  VECTOR_SEARCH_TIMEOUT_MS: z.coerce.number().int().min(500).max(30_000).default(12_000),
+  VECTOR_SEARCH_TIMEOUT_MS: z.coerce.number().int().min(500).max(60_000).default(12_000),
 
   /** embedding LRU 缓存容量 */
   EMBEDDING_CACHE_SIZE: z.coerce.number().int().min(1).max(10_000).default(100),
