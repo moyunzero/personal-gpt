@@ -1,51 +1,29 @@
+/// <reference lib="dom" />
 import "dotenv/config";
 import { DataAPIClient } from "@datastax/astra-db-ts";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
 import { PlaywrightWebBaseLoader } from "@langchain/community/document_loaders/web/playwright";
 
+import { embedTexts } from "@personal-gpt/shared/ai/embeddings";
+import { EMBEDDING_DIMENSION } from "@personal-gpt/shared/ai/embedding-models";
+
 const { 
     ASTRA_DB_NAMESPACE,
     ASTRA_DB_COLLECTION,
     ASTRA_DB_API_ENDPOINT,
     ASTRA_DB_APPLICATION_TOKEN,
-    OPENROUTER_API_KEY
 } = process.env;
 
 if (!ASTRA_DB_API_ENDPOINT || !ASTRA_DB_APPLICATION_TOKEN) {
   throw new Error('Missing required environment variables: ASTRA_DB_API_ENDPOINT and ASTRA_DB_APPLICATION_TOKEN');
 }
 
-// 直接调用 OpenRouter 的嵌入 API
-// 使用 NVIDIA 嵌入模型
+// NVIDIA NIM llama-nemotron-embed-1b-v2（经 @ai-sdk/openai-compatible）
 const getEmbedding = async (text: string, retries = 3): Promise<number[]> => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
-
-      const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "nvidia/llama-nemotron-embed-vl-1b-v2:free",
-          input: text,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`OpenRouter API 错误: ${response.status} - ${error}`);
-      }
-
-      const data = await response.json();
-      return data.data[0].embedding;
+      return (await embedTexts([text]))[0]!;
     } catch (error) {
       const isLastAttempt = attempt === retries;
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -54,7 +32,6 @@ const getEmbedding = async (text: string, retries = 3): Promise<number[]> => {
         throw new Error(`生成 embedding 失败 (已重试 ${retries} 次): ${errorMsg}`);
       }
       
-      // 指数退避：第一次等2秒，第二次等4秒
       const delay = 2000 * attempt;
       console.log(`\n  ⚠ Embedding 生成失败 (尝试 ${attempt}/${retries}): ${errorMsg}`);
       console.log(`  ⏳ ${delay / 1000}秒后重试...`);
@@ -91,8 +68,8 @@ const createCollection = async (similarityMetric: "dot_product" | "cosine" | "eu
       console.log(`尝试创建集合... (${i + 1}/${retries})`);
       const res = await db.createCollection(ASTRA_DB_COLLECTION!, {
         vector: {
-          // nvidia/llama-nemotron-embed-vl-1b-v2 默认维度为 2048
-          dimension: 2048,
+          // NVIDIA NIM 2048 维
+          dimension: EMBEDDING_DIMENSION,
           metric: similarityMetric,
         },
       });
@@ -189,21 +166,18 @@ const scrapePageSmart = async (
             
             // 提取文本内容
             const content = await page.evaluate(() => {
-              // 移除脚本和样式标签
-              const scripts = document.querySelectorAll('script, style, nav, footer, header');
-              scripts.forEach(el => el.remove());
-              
-              // 获取主要内容
-              const selectors = ['article', '.article', '.content', '.post', 'main', 'body'];
+              const scripts = document.querySelectorAll("script, style, nav, footer, header");
+              scripts.forEach((el) => el.remove());
+
+              const selectors = ["article", ".article", ".content", ".post", "main", "body"];
               for (const sel of selectors) {
                 const element = document.querySelector(sel);
-                if (element && element.textContent && element.textContent.trim().length > 100) {
+                if (element?.textContent && element.textContent.trim().length > 100) {
                   return element.textContent;
                 }
               }
-              
-              // 如果没有找到主要内容区域，返回 body
-              return document.body.textContent || '';
+
+              return document.body.textContent || "";
             });
             
             return content;

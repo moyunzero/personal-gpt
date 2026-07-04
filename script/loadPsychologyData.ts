@@ -4,12 +4,17 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import * as fs from "fs";
 import * as path from "path";
 
+import { embedTexts } from "@personal-gpt/shared/ai/embeddings";
+import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
+
+const WORKSPACE_ID = process.env.WORKSPACE_ID ?? DEFAULT_WORKSPACE_ID;
+import { EMBEDDING_DIMENSION } from "@personal-gpt/shared/ai/embedding-models";
+
 const { 
     ASTRA_DB_NAMESPACE,
     ASTRA_DB_COLLECTION,
     ASTRA_DB_API_ENDPOINT,
     ASTRA_DB_APPLICATION_TOKEN,
-    OPENROUTER_API_KEY
 } = process.env;
 
 if (!ASTRA_DB_API_ENDPOINT || !ASTRA_DB_APPLICATION_TOKEN) {
@@ -50,51 +55,40 @@ function saveProgress(lastIndex: number, processedIds: Set<string>) {
   }));
 }
 
-// 批量生成向量嵌入
-const getEmbeddingsBatch = async (texts: string[], retries = 3): Promise<number[][]> => {
+// 批量生成向量嵌入（NVIDIA NIM；免费层 ~40 RPM）
+function parseQuotaRetryMs(errorMsg: string): number | null {
+  const match = errorMsg.match(/retry in ([\d.]+)s/i);
+  if (match) {
+    return Math.ceil(parseFloat(match[1]!) * 1000) + 500;
+  }
+  return null;
+}
+
+function isQuotaError(errorMsg: string): boolean {
+  return /quota exceeded|rate limit|429/i.test(errorMsg);
+}
+
+const getEmbeddingsBatch = async (texts: string[], retries = 12): Promise<number[][]> => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-      const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "nvidia/llama-nemotron-embed-vl-1b-v2:free",
-          input: texts,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`OpenRouter API 错误: ${response.status} - ${error}`);
-      }
-
-      const data = await response.json();
-      return data.data.map((item: { embedding: number[] }) => item.embedding);
+      return await embedTexts(texts);
     } catch (error) {
-      const isLastAttempt = attempt === retries;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      
+      const isLastAttempt = attempt === retries;
+
       if (isLastAttempt) {
         throw new Error(`批量生成 embedding 失败 (已重试 ${retries} 次): ${errorMsg}`);
       }
-      
-      const delay = 2000 * attempt;
-      console.log(`\n  ⚠ Embedding 生成失败 (尝试 ${attempt}/${retries}): ${errorMsg}`);
-      console.log(`  ⏳ ${delay / 1000}秒后重试...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+
+      const quotaDelay = parseQuotaRetryMs(errorMsg);
+      const delay = quotaDelay ?? (isQuotaError(errorMsg) ? 60_000 : 2000 * attempt);
+      console.log(`\n  ⚠ Embedding 生成失败 (尝试 ${attempt}/${retries}): ${errorMsg.slice(0, 200)}`);
+      console.log(`  ⏳ ${(delay / 1000).toFixed(0)} 秒后重试...`);
+      await sleep(delay);
     }
   }
-  
-  throw new Error('批量生成 embedding 失败');
+
+  throw new Error("批量生成 embedding 失败");
 };
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -115,7 +109,7 @@ const createCollection = async (similarityMetric: "dot_product" | "cosine" | "eu
       console.log(`尝试创建集合... (${i + 1}/${retries})`);
       const res = await db.createCollection(ASTRA_DB_COLLECTION!, {
         vector: {
-          dimension: 2048,
+          dimension: EMBEDDING_DIMENSION,
           metric: similarityMetric,
         },
       });
@@ -150,8 +144,11 @@ const loadPsychologyData = async () => {
   let totalInserted = 0;
   const startTime = Date.now();
   
-  const BATCH_SIZE = 5;
-  const CONCURRENT_BATCHES = 3;
+  const BATCH_SIZE = 3;
+  const CONCURRENT_BATCHES = 1;
+  // 免费层按「条数」计 RPM，单批越小、间隔越大越稳
+  const EMBED_BATCH_SIZE = parseInt(process.env.EMBED_BATCH_SIZE ?? "8", 10);
+  const EMBED_DELAY_MS = parseInt(process.env.EMBED_DELAY_MS ?? "800", 10);
   
   for (let batchStart = progress.lastIndex; batchStart < qaData.length; batchStart += BATCH_SIZE * CONCURRENT_BATCHES) {
     const batchPromises = [];
@@ -217,15 +214,27 @@ const loadPsychologyData = async () => {
     console.log(`  🔄 批量生成 ${allChunks.length} 个向量...`);
     
     const embeddings: number[][] = [];
-    const EMBED_BATCH_SIZE = 20;
-    
+    let embedRequestsThisMinute = 0;
+    let minuteWindowStart = Date.now();
+
     for (let i = 0; i < allChunks.length; i += EMBED_BATCH_SIZE) {
       const chunkBatch = allChunks.slice(i, Math.min(i + EMBED_BATCH_SIZE, allChunks.length));
       const batchEmbeddings = await getEmbeddingsBatch(chunkBatch);
       embeddings.push(...batchEmbeddings);
-      
-      if (i + EMBED_BATCH_SIZE < allChunks.length) {
-        await sleep(200);
+      embedRequestsThisMinute += 1;
+
+      // NIM 免费层约 40 RPM，按 API 调用计
+      if (embedRequestsThisMinute >= 35) {
+        const elapsed = Date.now() - minuteWindowStart;
+        if (elapsed < 60_000) {
+          const waitMs = 60_000 - elapsed + 1000;
+          console.log(`  ⏸ 已接近 NIM RPM 限额，等待 ${(waitMs / 1000).toFixed(0)} 秒...`);
+          await sleep(waitMs);
+        }
+        embedRequestsThisMinute = 0;
+        minuteWindowStart = Date.now();
+      } else if (i + EMBED_BATCH_SIZE < allChunks.length) {
+        await sleep(EMBED_DELAY_MS);
       }
     }
     
@@ -240,8 +249,9 @@ const loadPsychologyData = async () => {
       insertPromises.push(
         collection.insertOne({
           $vector: embedding,
-          content: allChunks[i],  // 只保留 content，删除重复的 text
-          source: 'psychology-qa',
+          content: allChunks[i],
+          workspaceId: WORKSPACE_ID,
+          source: "psychology-qa",
           question: mapping.qa.input,
           category: 'psychology',
           chunkIndex: mapping.chunkIndex,  // 添加块索引
@@ -297,6 +307,7 @@ const loadPsychologyData = async () => {
 (async () => {
   try {
     console.log("开始心理学数据加载流程...");
+    console.log("WorkspaceId:", WORKSPACE_ID);
     console.log("API Endpoint:", ASTRA_DB_API_ENDPOINT);
     console.log("Namespace:", ASTRA_DB_NAMESPACE);
     console.log("Collection:", ASTRA_DB_COLLECTION);

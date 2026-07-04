@@ -1,3 +1,3 @@
 # tools/
 
-Phase 2 Agent 工具注册占位目录。
+v2.0 Agent 工具注册占位目录。

@@ -52,6 +52,18 @@ const SOURCE_LABEL: Record<string, string> = {
   "psychology-qa": "心理学知识库",
 };
 
+const UPLOAD_SOURCE_PATTERN = /\.(md|markdown|pdf|txt|docx)$/i;
+
+function resolveSourceLabel(source: string): string {
+  if (SOURCE_LABEL[source]) {
+    return SOURCE_LABEL[source];
+  }
+  if (UPLOAD_SOURCE_PATTERN.test(source)) {
+    return "用户上传文档";
+  }
+  return source;
+}
+
 /**
  * 把一个检索文档包成 <context> 块。
  *
@@ -63,7 +75,7 @@ const SOURCE_LABEL: Record<string, string> = {
  */
 export function formatContextBlock(doc: RetrievedDoc): string {
   const source = doc.source ?? "unknown";
-  const label = SOURCE_LABEL[source] ?? source;
+  const label = resolveSourceLabel(source);
   const titleAttr = doc.title ? ` title="${escapeAttr(doc.title)}"` : "";
   const safeContent = doc.content.replace(/<\/context/gi, "</context_escaped");
 

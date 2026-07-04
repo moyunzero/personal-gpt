@@ -5,12 +5,13 @@ import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 
+import { embedTexts } from "@personal-gpt/shared/ai/embeddings";
+
 const { 
     ASTRA_DB_NAMESPACE,
     ASTRA_DB_COLLECTION,
     ASTRA_DB_API_ENDPOINT,
     ASTRA_DB_APPLICATION_TOKEN,
-    OPENROUTER_API_KEY
 } = process.env;
 
 if (!ASTRA_DB_API_ENDPOINT || !ASTRA_DB_APPLICATION_TOKEN) {
@@ -215,35 +216,11 @@ function saveProgress(processedFiles: Record<string, string>) {
   }, null, 2));
 }
 
-// 批量生成向量嵌入
+// 批量生成向量嵌入（NVIDIA NIM）
 const getEmbeddingsBatch = async (texts: string[], retries = 3): Promise<number[][]> => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-      const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "nvidia/llama-nemotron-embed-vl-1b-v2:free",
-          input: texts,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`OpenRouter API 错误: ${response.status} - ${error}`);
-      }
-
-      const data = await response.json();
-      return data.data.map((item: { embedding: number[] }) => item.embedding);
+      return await embedTexts(texts);
     } catch (error) {
       const isLastAttempt = attempt === retries;
       const errorMsg = error instanceof Error ? error.message : String(error);

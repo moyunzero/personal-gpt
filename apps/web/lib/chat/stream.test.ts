@@ -4,8 +4,8 @@ import type { Citation } from "@personal-gpt/shared/types/kb";
 
 const streamTextMock = vi.fn();
 
-vi.mock("@openrouter/ai-sdk-provider", () => ({
-  createOpenRouter: () => (modelName: string) => modelName,
+vi.mock("@personal-gpt/shared/ai/groq-chat", () => ({
+  groqChatModel: (modelName: string) => modelName,
 }));
 
 vi.mock("ai", async (importOriginal) => {
@@ -15,10 +15,6 @@ vi.mock("ai", async (importOriginal) => {
     streamText: (...args: unknown[]) => streamTextMock(...args),
   };
 });
-
-vi.mock("@/lib/env", () => ({
-  env: { OPENROUTER_API_KEY: "test-key" },
-}));
 
 vi.mock("@/lib/logger", () => ({
   logger: {
@@ -31,13 +27,19 @@ vi.mock("@/lib/logger", () => ({
 
 import { createChatStream } from "./stream";
 
-function mockSuccessfulTextStream(text: string) {
+function mockTextStream(chunks: Array<{ type: string; text?: string }>) {
   streamTextMock.mockReturnValue({
     fullStream: (async function* () {
-      yield { type: "text-delta", text };
+      for (const chunk of chunks) {
+        yield chunk;
+      }
       yield { type: "finish" };
     })(),
   });
+}
+
+function mockSuccessfulTextStream(text: string) {
+  mockTextStream([{ type: "text-delta", text }]);
 }
 
 async function collectStreamParts(stream: ReadableStream<unknown>) {
@@ -121,5 +123,29 @@ describe("createChatStream citations", () => {
     expect(
       parts.some((part) => (part as { type: string }).type === "data-citations"),
     ).toBe(false);
+  });
+
+  it("strips Qwen think blocks from streamed text", async () => {
+    const open = "<" + "think" + ">";
+    const close = "<" + "/think" + ">";
+    mockTextStream([
+      { type: "text-delta", text: open + "内部推理" + close },
+      { type: "text-delta", text: "最终回答" },
+    ]);
+
+    const stream = createChatStream({
+      systemPrompt: "system",
+      messages: [{ role: "user", content: "test" }],
+      requestId: "req-3",
+      citations: [],
+    });
+
+    const parts = await collectStreamParts(stream);
+    const deltas = parts
+      .filter((part) => (part as { type: string }).type === "text-delta")
+      .map((part) => (part as { delta: string }).delta);
+
+    expect(deltas.join("")).toBe("最终回答");
+    expect(deltas.join("")).not.toContain("think");
   });
 });

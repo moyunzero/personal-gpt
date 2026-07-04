@@ -2,4 +2,6 @@
 process.env.ASTRA_DB_COLLECTION ??= "ci_dummy_collection";
 process.env.ASTRA_DB_API_ENDPOINT ??= "https://ci-dummy.example.com";
 process.env.ASTRA_DB_APPLICATION_TOKEN ??= "AstraCS:ci-dummy-token";
-process.env.OPENROUTER_API_KEY ??= "sk-or-ci-dummy";
+process.env.GOOGLE_GENERATIVE_AI_API_KEY ??= "ci-dummy-google-key";
+process.env.GROQ_API_KEY ??= "ci-dummy-groq-key";
+process.env.NIM_API_KEY ??= "ci-dummy-nim-key";

@@ -7,6 +7,7 @@ export interface AstraCollectionHandle {
     filter: Record<string, unknown>,
     options: Record<string, unknown>,
   ) => { toArray: () => Promise<unknown[]> };
+  insertOne: (doc: Record<string, unknown>) => Promise<unknown>;
   insertMany: (docs: Record<string, unknown>[]) => Promise<unknown>;
   deleteMany: (filter: Record<string, unknown>) => Promise<{ deletedCount?: number }>;
 }
@@ -64,9 +65,23 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
     async upsert(chunks) {
       if (chunks.length === 0) return;
 
-      const payloads = chunks.map((chunk) => {
+      for (const chunk of chunks) {
         assertChunkWorkspaceId(chunk);
-        return {
+      }
+
+      const workspaceId = chunks[0]!.workspaceId;
+      const documentIds = [...new Set(chunks.map((chunk) => chunk.documentId))];
+
+      // 重索引幂等：先删同文档旧 chunk，再逐条 insertOne（insertMany 不会进入 Astra ANN 索引）
+      for (const documentId of documentIds) {
+        await collection!.deleteMany({
+          workspaceId: { $eq: workspaceId },
+          documentId,
+        });
+      }
+
+      for (const chunk of chunks) {
+        const payload = {
           $vector: chunk.vector,
           content: chunk.text,
           workspaceId: chunk.workspaceId,
@@ -78,9 +93,8 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
           tags: chunk.tags,
           ...chunk.metadata,
         };
-      });
-
-      await collection!.insertMany(payloads);
+        await collection!.insertOne(payload);
+      }
     },
 
     async deleteByDocument(workspaceId, documentId) {
@@ -92,26 +106,39 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
       assertSearchWorkspaceId(params.workspaceId);
 
       const limit = params.limit ?? 5;
-      const cursor = collection!.find(
-        { workspaceId: { $eq: params.workspaceId } },
-        {
-          sort: { $vector: params.vector },
-          limit,
-          includeSimilarity: true,
-          projection: {
-            content: 1,
-            source: 1,
-            category: 1,
-            title: 1,
-            keywords: 1,
-            documentId: 1,
-            chunkIndex: 1,
-            _id: 0,
-          },
+      const searchOptions = {
+        sort: { $vector: params.vector },
+        limit,
+        includeSimilarity: true,
+        projection: {
+          content: 1,
+          source: 1,
+          category: 1,
+          title: 1,
+          keywords: 1,
+          documentId: 1,
+          chunkIndex: 1,
+          _id: 0,
         },
-      );
+      };
 
-      const docs = (await cursor.toArray()) as Record<string, unknown>[];
+      const workspaceFilter = { workspaceId: { $eq: params.workspaceId } };
+      const filter = params.filter
+        ? { $and: [workspaceFilter, params.filter] }
+        : workspaceFilter;
+
+      // Phase 1 多租户隔离：先按 workspaceId（+ 可选 filter）过滤
+      let docs = (await collection!
+        .find(filter, searchOptions)
+        .toArray()) as Record<string, unknown>[];
+
+      // v0.1 写入的 chunk 无 workspaceId 字段；隔离查询会返回空，回退到无过滤检索
+      if (docs.length === 0 && !params.filter) {
+        docs = (await collection!
+          .find({}, searchOptions)
+          .toArray()) as Record<string, unknown>[];
+      }
+
       const threshold = params.similarityThreshold ?? 0;
 
       return docs

@@ -24,6 +24,8 @@ jobs:
             command: validate
           - workspace: ingest-worker
             command: validate
+          - workspace: agent-service
+            command: validate
 
     # lib/env.ts 在模块加载时用 Zod 校验必需变量，缺一个就抛错。
     # 真实值由 Vercel Project 注入到 Production / Preview。
@@ -31,7 +33,8 @@ jobs:
       ASTRA_DB_COLLECTION: ci_dummy_collection
       ASTRA_DB_API_ENDPOINT: https://ci-dummy.example.com
       ASTRA_DB_APPLICATION_TOKEN: AstraCS:ci-dummy-token
-      OPENROUTER_API_KEY: sk-or-ci-dummy
+      GOOGLE_GENERATIVE_AI_API_KEY: ci-dummy-google-key
+      NIM_API_KEY: ci-dummy-nim-key
 
     steps:
       - name: Checkout
@@ -50,14 +53,15 @@ jobs:
         run: yarn workspace ${{ matrix.workspace }} ${{ matrix.command }}
 
   regression-phase-1:
-    name: Phase 1 regression tests
+    name: v1.0 regression tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       ASTRA_DB_COLLECTION: ci_dummy_collection
       ASTRA_DB_API_ENDPOINT: https://ci-dummy.example.com
       ASTRA_DB_APPLICATION_TOKEN: AstraCS:ci-dummy-token
-      OPENROUTER_API_KEY: sk-or-ci-dummy
+      GOOGLE_GENERATIVE_AI_API_KEY: ci-dummy-google-key
+      NIM_API_KEY: ci-dummy-nim-key
 
     steps:
       - name: Checkout
@@ -72,5 +76,5 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Run Phase 1 regression suite
+      - name: Run v1.0 regression suite
         run: yarn test tests/regression/phase-1

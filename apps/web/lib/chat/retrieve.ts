@@ -1,5 +1,4 @@
-import OpenAI from "openai";
-
+import { generateRagHelperText } from "@personal-gpt/shared/ai/rag-helper";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import type { RetrievedChunk } from "@personal-gpt/shared/stores/vector-store";
 import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
@@ -14,33 +13,21 @@ import {
   type RetrievedDoc,
   type VectorSearchResult,
 } from "./context";
-import { traceRetrieveStep } from "./tracing";
-import { EmbeddingCache, makeEmbeddingCacheKey } from "./embedding-cache";
+import { embedQueryText } from "./embedding-service";
 import {
   ENABLE_HYDE,
   ENABLE_MULTI_QUERY,
   ENABLE_RERANKER,
   RERANKER_CANDIDATE_LIMIT,
+  RETRIEVAL_GRACE_MS,
   RETRIEVAL_LIMIT,
+  SEED_CORPUS_SIMILARITY_THRESHOLD,
   TOP1_SIMILARITY_THRESHOLD,
 } from "./rag-options";
+import { rerankHitsWithLlm } from "./reranker";
+import { traceRetrieveStep } from "./tracing";
 
-const {
-  ASTRA_DB_COLLECTION,
-  OPENROUTER_API_KEY,
-  VECTOR_SEARCH_TIMEOUT_MS,
-  EMBEDDING_CACHE_SIZE,
-} = env;
-
-const EMBEDDING_MODEL = "nvidia/llama-nemotron-embed-vl-1b-v2:free";
-const HYDE_MODEL = "inclusionai/ring-2.6-1t:free";
-
-const openRouterClient = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: OPENROUTER_API_KEY,
-});
-
-const embeddingCache = new EmbeddingCache(EMBEDDING_CACHE_SIZE);
+const { ASTRA_DB_COLLECTION, VECTOR_SEARCH_TIMEOUT_MS } = env;
 
 function hitKey(hit: RetrievedChunk): string {
   return `${hit.documentId ?? "unknown"}:${hit.chunkIndex ?? 0}`;
@@ -58,41 +45,19 @@ function mergeHits(existing: RetrievedChunk[], incoming: RetrievedChunk[]): Retr
   return [...byKey.values()].sort((a, b) => b.similarity - a.similarity);
 }
 
-function applyReranker(hits: RetrievedChunk[]): RetrievedChunk[] {
+async function applyReranker(
+  query: string,
+  hits: RetrievedChunk[],
+): Promise<RetrievedChunk[]> {
+  const candidates = hits.slice(0, RERANKER_CANDIDATE_LIMIT);
   if (!ENABLE_RERANKER) {
-    return hits.slice(0, RETRIEVAL_LIMIT);
+    return candidates.slice(0, RETRIEVAL_LIMIT);
   }
-  return [...hits]
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, RETRIEVAL_LIMIT);
+  return rerankHitsWithLlm(query, candidates, RETRIEVAL_LIMIT);
 }
 
 function passesTop1PreCheck(hits: RetrievedChunk[]): boolean {
   return hits.length > 0 && hits[0].similarity >= TOP1_SIMILARITY_THRESHOLD;
-}
-
-async function embedText(text: string, log: ReturnType<typeof logger.child>): Promise<number[] | null> {
-  const cacheKey = makeEmbeddingCacheKey(text);
-  const cached = embeddingCache.get(cacheKey);
-  if (cached) {
-    log.metric("embedding.cache.hit", { cacheSize: embeddingCache.size() });
-    return cached;
-  }
-
-  log.metric("embedding.cache.miss", { cacheSize: embeddingCache.size() });
-  const embeddings = await openRouterClient.embeddings.create({
-    model: EMBEDDING_MODEL,
-    input: text,
-    encoding_format: "float",
-  });
-
-  const vector = embeddings.data[0]?.embedding;
-  if (!vector) {
-    return null;
-  }
-
-  embeddingCache.set(cacheKey, vector);
-  return vector;
 }
 
 async function buildSearchQueries(query: string): Promise<string[]> {
@@ -100,20 +65,12 @@ async function buildSearchQueries(query: string): Promise<string[]> {
     return [query];
   }
 
-  const completion = await openRouterClient.chat.completions.create({
-    model: HYDE_MODEL,
-    temperature: 0.2,
-    messages: [
-      {
-        role: "system",
-        content:
-          "Generate exactly 3 short search query variants for retrieval. Return one variant per line, no numbering.",
-      },
-      { role: "user", content: query },
-    ],
-  });
+  const raw = await generateRagHelperText(
+    "为用户问题生成 3 个简短的检索查询变体，每行一个，不要编号，不要解释。",
+    query,
+    0.2,
+  );
 
-  const raw = completion.choices[0]?.message?.content ?? "";
   const variants = raw
     .split("\n")
     .map((line) => line.trim())
@@ -128,22 +85,24 @@ async function buildEmbeddingInput(query: string): Promise<string> {
     return query;
   }
 
-  const completion = await openRouterClient.chat.completions.create({
-    model: HYDE_MODEL,
-    temperature: 0.3,
-    messages: [
-      {
-        role: "system",
-        content:
-          "Write a concise hypothetical passage that would answer the user question. Output passage text only.",
-      },
-      { role: "user", content: query },
-    ],
-  });
+  const hypothetical = await generateRagHelperText(
+    "写一段能回答用户问题的简短假设性段落，只输出段落正文。",
+    query,
+    0.3,
+  );
 
-  const hypothetical = completion.choices[0]?.message?.content?.trim();
   return hypothetical || query;
 }
+
+/** KB 上传与 prompt-suggestion 优先路（有 documentId 或显式 source） */
+const USER_CORPUS_FILTER = {
+  $or: [
+    { documentId: { $exists: true } },
+    { source: { $eq: "prompt-suggestion" } },
+  ],
+} as const;
+
+const SEED_PSYCHOLOGY_FILTER = { source: { $eq: "psychology-qa" } } as const;
 
 async function searchWorkspace(
   workspaceId: string,
@@ -152,12 +111,25 @@ async function searchWorkspace(
   const vectorStore = createVectorStore();
   const limit = ENABLE_RERANKER ? RERANKER_CANDIDATE_LIMIT : RETRIEVAL_LIMIT;
 
-  return vectorStore.search({
+  // Path A：用户上传 / prompt-suggestion（Astra 全局 ANN 对后期 insert 不友好，需 metadata 过滤）
+  const userHits = await vectorStore.search({
     workspaceId,
     vector,
     limit,
-    similarityThreshold: 0.6,
+    similarityThreshold: TOP1_SIMILARITY_THRESHOLD,
+    filter: USER_CORPUS_FILTER,
   });
+
+  // Path B：psychology seed，更高门槛，避免泛化问法被 QA 挤占
+  const seedHits = await vectorStore.search({
+    workspaceId,
+    vector,
+    limit,
+    similarityThreshold: SEED_CORPUS_SIMILARITY_THRESHOLD,
+    filter: SEED_PSYCHOLOGY_FILTER,
+  });
+
+  return mergeHits(userHits, seedHits).slice(0, limit);
 }
 
 function mapHitsToDocs(hits: RetrievedChunk[]): RetrievedDoc[] {
@@ -173,9 +145,49 @@ function mapHitsToDocs(hits: RetrievedChunk[]): RetrievedDoc[] {
   }));
 }
 
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+async function awaitSearchWithGrace(
+  searchPromise: Promise<VectorSearchResult>,
+  timeoutMs: number,
+  log: ReturnType<typeof logger.child>,
+): Promise<VectorSearchResult> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(
+        () => reject(new Error("Vector search timeout")),
+        timeoutMs,
+      );
+    });
+    return await Promise.race([searchPromise, timeoutPromise]);
+  } catch (error) {
+    if (classifyVectorError(error) !== "timeout") {
+      throw error;
+    }
+
+    log.metric("vector.search.timeout_grace", { graceMs: RETRIEVAL_GRACE_MS });
+    const lateResult = await Promise.race([
+      searchPromise,
+      sleep(RETRIEVAL_GRACE_MS).then(() => null),
+    ]);
+
+    if (lateResult) {
+      log.debug("宽限期内检索完成，采用延迟结果");
+      return lateResult;
+    }
+
+    throw error;
+  } finally {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 /**
- * 向量检索：embedding → VectorStore.search(workspaceId) → 阈值过滤 → context 块。
- * HyDE / Multi-Query / Reranker 仅在 rag-options 开关为 true 时启用。
+ * 向量检索：Multi-Query → HyDE embedding → search → Reranker → context。
  */
 export async function getRelevantContext(
   query: string,
@@ -193,78 +205,77 @@ export async function getRelevantContext(
     return { kind: "no-docs" };
   }
 
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
   const traceCtx = { workspaceId, requestId };
 
   try {
-    log.debug("开始检索", { query, workspaceId });
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(
-        () => reject(new Error("Vector search timeout")),
-        VECTOR_SEARCH_TIMEOUT_MS,
-      );
+    log.debug("开始检索", {
+      query,
+      workspaceId,
+      hyde: ENABLE_HYDE,
+      multiQuery: ENABLE_MULTI_QUERY,
+      reranker: ENABLE_RERANKER,
     });
 
     const searchPromise: Promise<VectorSearchResult> = traceRetrieveStep(
       "retrieve",
       traceCtx,
       async () => {
-      const searchQueries = await buildSearchQueries(query);
-      let mergedHits: RetrievedChunk[] = [];
+        const searchQueries = await buildSearchQueries(query);
+        let mergedHits: RetrievedChunk[] = [];
 
-      for (const searchQuery of searchQueries) {
-        const embeddingInput = await buildEmbeddingInput(searchQuery);
-        const vector = await traceRetrieveStep("embed", traceCtx, () =>
-          embedText(embeddingInput, log),
-        );
-        if (!vector) {
-          log.warn("embedding 生成失败");
-          continue;
+        for (const searchQuery of searchQueries) {
+          const embeddingInput = await buildEmbeddingInput(searchQuery);
+          const vector = await traceRetrieveStep("embed", traceCtx, () =>
+            embedQueryText(embeddingInput, log),
+          );
+          if (!vector) {
+            log.warn("embedding 生成失败");
+            continue;
+          }
+
+          const hits = await traceRetrieveStep("search", traceCtx, () =>
+            searchWorkspace(workspaceId, vector),
+          );
+          mergedHits = mergeHits(mergedHits, hits);
         }
 
-        const hits = await traceRetrieveStep("search", traceCtx, () =>
-          searchWorkspace(workspaceId, vector),
+        mergedHits = await applyReranker(query, mergedHits);
+
+        log.debug("找到文档", {
+          count: mergedHits.length,
+          hits: mergedHits.map((d) => ({
+            similarity: d.similarity,
+            title: d.title,
+            source: d.source,
+          })),
+        });
+
+        if (!passesTop1PreCheck(mergedHits)) {
+          return { kind: "no-docs" } as const;
+        }
+
+        const relevantDocs = mapHitsToDocs(mergedHits);
+        const blocks = formatContextBlocks(relevantDocs);
+        const citations = mapDocsToCitations(relevantDocs);
+        const sources = Array.from(
+          new Set(relevantDocs.map((doc) => doc.source ?? "unknown")),
         );
-        mergedHits = mergeHits(mergedHits, hits);
-      }
 
-      mergedHits = applyReranker(mergedHits);
-
-      log.debug("找到文档", {
-        count: mergedHits.length,
-        hits: mergedHits.map((d) => ({
-          similarity: d.similarity,
-          title: d.title,
-          source: d.source,
-        })),
-      });
-
-      if (!passesTop1PreCheck(mergedHits)) {
-        return { kind: "no-docs" } as const;
-      }
-
-      const relevantDocs = mapHitsToDocs(mergedHits);
-      const blocks = formatContextBlocks(relevantDocs);
-      const citations = mapDocsToCitations(relevantDocs);
-      const sources = Array.from(
-        new Set(relevantDocs.map((doc) => doc.source ?? "unknown")),
-      );
-
-      log.debug("返回上下文", { length: blocks.length });
-
-      return {
-        kind: "ok",
-        blocks,
-        docCount: relevantDocs.length,
-        sources,
-        citations,
-      } as const;
+        return {
+          kind: "ok",
+          blocks,
+          docCount: relevantDocs.length,
+          sources,
+          citations,
+        } as const;
       },
     );
 
-    return await Promise.race([searchPromise, timeoutPromise]);
+    return await awaitSearchWithGrace(
+      searchPromise,
+      VECTOR_SEARCH_TIMEOUT_MS,
+      log,
+    );
   } catch (error) {
     const kind = classifyVectorError(error);
     if (kind === "timeout") {
@@ -276,9 +287,5 @@ export async function getRelevantContext(
       error: error instanceof Error ? error.message : String(error),
     });
     return { kind: "api-error", error };
-  } finally {
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId);
-    }
   }
 }

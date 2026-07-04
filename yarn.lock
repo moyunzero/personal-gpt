@@ -11,6 +11,14 @@
     "@ai-sdk/provider-utils" "4.0.27"
     "@vercel/oidc" "3.2.0"
 
+"@ai-sdk/openai-compatible@2.0.56":
+  version "2.0.56"
+  resolved "https://registry.npmmirror.com/@ai-sdk/openai-compatible/-/openai-compatible-2.0.56.tgz#ff80989890b7c019a6f3e4cda847cf7dd9ff7696"
+  integrity sha512-cQrN6OUn/jvsY3OdsU6Wn+ss7vp1iwIcakZKSlSRMnYqShBfyT7Qht+eqmgxs7w9ttrw6FAG6o11AiBs+iEsTA==
+  dependencies:
+    "@ai-sdk/provider" "3.0.13"
+    "@ai-sdk/provider-utils" "4.0.35"
+
 "@ai-sdk/provider-utils@4.0.27":
   version "4.0.27"
   resolved "https://registry.npmmirror.com/@ai-sdk/provider-utils/-/provider-utils-4.0.27.tgz#d2183685768626bcf1c968b7d73ea2b974da59b9"
@@ -20,10 +28,26 @@
     "@standard-schema/spec" "^1.1.0"
     eventsource-parser "^3.0.8"
 
+"@ai-sdk/provider-utils@4.0.35":
+  version "4.0.35"
+  resolved "https://registry.npmmirror.com/@ai-sdk/provider-utils/-/provider-utils-4.0.35.tgz#bd32efdd5e4ac4f5c2ac42924d960a1d8bf0b4e2"
+  integrity sha512-bjYld/2KGPLt78kpqbya+fD4LYS7BqVQJyUjE3qAHrYB0FR2Q90BaWEVIBZaguTWXf/A8L6uG1zO1v9TxVlGWg==
+  dependencies:
+    "@ai-sdk/provider" "3.0.13"
+    "@standard-schema/spec" "^1.1.0"
+    eventsource-parser "^3.0.8"
+
 "@ai-sdk/provider@3.0.10":
   version "3.0.10"
   resolved "https://registry.npmmirror.com/@ai-sdk/provider/-/provider-3.0.10.tgz#abfb6776f699951f9b8ac20cf1d42a3fc7d79752"
   integrity sha512-Q3BZ27qfpYqnCYGvE3vt+Qi6LGOF9R5Nmzn+9JoM1lCRsD9mYaIhfJLkSunN48nfGXJ6n+XNV0J/XVpqGQl7Dw==
+  dependencies:
+    json-schema "^0.4.0"
+
+"@ai-sdk/provider@3.0.13":
+  version "3.0.13"
+  resolved "https://registry.npmmirror.com/@ai-sdk/provider/-/provider-3.0.13.tgz#8d2d64bcf5bd077133c82cc1eeefad3bee0b192d"
+  integrity sha512-ZPtVYt5QIJzOta1kdUiDuCx4HhFkvNPv/rvmZ2b1iXwybYjJsCnNYR4PAw4kW7rgVfDARvHXcU64efWuqNp6bw==
   dependencies:
     json-schema "^0.4.0"
 
@@ -1210,11 +1234,6 @@
   version "1.0.39"
   resolved "https://registry.npmmirror.com/@nolyfill/is-core-module/-/is-core-module-1.0.39.tgz#3dc35ba0f1e66b403c00b39344f870298ebb1c8e"
   integrity sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==
-
-"@openrouter/ai-sdk-provider@2.9.0":
-  version "2.9.0"
-  resolved "https://registry.npmmirror.com/@openrouter/ai-sdk-provider/-/ai-sdk-provider-2.9.0.tgz#0c05b6dda3055381c91204303cb4b2f7fb8525a3"
-  integrity sha512-Seva+NCa0WUQnJIUE5GzHsUv1WTIeyqwz0ELl2VtS6NP+eF+77yCXGFVOMbvoCM7QMjlnhv7931e89R+8pJdcQ==
 
 "@opentelemetry/api@1.9.0":
   version "1.9.0"

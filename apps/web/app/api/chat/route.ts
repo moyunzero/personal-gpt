@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { type VectorSearchResult } from "@/lib/chat/context";
 import { formatMessages, type InputMessage } from "@/lib/chat/messages";
 import { buildSystemPrompt } from "@/lib/chat/prompt";
-import { shouldUseVectorSearch } from "@/lib/chat/query-classifier";
+import { decideQueryRoute } from "@/lib/chat/query-router";
 import { getRelevantContext } from "@/lib/chat/retrieve";
 import { createChatStream } from "@/lib/chat/stream";
 import { logger } from "@/lib/logger";
@@ -60,7 +60,7 @@ export async function OPTIONS(req: Request) {
  *   1. CORS + Origin 硬校验（跨域作品集集成）
  *   2. 限流（按 IP，fail-open）
  *   3. 解析 / 校验请求体
- *   4. 调 query-classifier 决定是否走向量检索
+ *   4. 调 query-router 决定 direct（模型直答）或 retrieve（向量检索）
  *   5. 把检索结果交给 buildSystemPrompt
  *   6. 把 system + messages 交给 createChatStream，包成 UIMessageStreamResponse
  *   7. 顶层 try-catch + requestId 错误响应
@@ -140,10 +140,19 @@ export async function POST(req: Request) {
       });
     }
 
-    // 智能判断是否需要向量检索；不需要时直接走默认 no-docs 分支
-    const needsContext = shouldUseVectorSearch(lastContent);
+    const routeDecision = await decideQueryRoute(lastContent, {
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      requestId,
+    });
+    log.debug("query route", {
+      route: routeDecision.route,
+      reason: routeDecision.reason,
+      fastPath: routeDecision.fastPath ?? false,
+      precheckSimilarity: routeDecision.precheckSimilarity,
+    });
+
     let contextResult: VectorSearchResult = { kind: "no-docs" };
-    if (needsContext) {
+    if (routeDecision.route === "retrieve") {
       contextResult = await getRelevantContext(
         lastContent,
         requestId,
@@ -161,7 +170,7 @@ export async function POST(req: Request) {
         docCount: contextResult.docCount,
         sources: contextResult.sources,
       });
-    } else if (contextResult.kind === "no-docs" && needsContext) {
+    } else if (contextResult.kind === "no-docs" && routeDecision.route === "retrieve") {
       log.metric("vector.search.no_docs", { queryLength: lastContent.length });
     }
     // timeout / api-error 的日志在 getRelevantContext 里已经发过，避免重复。

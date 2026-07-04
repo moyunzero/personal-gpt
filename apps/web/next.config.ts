@@ -1,4 +1,9 @@
+import path from "node:path";
+import { loadEnvConfig } from "@next/env";
 import type { NextConfig } from "next";
+
+// Monorepo：从仓库根目录加载 .env（与 yarn dev:web 在 apps/web 下 cwd 无关）
+loadEnvConfig(path.join(__dirname, "../.."));
 
 /**
  * 全站基线安全响应头。

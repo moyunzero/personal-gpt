@@ -17,6 +17,8 @@ const createMock = vi.fn();
 const queueAddMock = vi.fn();
 const jobUpdateMock = vi.fn();
 const jobSaveMock = vi.fn();
+const docUpdateMock = vi.fn();
+const docFindOneMock = vi.fn();
 const mkdirMock = vi.fn();
 const writeFileMock = vi.fn();
 
@@ -44,6 +46,9 @@ import { DocumentEntity } from "@/lib/db/entities/document.entity";
 import { IngestJobEntity } from "@/lib/db/entities/ingest-job.entity";
 import { getDataSource } from "@/lib/db/get-data-source";
 import {
+  listDocuments,
+  reindexDocument,
+  updateDocumentMetadata,
   uploadDocument,
   UploadValidationError,
   validateUploadFile,
@@ -137,8 +142,10 @@ describe("uploadDocument enqueue contract", () => {
       ...data,
       id: data.documentId ? ingestJobEntity.id : documentEntity.id,
     }));
-    saveMock.mockImplementation(async (entity: { id?: string; status?: string }) => {
-      if (entity.status === "pending") return documentEntity;
+    saveMock.mockImplementation(async (entity: Record<string, unknown>) => {
+      if (entity.status === "pending") {
+        return { ...documentEntity, ...entity, id: documentEntity.id };
+      }
       return { ...ingestJobEntity, ...entity };
     });
 
@@ -179,6 +186,220 @@ describe("uploadDocument enqueue contract", () => {
     expect(jobUpdateMock).toHaveBeenCalledWith(
       { id: "job-uuid" },
       { bullJobId: "bull-123" },
+    );
+  });
+
+  it("passes category and tags into ingest queue payload", async () => {
+    await uploadDocument(makeFile(), { category: "docs", tags: ["ai", "rag"] });
+
+    expect(queueAddMock).toHaveBeenCalledWith(
+      "ingest-doc-uuid",
+      expect.objectContaining({
+        category: "docs",
+        tags: ["ai", "rag"],
+      }),
+    );
+  });
+});
+
+describe("reindexDocument (INGEST-05)", () => {
+  const workspaceId = "00000000-0000-4000-8000-000000000001";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    const documentEntity = {
+      id: "doc-reindex",
+      workspaceId,
+      title: "reindex-me",
+      status: "ready",
+      filePath: "/tmp/uploads/reindex.pdf",
+      mimeType: "application/pdf",
+      tags: ["tag-a"],
+      category: "docs",
+      chunkCount: 12,
+    };
+
+    const ingestJobEntity = {
+      id: "job-reindex",
+      workspaceId,
+      documentId: documentEntity.id,
+      status: "queued",
+      progress: 0,
+      bullJobId: null,
+    };
+
+    docFindOneMock.mockResolvedValue(documentEntity);
+    docUpdateMock.mockResolvedValue(undefined);
+    createMock.mockImplementation((data: Record<string, unknown>) => ({
+      ...data,
+      id: data.documentId ? ingestJobEntity.id : documentEntity.id,
+    }));
+    jobSaveMock.mockResolvedValue(ingestJobEntity);
+    queueAddMock.mockResolvedValue({ id: "bull-reindex-456" });
+    jobUpdateMock.mockResolvedValue(undefined);
+
+    vi.mocked(getDataSource).mockResolvedValue({
+      getRepository: (entity: unknown) => {
+        if (entity === DocumentEntity) {
+          return {
+            findOne: docFindOneMock,
+            update: docUpdateMock,
+          };
+        }
+        if (entity === IngestJobEntity) {
+          return {
+            create: createMock,
+            save: jobSaveMock,
+            update: jobUpdateMock,
+          };
+        }
+        throw new Error("unexpected entity");
+      },
+    } as never);
+  });
+
+  it("sets status processing and enqueues BullMQ job", async () => {
+    const result = await reindexDocument("doc-reindex");
+
+    expect(result).not.toBeNull();
+    expect(docUpdateMock).toHaveBeenCalledWith(
+      { id: "doc-reindex", workspaceId },
+      { status: "processing", chunkCount: 0 },
+    );
+    expect(result?.document.status).toBe("processing");
+    expect(result?.document.chunkCount).toBe(0);
+    expect(queueAddMock).toHaveBeenCalledWith(
+      "ingest-doc-reindex",
+      expect.objectContaining({
+        documentId: "doc-reindex",
+        filePath: "/tmp/uploads/reindex.pdf",
+        mimeType: "application/pdf",
+      }),
+    );
+    expect(result?.job.id).toBe("job-reindex");
+    expect(jobUpdateMock).toHaveBeenCalledWith(
+      { id: "job-reindex" },
+      { bullJobId: "bull-reindex-456" },
+    );
+  });
+
+  it("returns null when document is missing filePath", async () => {
+    docFindOneMock.mockResolvedValue({
+      id: "doc-no-path",
+      workspaceId,
+      filePath: null,
+      mimeType: "application/pdf",
+    });
+
+    const result = await reindexDocument("doc-no-path");
+
+    expect(result).toBeNull();
+    expect(docUpdateMock).not.toHaveBeenCalled();
+    expect(queueAddMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateDocumentMetadata (KB-02)", () => {
+  const workspaceId = "00000000-0000-4000-8000-000000000001";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    const documentEntity = {
+      id: "doc-meta",
+      workspaceId,
+      title: "meta-doc",
+      status: "ready",
+      category: "old-cat",
+      tags: ["a"],
+      chunkCount: 1,
+    };
+
+    docFindOneMock.mockResolvedValue(documentEntity);
+    saveMock.mockImplementation(async (entity: Record<string, unknown>) => ({
+      ...documentEntity,
+      ...entity,
+    }));
+
+    vi.mocked(getDataSource).mockResolvedValue({
+      getRepository: (entity: unknown) => {
+        if (entity === DocumentEntity) {
+          return {
+            findOne: docFindOneMock,
+            save: saveMock,
+          };
+        }
+        throw new Error("unexpected entity");
+      },
+    } as never);
+  });
+
+  it("stores null when category is cleared", async () => {
+    const result = await updateDocumentMetadata("doc-meta", { category: null });
+
+    expect(result?.category).toBeNull();
+    expect(saveMock).toHaveBeenCalledWith(
+      expect.objectContaining({ category: null }),
+    );
+  });
+});
+
+describe("listDocuments tags filter (KB-03)", () => {
+  const andWhereMock = vi.fn().mockReturnThis();
+  const orderByMock = vi.fn().mockReturnThis();
+  const skipMock = vi.fn().mockReturnThis();
+  const takeMock = vi.fn().mockReturnThis();
+  const getManyAndCountMock = vi.fn().mockResolvedValue([[], 0]);
+  const jobWhereMock = vi.fn().mockReturnThis();
+  const jobOrderByMock = vi.fn().mockReturnThis();
+  const jobGetManyMock = vi.fn().mockResolvedValue([]);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    andWhereMock.mockReturnThis();
+    orderByMock.mockReturnThis();
+    skipMock.mockReturnThis();
+    takeMock.mockReturnThis();
+    getManyAndCountMock.mockResolvedValue([[], 0]);
+    jobWhereMock.mockReturnThis();
+    jobOrderByMock.mockReturnThis();
+    jobGetManyMock.mockResolvedValue([]);
+
+    vi.mocked(getDataSource).mockResolvedValue({
+      getRepository: (entity: unknown) => {
+        if (entity === DocumentEntity) {
+          return {
+            createQueryBuilder: () => ({
+              where: vi.fn().mockReturnThis(),
+              andWhere: andWhereMock,
+              orderBy: orderByMock,
+              skip: skipMock,
+              take: takeMock,
+              getManyAndCount: getManyAndCountMock,
+            }),
+          };
+        }
+        if (entity === IngestJobEntity) {
+          return {
+            createQueryBuilder: () => ({
+              where: jobWhereMock,
+              orderBy: jobOrderByMock,
+              getMany: jobGetManyMock,
+            }),
+          };
+        }
+        throw new Error("unexpected entity");
+      },
+    } as never);
+  });
+
+  it("applies tags OR filter via query builder", async () => {
+    await listDocuments({ tags: ["python"] });
+
+    expect(andWhereMock).toHaveBeenCalledWith(
+      "doc.tags ?| array[:...tags]",
+      { tags: ["python"] },
     );
   });
 });

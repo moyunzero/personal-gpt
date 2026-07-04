@@ -32,6 +32,8 @@ export interface VectorSearchParams {
   vector: number[];
   limit?: number;
   similarityThreshold?: number;
+  /** Astra find 附加过滤（与 workspaceId 以 $and 合并） */
+  filter?: Record<string, unknown>;
 }
 
 export interface VectorStore {

@@ -11,24 +11,28 @@
     "dev:worker": "yarn workspace ingest-worker start:dev",
     "dev:agent": "yarn workspace agent-service start:dev",
     "docker:up": "docker compose up -d",
-    "seed": "ts-node ./script/loadDB.ts",
-    "seed:psychology": "ts-node ./script/loadPsychologyData.ts",
-    "seed:suggestions": "ts-node ./script/loadPromptSuggestions.ts",
+    "seed": "ts-node --project tsconfig.scripts.json ./script/loadDB.ts",
+    "seed:psychology": "ts-node --project tsconfig.scripts.json ./script/loadPsychologyData.ts",
+    "seed:suggestions": "ts-node --project tsconfig.scripts.json ./script/loadPromptSuggestions.ts",
+    "astra:init-embedding": "ts-node --project tsconfig.scripts.json ./script/initEmbeddingCollection.ts",
     "migrate:legacy": "yarn workspace web migrate:legacy",
-    "validate": "yarn workspace web validate && yarn workspace ingest-worker validate && yarn workspace @personal-gpt/shared validate",
+    "validate": "yarn workspace web validate && yarn workspace ingest-worker validate && yarn workspace agent-service validate && yarn workspace @personal-gpt/shared validate",
     "test": "vitest run",
-    "test:regression": "vitest run tests/regression/phase-1"
+    "test:regression": "vitest run tests/regression/phase-1",
+    "acceptance:phase-1": "node tests/acceptance/phase-1/run.mjs"
   },
   "devDependencies": {
     "@datastax/astra-db-ts": "2.2.1",
     "@langchain/community": "1.1.28",
     "@langchain/core": "1.1.45",
     "@langchain/textsplitters": "1.0.1",
+    "@personal-gpt/shared": "*",
     "cheerio": "1.2.0",
     "dotenv": "17.4.2",
     "openai": "6.37.0",
     "playwright": "1.59.1",
     "ts-node": "10.9.2",
+    "tsconfig-paths": "4.2.0",
     "typescript": "^5",
     "vitest": "^4.1.6"
   }

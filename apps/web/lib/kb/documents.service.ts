@@ -4,6 +4,8 @@ import path from "node:path";
 
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import type { IngestJobPayload } from "@personal-gpt/shared/types/kb";
+import { normalizeUploadMime } from "@personal-gpt/shared/utils/ingest";
+import { getUploadsDir } from "@personal-gpt/shared/utils/paths";
 import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 
 import { DocumentEntity } from "@/lib/db/entities/document.entity";
@@ -54,9 +56,7 @@ export interface DocumentWithJob {
 }
 
 /** monorepo 根目录 uploads/（web 与 ingest-worker 共用绝对路径） */
-export function getUploadsDir(): string {
-  return path.resolve(__dirname, "../../../..", "uploads");
-}
+export { getUploadsDir } from "@personal-gpt/shared/utils/paths";
 
 /** 上传前校验：MIME 白名单 + 20MB 上限（D-13） */
 export function validateUploadFile(
@@ -181,9 +181,9 @@ export async function uploadDocument(
   file: UploadFileInput,
   meta: { title?: string; category?: string; tags?: string[] } = {},
 ): Promise<DocumentWithJob> {
-  validateUploadFile(file);
+  const mimeType = normalizeUploadMime(file.name, file.type);
+  validateUploadFile({ type: mimeType, size: file.size });
 
-  const mimeType = file.type;
   const filePath = await saveUploadToDisk(file, mimeType);
   const title = meta.title?.trim() || file.name.replace(/\.[^.]+$/, "") || file.name;
 

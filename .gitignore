@@ -54,8 +54,6 @@ uploads/
 .planning/
 .env*.local
 
-docs/
-
 reference/
 
 .agents/

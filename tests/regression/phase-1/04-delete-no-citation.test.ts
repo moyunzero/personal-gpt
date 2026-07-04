@@ -13,20 +13,13 @@ vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
 vi.mock("@/lib/env", () => ({
   env: {
     ASTRA_DB_COLLECTION: "test-collection",
-    OPENROUTER_API_KEY: "test-key",
     VECTOR_SEARCH_TIMEOUT_MS: 5000,
     EMBEDDING_CACHE_SIZE: 100,
   },
 }));
 
-vi.mock("openai", () => ({
-  default: class MockOpenAI {
-    embeddings = {
-      create: vi.fn().mockResolvedValue({
-        data: [{ embedding: [0.1, 0.2, 0.3] }],
-      }),
-    };
-  },
+vi.mock("@personal-gpt/shared/ai/embeddings", () => ({
+  embedText: vi.fn().mockResolvedValue([0.1, 0.2, 0.3]),
 }));
 
 vi.mock("@/lib/chat/tracing", () => ({

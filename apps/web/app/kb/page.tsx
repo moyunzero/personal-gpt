@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import AppHeader from "../components/AppHeader";
+import KbCategoryCombobox from "../components/KbCategoryCombobox";
 import KbDocumentList, {
   type KbDocumentItem,
 } from "../components/KbDocumentList";
@@ -25,7 +26,17 @@ export default function KbPage() {
   const [status, setStatus] = useState("");
   const [tags, setTags] = useState("");
 
-  // 筛选变化时拉列表；setState 仅在 fetch 异步回调中，避免 effect 内同步 setState
+  const categories = useMemo(
+    () =>
+      [
+        ...new Set(
+          items.map((i) => i.category).filter((c): c is string => Boolean(c)),
+        ),
+      ],
+    [items],
+  );
+
+  // 筛选变化时拉列表
   useEffect(() => {
     let cancelled = false;
 
@@ -77,43 +88,55 @@ export default function KbPage() {
 
         <KbUploadZone onUploaded={handleUploaded} />
 
-        <section className="kb-filters" aria-label="筛选文档">
-          <input
-            className="kb-filter-input"
-            placeholder="搜索标题…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <input
-            className="kb-filter-input"
-            placeholder="分类"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          />
-          <input
-            className="kb-filter-input"
-            placeholder="标签（逗号分隔）"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-          />
-          <select
-            className="kb-filter-select"
-            aria-label="按状态筛选"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <option value="">全部状态</option>
-            <option value="pending">等待中</option>
-            <option value="processing">处理中</option>
-            <option value="ready">就绪</option>
-            <option value="failed">失败</option>
-          </select>
+        <section className="kb-toolbar" aria-label="筛选文档">
+          <div className="kb-toolbar-search">
+            <input
+              className="kb-field-input kb-toolbar-search-input"
+              placeholder="搜索文档…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="搜索标题"
+            />
+          </div>
+          <div className="kb-toolbar-filters">
+            <KbCategoryCombobox
+              className="kb-toolbar-filter"
+              value={category}
+              onChange={setCategory}
+              options={categories}
+              placeholder="分类"
+              aria-label="按分类筛选"
+            />
+            <input
+              className="kb-field-input kb-toolbar-filter"
+              placeholder="标签"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              aria-label="按标签筛选"
+            />
+            <select
+              className="kb-field-input kb-toolbar-select"
+              aria-label="按状态筛选"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <option value="">全部状态</option>
+              <option value="pending">等待中</option>
+              <option value="processing">处理中</option>
+              <option value="ready">就绪</option>
+              <option value="failed">失败</option>
+            </select>
+          </div>
         </section>
 
         {loading ? <p className="kb-loading">加载中…</p> : null}
         {error ? <p className="kb-upload-error">{error}</p> : null}
 
-        <KbDocumentList items={items} onItemsChange={setItems} />
+        <KbDocumentList
+          items={items}
+          categories={categories}
+          onItemsChange={setItems}
+        />
       </div>
     </main>
   );

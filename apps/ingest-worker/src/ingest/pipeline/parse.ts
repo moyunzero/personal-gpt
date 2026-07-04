@@ -5,11 +5,12 @@ import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
 
 import { DEFAULT_ALLOWED_MIME_TYPES } from "../../../../../packages/shared/src/utils/ingest";
+import { getUploadsDir } from "../../../../../packages/shared/src/utils/paths";
 
 const PARSE_TIMEOUT_MS = 60_000;
 
 /** uploads/ 根目录（monorepo 根），解析前校验 filePath 必须在其下 */
-const UPLOADS_ROOT = path.resolve(__dirname, "../../../../../uploads");
+const UPLOADS_ROOT = getUploadsDir();
 
 function assertAllowedMime(mimeType: string): void {
   if (!DEFAULT_ALLOWED_MIME_TYPES.includes(mimeType)) {

@@ -7,8 +7,8 @@ vi.mock("@/lib/chat/retrieve", () => ({
   getRelevantContext: (...args: unknown[]) => getRelevantContextMock(...args),
 }));
 
-vi.mock("@openrouter/ai-sdk-provider", () => ({
-  createOpenRouter: () => (modelName: string) => modelName,
+vi.mock("@ai-sdk/google", () => ({
+  google: (modelName: string) => modelName,
 }));
 
 vi.mock("ai", async (importOriginal) => {
@@ -18,10 +18,6 @@ vi.mock("ai", async (importOriginal) => {
     streamText: (...args: unknown[]) => streamTextMock(...args),
   };
 });
-
-vi.mock("@/lib/env", () => ({
-  env: { OPENROUTER_API_KEY: "test-key" },
-}));
 
 vi.mock("@/lib/logger", () => ({
   logger: {
@@ -34,7 +30,7 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
-import { shouldUseVectorSearch } from "@/lib/chat/query-classifier";
+import { isGreetingOnly } from "@/lib/chat/query-intent";
 import { createChatStream } from "@/lib/chat/stream";
 
 async function collectStreamParts(stream: ReadableStream<unknown>) {
@@ -55,13 +51,12 @@ describe("Phase 1 regression #3: greeting skips retrieval and citations", () => 
   });
 
   it("does not use vector search for 你好", () => {
-    expect(shouldUseVectorSearch("你好")).toBe(false);
+    expect(isGreetingOnly("你好")).toBe(true);
   });
 
   it("streams response without data-citations for greeting flow", async () => {
     const query = "你好";
-    const needsContext = shouldUseVectorSearch(query);
-    expect(needsContext).toBe(false);
+    const needsContext = !isGreetingOnly(query);
 
     if (needsContext) {
       await getRelevantContextMock(query, "reg-3");

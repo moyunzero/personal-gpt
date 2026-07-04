@@ -24,7 +24,7 @@ function ensureLangSmithEnv(): boolean {
   process.env.LANGSMITH_TRACING = "true";
   process.env.LANGSMITH_API_KEY = key;
   if (!process.env.LANGSMITH_PROJECT?.trim()) {
-    process.env.LANGSMITH_PROJECT = "personal-gpt-phase1";
+    process.env.LANGSMITH_PROJECT = "personal-gpt-gemini";
   }
 
   configured = true;

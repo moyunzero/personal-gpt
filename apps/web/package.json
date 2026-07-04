@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "DOTENV_CONFIG_PATH=../../.env next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -17,10 +17,9 @@
     "migrate:legacy": "ts-node --project tsconfig.json script/migrateLegacy.ts"
   },
   "dependencies": {
-    "@personal-gpt/shared": "*",
     "@ai-sdk/react": "3.0.179",
     "@datastax/astra-db-ts": "2.2.1",
-    "@openrouter/ai-sdk-provider": "2.9.0",
+    "@personal-gpt/shared": "*",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "ai": "6.0.177",
@@ -28,20 +27,19 @@
     "ioredis": "5.11.1",
     "langsmith": "0.7.15",
     "next": "16.2.6",
-    "openai": "6.37.0",
+    "pg": "8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
     "reflect-metadata": "^0.2.2",
     "remark-gfm": "^4.0.1",
     "typeorm": "0.3.28",
-    "pg": "8.22.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@nestjs/typeorm": "11.0.3",
     "@langchain/community": "1.1.28",
     "@langchain/core": "1.1.45",
+    "@nestjs/typeorm": "11.0.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

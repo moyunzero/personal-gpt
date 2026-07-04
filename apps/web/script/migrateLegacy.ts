@@ -5,6 +5,7 @@ import * as path from "node:path";
 
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
+import { embedTexts } from "@personal-gpt/shared/ai/embeddings";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 
@@ -19,32 +20,6 @@ const dryRun = process.argv.includes("--dry-run");
 const psychologyLimit = process.env.LEGACY_PSYCHOLOGY_LIMIT
   ? parseInt(process.env.LEGACY_PSYCHOLOGY_LIMIT, 10)
   : 50;
-
-async function embedBatch(texts: string[]): Promise<number[][]> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY required for migrate:legacy");
-  }
-
-  const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "nvidia/llama-nemotron-embed-vl-1b-v2:free",
-      input: texts,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenRouter embedding failed: ${response.status}`);
-  }
-
-  const data = (await response.json()) as { data: { embedding: number[] }[] };
-  return data.data.map((item) => item.embedding);
-}
 
 async function upsertLegacyDocument(
   dataSource: typeof AppDataSourceType,
@@ -86,7 +61,7 @@ async function upsertLegacyDocument(
   const vectorStore = createVectorStore();
   await vectorStore.deleteByDocument(DEFAULT_WORKSPACE_ID, document.id);
 
-  const embeddings = await embedBatch(chunks);
+  const embeddings = await embedTexts(chunks);
   await vectorStore.upsert(
     chunks.map((text, chunkIndex) => ({
       workspaceId: DEFAULT_WORKSPACE_ID,

@@ -9,10 +9,16 @@
     "./types/kb": "./src/types/kb.ts",
     "./schemas/env": "./src/schemas/env.ts",
     "./utils/ingest": "./src/utils/ingest.ts",
+    "./utils/paths": "./src/utils/paths.ts",
     "./constants/workspace": "./src/constants/workspace.ts",
     "./constants/queue": "./src/constants/queue.ts",
     "./stores/vector-store": "./src/stores/vector-store.ts",
-    "./stores/vector-store.astra": "./src/stores/vector-store.astra.ts"
+    "./stores/vector-store.astra": "./src/stores/vector-store.astra.ts",
+    "./ai/groq-models": "./src/ai/groq-models.ts",
+    "./ai/groq-chat": "./src/ai/groq-chat.ts",
+    "./ai/embedding-models": "./src/ai/embedding-models.ts",
+    "./ai/embeddings": "./src/ai/embeddings.ts",
+    "./ai/rag-helper": "./src/ai/rag-helper.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
@@ -20,7 +26,9 @@
     "validate": "yarn type-check && yarn test"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "2.0.56",
     "@datastax/astra-db-ts": "2.2.1",
+    "ai": "6.0.177",
     "zod": "4.4.3"
   },
   "devDependencies": {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import KbCategoryCombobox from "./KbCategoryCombobox";
 import KbDeleteConfirm from "./KbDeleteConfirm";
 
 export type KbDocumentItem = {
@@ -24,6 +25,7 @@ export type KbDocumentItem = {
 
 type KbDocumentListProps = {
   items: KbDocumentItem[];
+  categories?: string[];
   onItemsChange: (items: KbDocumentItem[]) => void;
 };
 
@@ -34,12 +36,24 @@ const STATUS_LABEL: Record<KbDocumentItem["status"], string> = {
   failed: "失败",
 };
 
+/** SSE 终态后从 REST 拉权威 document（含 chunkCount） */
+async function fetchDocumentById(
+  documentId: string,
+): Promise<KbDocumentItem | null> {
+  const res = await fetch(`/api/kb/documents/${documentId}`);
+  const data = (await res.json()) as { document?: KbDocumentItem };
+  if (!res.ok || !data.document) return null;
+  return data.document;
+}
+
 function KbDocumentRow({
   item,
+  categories,
   onUpdate,
   onRemove,
 }: {
   item: KbDocumentItem;
+  categories: string[];
   onUpdate: (next: KbDocumentItem) => void;
   onRemove: (id: string) => void;
 }) {
@@ -50,6 +64,27 @@ function KbDocumentRow({
   const [reindexing, setReindexing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
+  const [editCategory, setEditCategory] = useState(item.category ?? "");
+  const [editTags, setEditTags] = useState(item.tags.join(", "));
+
+  const parseTags = (raw: string) =>
+    raw.split(",").map((t) => t.trim()).filter(Boolean);
+
+  const resetEditState = () => {
+    setEditTitle(item.title);
+    setEditCategory(item.category ?? "");
+    setEditTags(item.tags.join(", "));
+  };
+
+  const startEditing = () => {
+    resetEditState();
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    resetEditState();
+    setEditing(false);
+  };
 
   const jobId = item.latestJob?.id;
 
@@ -79,8 +114,19 @@ function KbDocumentRow({
 
     es.addEventListener("completed", () => {
       setStreamProgress(100);
-      onUpdate({ ...item, status: "ready", latestJob: item.latestJob ? { ...item.latestJob, progress: 100, status: "completed" } : null });
-      es.close();
+      void (async () => {
+        const fresh = await fetchDocumentById(item.id);
+        onUpdate(
+          fresh ?? {
+            ...item,
+            status: "ready",
+            latestJob: item.latestJob
+              ? { ...item.latestJob, progress: 100, status: "completed" }
+              : null,
+          },
+        );
+        es.close();
+      })();
     });
 
     es.addEventListener("failed", (event) => {
@@ -123,16 +169,33 @@ function KbDocumentRow({
     }
   };
 
-  const handleSaveTitle = async () => {
-    const trimmed = editTitle.trim();
-    if (!trimmed || trimmed === item.title) {
+  const handleSave = async () => {
+    const trimmedTitle = editTitle.trim();
+    if (!trimmedTitle) {
+      cancelEditing();
+      return;
+    }
+
+    const nextCategory = editCategory.trim() || null;
+    const nextTags = parseTags(editTags);
+    const unchanged =
+      trimmedTitle === item.title &&
+      nextCategory === item.category &&
+      JSON.stringify(nextTags) === JSON.stringify(item.tags);
+
+    if (unchanged) {
       setEditing(false);
       return;
     }
+
     const res = await fetch(`/api/kb/documents/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: trimmed }),
+      body: JSON.stringify({
+        title: trimmedTitle,
+        category: nextCategory,
+        tags: nextTags,
+      }),
     });
     const data = (await res.json()) as { document?: KbDocumentItem };
     if (data.document) onUpdate(data.document);
@@ -158,22 +221,71 @@ function KbDocumentRow({
       <article className="kb-doc-row">
         <div className="kb-doc-main">
           {editing ? (
-            <input
-              className="kb-doc-title-input"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={() => void handleSaveTitle()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleSaveTitle();
-                if (e.key === "Escape") setEditing(false);
-              }}
-              autoFocus
-            />
+            <div className="kb-doc-edit-form">
+              <label className="kb-field">
+                <span className="kb-field-label">标题</span>
+                <input
+                  className="kb-field-input kb-doc-edit-title"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleSave();
+                    if (e.key === "Escape") cancelEditing();
+                  }}
+                  placeholder="文档标题"
+                  autoFocus
+                />
+              </label>
+              <div className="kb-meta-grid kb-meta-grid-compact">
+                <label className="kb-field">
+                  <span className="kb-field-label">分类</span>
+                  <KbCategoryCombobox
+                    value={editCategory}
+                    onChange={setEditCategory}
+                    options={categories}
+                    placeholder="分类"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleSave();
+                      if (e.key === "Escape") cancelEditing();
+                    }}
+                  />
+                </label>
+                <label className="kb-field">
+                  <span className="kb-field-label">标签</span>
+                  <input
+                    className="kb-field-input"
+                    value={editTags}
+                    onChange={(e) => setEditTags(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleSave();
+                      if (e.key === "Escape") cancelEditing();
+                    }}
+                    placeholder="逗号分隔"
+                  />
+                </label>
+              </div>
+              <div className="kb-doc-edit-actions">
+                <button
+                  type="button"
+                  className="kb-btn kb-btn-primary"
+                  onClick={() => void handleSave()}
+                >
+                  保存
+                </button>
+                <button
+                  type="button"
+                  className="kb-btn kb-btn-ghost"
+                  onClick={cancelEditing}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
           ) : (
             <button
               type="button"
               className="kb-doc-title"
-              onClick={() => setEditing(true)}
+              onClick={startEditing}
             >
               {item.title}
             </button>
@@ -246,6 +358,7 @@ function KbDocumentRow({
 /** 文档列表 + 行内 SSE 进度（D-11/D-12） */
 export default function KbDocumentList({
   items,
+  categories = [],
   onItemsChange,
 }: KbDocumentListProps) {
   const updateItem = useCallback(
@@ -274,6 +387,7 @@ export default function KbDocumentList({
         <KbDocumentRow
           key={item.id}
           item={item}
+          categories={categories}
           onUpdate={updateItem}
           onRemove={removeItem}
         />

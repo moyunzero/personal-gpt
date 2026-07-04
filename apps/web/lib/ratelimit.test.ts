@@ -7,7 +7,8 @@ vi.hoisted(() => {
   process.env.ASTRA_DB_COLLECTION = "test_collection";
   process.env.ASTRA_DB_API_ENDPOINT = "https://test.example.com";
   process.env.ASTRA_DB_APPLICATION_TOKEN = "AstraCS:test";
-  process.env.OPENROUTER_API_KEY = "test_key";
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test_key";
+  process.env.NIM_API_KEY = "test_nim_key";
   // 故意不设 UPSTASH_*，让模块顶层的 limiter 落到 null 分支
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;

@@ -1,3 +1,3 @@
 # graph/
 
-Phase 2 LangGraph 图编排占位目录。
+v2.0 LangGraph 图编排占位目录。

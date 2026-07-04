@@ -1,0 +1,98 @@
+[
+  {
+    "step": "01-chat-home",
+    "status": "SHOT",
+    "detail": "/Users/moyun/code/personal-gpt/tests/acceptance/phase-1/screenshots/01-chat-home.png",
+    "at": "2026-07-02T16:10:32.324Z"
+  },
+  {
+    "step": "01-chat-home",
+    "status": "PASS",
+    "detail": "首页加载正常",
+    "at": "2026-07-02T16:10:32.325Z"
+  },
+  {
+    "step": "02-chat-greeting-no-citation",
+    "status": "SHOT",
+    "detail": "/Users/moyun/code/personal-gpt/tests/acceptance/phase-1/screenshots/02-chat-greeting-no-citation.png",
+    "at": "2026-07-02T16:10:43.443Z"
+  },
+  {
+    "step": "02-chat-greeting",
+    "status": "PASS",
+    "detail": "无引用来源卡片",
+    "at": "2026-07-02T16:10:43.443Z"
+  },
+  {
+    "step": "03-kb-page",
+    "status": "SHOT",
+    "detail": "/Users/moyun/code/personal-gpt/tests/acceptance/phase-1/screenshots/03-kb-page.png",
+    "at": "2026-07-02T16:10:44.516Z"
+  },
+  {
+    "step": "03-kb-page",
+    "status": "PASS",
+    "detail": "知识库页加载",
+    "at": "2026-07-02T16:10:44.516Z"
+  },
+  {
+    "step": "04-kb-upload-started",
+    "status": "SHOT",
+    "detail": "/Users/moyun/code/personal-gpt/tests/acceptance/phase-1/screenshots/04-kb-upload-started.png",
+    "at": "2026-07-02T16:10:44.565Z"
+  },
+  {
+    "step": "04-kb-upload",
+    "status": "PASS",
+    "detail": "文件已上传并出现在列表",
+    "at": "2026-07-02T16:10:44.565Z"
+  },
+  {
+    "step": "05-kb-ingest-ready",
+    "status": "SHOT",
+    "detail": "/Users/moyun/code/personal-gpt/tests/acceptance/phase-1/screenshots/05-kb-ingest-ready.png",
+    "at": "2026-07-02T16:10:44.595Z"
+  },
+  {
+    "step": "05-kb-ingest",
+    "status": "PASS",
+    "detail": "文档状态=就绪",
+    "at": "2026-07-02T16:10:44.595Z"
+  },
+  {
+    "step": "06-chat-with-citations",
+    "status": "SHOT",
+    "detail": "/Users/moyun/code/personal-gpt/tests/acceptance/phase-1/screenshots/06-chat-with-citations.png",
+    "at": "2026-07-02T16:10:54.655Z"
+  },
+  {
+    "step": "06-chat-citation",
+    "status": "PASS",
+    "detail": "1 条引用",
+    "at": "2026-07-02T16:10:54.655Z"
+  },
+  {
+    "step": "07-kb-after-delete",
+    "status": "SHOT",
+    "detail": "/Users/moyun/code/personal-gpt/tests/acceptance/phase-1/screenshots/07-kb-after-delete.png",
+    "at": "2026-07-02T16:10:57.385Z"
+  },
+  {
+    "step": "07-kb-delete",
+    "status": "PASS",
+    "detail": "已删除「mocode-acceptance」",
+    "at": "2026-07-02T16:10:57.385Z"
+  },
+  {
+    "step": "08-kb-corrupt-pdf-failed",
+    "status": "SHOT",
+    "detail": "/Users/moyun/code/personal-gpt/tests/acceptance/phase-1/screenshots/08-kb-corrupt-pdf-failed.png",
+    "at": "2026-07-02T16:10:59.744Z"
+  },
+  {
+    "step": "08-corrupt-pdf",
+    "status": "PASS",
+    "detail": "损坏 PDF 显示失败状态",
+    "at": "2026-07-02T16:10:59.744Z"
+  }
+]

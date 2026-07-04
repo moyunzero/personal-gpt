@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "build": "nest build",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
+    "start": "DOTENV_CONFIG_PATH=../../.env node -r dotenv/config dist/apps/ingest-worker/src/main.js",
+    "start:dev": "DOTENV_CONFIG_PATH=../../.env ts-node -r dotenv/config src/main.ts",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "verify:parse": "DOTENV_CONFIG_PATH=../../.env ts-node -r dotenv/config --project tsconfig.json script/verify-parse.ts",

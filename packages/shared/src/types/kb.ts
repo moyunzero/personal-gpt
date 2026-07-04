@@ -1,9 +1,9 @@
 /**
  * 知识库跨 app 共享类型（web / ingest-worker / agent-service）。
- * 与 enterprise-roadmap Phase 1.2 PG schema 对齐。
+ * 与 enterprise-roadmap v1.0 数据模型 PG schema 对齐。
  */
 
-/** Phase 1 默认 workspace；多租户 UI 在 Phase 4 引入 */
+/** v1.0 默认 workspace；多租户 UI 在 v4.0 引入 */
 export type WorkspaceId = string;
 
 export type DocumentStatus = "pending" | "processing" | "ready" | "failed";
