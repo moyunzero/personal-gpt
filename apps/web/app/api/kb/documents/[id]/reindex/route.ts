@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { ReindexBusyError, reindexDocument, serializeDocumentRow } from "@/lib/kb/documents.service";
+import {
+  ReindexBusyError,
+  reindexDocument,
+  serializeDocumentRow,
+} from "@/lib/kb/documents.service";
 import { guardKbRequest } from "@/lib/kb/route-guards";
 
 type RouteContext = { params: Promise<{ id: string }> };

@@ -16,7 +16,9 @@ const DOC_ID = process.argv[2];
 
 async function main() {
   if (!DOC_ID) {
-    console.error("用法: npx ts-node --project tsconfig.scripts.json ./script/repairDocumentVectors.ts <documentId>");
+    console.error(
+      "用法: npx ts-node --project tsconfig.scripts.json ./script/repairDocumentVectors.ts <documentId>",
+    );
     process.exit(1);
   }
   const client = new DataAPIClient(process.env.ASTRA_DB_APPLICATION_TOKEN!);
