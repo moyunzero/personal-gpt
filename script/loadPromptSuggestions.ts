@@ -6,6 +6,9 @@ import * as path from "path";
 import * as crypto from "crypto";
 
 import { embedTexts } from "@personal-gpt/shared/ai/embeddings";
+import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
+
+const WORKSPACE_ID = process.env.WORKSPACE_ID ?? DEFAULT_WORKSPACE_ID;
 
 const {
   ASTRA_DB_NAMESPACE,
@@ -41,6 +44,7 @@ interface PromptSuggestionDoc {
 interface VectorDocument {
   $vector: number[];
   content: string;
+  workspaceId: string;
   source: string;
   category: string;
   title: string;
@@ -267,6 +271,7 @@ async function deleteOldDocuments(collection: AstraCollection, fileName: string)
     const result = await collection.deleteMany({
       fileName: fileName,
       source: "prompt-suggestion",
+      workspaceId: WORKSPACE_ID,
     });
 
     console.log(`  ✔ 已删除 ${result.deletedCount || 0} 个旧文档块`);
@@ -379,6 +384,7 @@ const loadPromptSuggestions = async () => {
       const vectorDoc: VectorDocument = {
         $vector: embeddings[chunkIndex],
         content: chunks[chunkIndex],
+        workspaceId: WORKSPACE_ID,
         source: "prompt-suggestion",
         category: doc.category,
         title: doc.title,
