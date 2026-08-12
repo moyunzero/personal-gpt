@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "DOTENV_CONFIG_PATH=../../.env next dev",
-    "build": "next build",
+    "build": "node script/run-kb-migrations.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
@@ -14,6 +14,7 @@
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d lib/db/data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d lib/db/data-source.ts",
+    "migrate:kb": "node script/run-kb-migrations.mjs",
     "migrate:legacy": "ts-node --project tsconfig.json script/migrateLegacy.ts"
   },
   "dependencies": {

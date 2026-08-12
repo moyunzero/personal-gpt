@@ -1,0 +1,15 @@
+.codegraph
+.git
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+apps/*/dist
+apps/web/.next
+uploads
+data
+docs
+reference
+.planning
+.agents
+.env*
+!.env.example
