@@ -3,12 +3,16 @@ import type { Citation } from "@personal-gpt/shared/types/kb";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import AgentStepPanels, { extractAgentSteps } from "./AgentStepPanels";
+import AgentTodoList, { extractTodos } from "./AgentTodoList";
 import CitationCards from "./CitationCards";
 
 interface BubbleProps {
   message: UIMessage;
   /** 当前消息仍在流式输出时不展示引用区（D-07） */
   isStreaming?: boolean;
+  /** Agent 模式：展示待办 / 步骤；角色行「助手 · Agent」 */
+  agentMode?: boolean;
 }
 
 function extractCitations(message: UIMessage): Citation[] {
@@ -40,8 +44,7 @@ const AssistantAvatar = () => (
   </span>
 );
 
-const Bubble = ({ message, isStreaming = false }: BubbleProps) => {
-  // 从 AI SDK 5+ 的 parts 数组中提取文本内容
+const Bubble = ({ message, isStreaming = false, agentMode = false }: BubbleProps) => {
   const content = message.parts
     .filter((part) => "type" in part && part.type === "text" && "text" in part)
     .map((part) => ("text" in part ? (part.text as string) : ""))
@@ -49,25 +52,38 @@ const Bubble = ({ message, isStreaming = false }: BubbleProps) => {
 
   const { role } = message;
   const citations = role === "assistant" && !isStreaming ? extractCitations(message) : [];
+  const hasAgentChrome =
+    agentMode &&
+    role === "assistant" &&
+    (extractTodos(message).length > 0 || extractAgentSteps(message).length > 0);
 
-  if (!content) {
+  if (!content && !hasAgentChrome) {
     return null;
   }
 
-  // 助手：左对齐 + spike-mark 头像 + 段落文字（不包气泡）
   if (role === "assistant") {
     return (
       <div className="message message-assistant">
         <AssistantAvatar />
         <div className="message-body">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          {agentMode ? (
+            <p className="message-role-line">助手 · Agent</p>
+          ) : null}
+          {agentMode ? (
+            <>
+              <AgentTodoList message={message} />
+              <AgentStepPanels message={message} />
+            </>
+          ) : null}
+          {content ? (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          ) : null}
           {citations.length > 0 ? <CitationCards citations={citations} /> : null}
         </div>
       </div>
     );
   }
 
-  // 用户：右对齐 cream-strong 气泡
   return (
     <div className="message message-user">
       <div className="message-body">
