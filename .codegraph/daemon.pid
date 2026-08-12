@@ -1,6 +1,6 @@
 {
-  "pid": 83615,
-  "version": "0.9.9",
+  "pid": 25872,
+  "version": "1.5.0",
   "socketPath": "/Users/moyun/code/personal-gpt/.codegraph/daemon.sock",
-  "startedAt": 1783136544510
+  "startedAt": 1786464868397
 }

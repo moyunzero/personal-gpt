@@ -59,3 +59,7 @@ docs/
 reference/
 
 .agents/
+
+# CodeGraph local index (machine-specific)
+.codegraph/*
+!.codegraph/.gitignore
