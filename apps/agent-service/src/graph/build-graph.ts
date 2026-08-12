@@ -22,8 +22,14 @@ import { createAnalystAgent } from "../agents/analyst.agent";
 import { createEditorAgent } from "../agents/editor.agent";
 import { createResearcherAgent } from "../agents/researcher.agent";
 import { createRetrieverAgent } from "../agents/retriever.agent";
-import { SUPERVISOR_PROMPT } from "../agents/supervisor.prompt";
+import { buildSupervisorPrompt } from "../agents/supervisor.prompt";
 import { createChatModel } from "../providers/chat-model.provider";
+import {
+  findSkill,
+  formatSkillForPrompt,
+  formatSkillsForPrompt,
+  loadEnabledSkills,
+} from "../skills/load-skills";
 import { resetWebSearchCallCount } from "../tools/web-search.tool";
 import {
   buildShortReplyMessages,
@@ -123,10 +129,18 @@ export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
   // 新图编译重置单任务搜索计数（D-15）；流式/每请求重置见 02-04
   resetWebSearchCallCount();
 
-  const retriever = createRetrieverAgent(model);
-  const researcher = createResearcherAgent(model);
+  // Skills → systemPrompt 注入（D-13）；绝不进入 agents / handoff（D-00c）
+  const skills = loadEnabledSkills();
+  const retriever = createRetrieverAgent(model, {
+    skillPrompt: formatSkillForPrompt(findSkill(skills, "kb-retrieval")),
+  });
+  const researcher = createResearcherAgent(model, {
+    skillPrompt: formatSkillForPrompt(findSkill(skills, "web-research")),
+  });
   const analyst = createAnalystAgent(model);
-  const editor = createEditorAgent(model);
+  const editor = createEditorAgent(model, {
+    skillPrompt: formatSkillForPrompt(findSkill(skills, "report-writer")),
+  });
 
   const supervisorWorkflow = createSupervisor({
     agents: [
@@ -136,7 +150,7 @@ export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
       editor.graph,
     ],
     llm: model,
-    prompt: SUPERVISOR_PROMPT,
+    prompt: buildSupervisorPrompt(formatSkillsForPrompt(skills)),
   });
 
   // 子图不单独挂 checkpointer；会话状态由外层 compile 统一保存

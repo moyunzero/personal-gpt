@@ -1,6 +1,6 @@
 /**
  * Supervisor 系统提示：只调度与综合，禁止亲自执行专科工具（D-06）。
- * 含 D-15 并行主题上限。
+ * 含 D-15 并行主题上限；可追加 Skills 总览（D-13，Skills≠Agent）。
  */
 
 import {
@@ -25,3 +25,10 @@ export const SUPERVISOR_PROMPT = `你是多智能体调度员（Supervisor），
 - 简单闲聊不应进入本流程（由外层短路处理）。
 
 根据用户目标选择一人或多人顺序协作，最后用中文给出综合答复。`;
+
+/** 将已启用 Skills 文本块追加到 Supervisor 提示（不把 skill 名注册为 Agent） */
+export function buildSupervisorPrompt(skillsPrompt = ""): string {
+  const extra = skillsPrompt.trim();
+  if (!extra) return SUPERVISOR_PROMPT;
+  return `${SUPERVISOR_PROMPT}\n\n${extra}`;
+}
