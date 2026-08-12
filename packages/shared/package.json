@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./types/kb": "./src/types/kb.ts",
+    "./types/agent": "./src/types/agent.ts",
     "./schemas/env": "./src/schemas/env.ts",
     "./utils/ingest": "./src/utils/ingest.ts",
     "./utils/paths": "./src/utils/paths.ts",

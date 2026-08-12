@@ -6,6 +6,7 @@ export * from "./ai/rag-helper";
 export * from "./constants/workspace";
 export * from "./constants/queue";
 export * from "./types/kb";
+export * from "./types/agent";
 export * from "./schemas/env";
 export * from "./utils/ingest";
 export * from "./stores/vector-store";

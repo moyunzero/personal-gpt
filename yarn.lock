@@ -11,6 +11,22 @@
     "@ai-sdk/provider-utils" "4.0.27"
     "@vercel/oidc" "3.2.0"
 
+"@ai-sdk/gateway@3.0.88":
+  version "3.0.88"
+  resolved "https://registry.npmmirror.com/@ai-sdk/gateway/-/gateway-3.0.88.tgz#6358fe9df14db784277de51f9018367e680255d7"
+  integrity sha512-AFoj7xdWAtCQcy0jJ235ENSakYM8D28qBX+rB+/rX4r8qe/LXgl0e5UivOqxAlIM5E9jnQdYxIPuj3XFtGk/yg==
+  dependencies:
+    "@ai-sdk/provider" "3.0.8"
+    "@ai-sdk/provider-utils" "4.0.22"
+    "@vercel/oidc" "3.1.0"
+
+"@ai-sdk/langchain@2.0.152":
+  version "2.0.152"
+  resolved "https://registry.npmmirror.com/@ai-sdk/langchain/-/langchain-2.0.152.tgz#ecba03a17fc759751341316c53d92ab3676ea23b"
+  integrity sha512-BBJZx6ufZ3Jwucsc1cf5O8fDteATCVLBPrwp9SWZhCTySE1H+pPs3ROkQBz1f1c/dfLbO3HJKRf2wCcmUd0hjg==
+  dependencies:
+    ai "6.0.146"
+
 "@ai-sdk/openai-compatible@2.0.56":
   version "2.0.56"
   resolved "https://registry.npmmirror.com/@ai-sdk/openai-compatible/-/openai-compatible-2.0.56.tgz#ff80989890b7c019a6f3e4cda847cf7dd9ff7696"
@@ -18,6 +34,15 @@
   dependencies:
     "@ai-sdk/provider" "3.0.13"
     "@ai-sdk/provider-utils" "4.0.35"
+
+"@ai-sdk/provider-utils@4.0.22":
+  version "4.0.22"
+  resolved "https://registry.npmmirror.com/@ai-sdk/provider-utils/-/provider-utils-4.0.22.tgz#89213807bbff3df8b9f1a71c46b03ebdf71fbc2d"
+  integrity sha512-B2OTFcRw/Pdka9ZTjpXv6T6qZ6RruRuLokyb8HwW+aoW9ndJ3YasA3/mVswyJw7VMBF8ofXgqvcrCt9KYvFifg==
+  dependencies:
+    "@ai-sdk/provider" "3.0.8"
+    "@standard-schema/spec" "^1.1.0"
+    eventsource-parser "^3.0.6"
 
 "@ai-sdk/provider-utils@4.0.27":
   version "4.0.27"
@@ -48,6 +73,13 @@
   version "3.0.13"
   resolved "https://registry.npmmirror.com/@ai-sdk/provider/-/provider-3.0.13.tgz#8d2d64bcf5bd077133c82cc1eeefad3bee0b192d"
   integrity sha512-ZPtVYt5QIJzOta1kdUiDuCx4HhFkvNPv/rvmZ2b1iXwybYjJsCnNYR4PAw4kW7rgVfDARvHXcU64efWuqNp6bw==
+  dependencies:
+    json-schema "^0.4.0"
+
+"@ai-sdk/provider@3.0.8":
+  version "3.0.8"
+  resolved "https://registry.npmmirror.com/@ai-sdk/provider/-/provider-3.0.8.tgz#fd7fac7533c03534ac1d3fb710a6b96e2aa00263"
+  integrity sha512-oGMAgGoQdBXbZqNG0Ze56CHjDZ1IDYOwGYxYjO5KLSlz5HiNQ9udIXsPZ61VWaHGZ5XW/jyjmr6t2xz2jGVwbQ==
   dependencies:
     json-schema "^0.4.0"
 
@@ -855,6 +887,51 @@
     p-queue "^6.6.2"
     zod "^3.25.76 || ^4"
 
+"@langchain/core@1.2.5":
+  version "1.2.5"
+  resolved "https://registry.npmmirror.com/@langchain/core/-/core-1.2.5.tgz#cef645914c2dbc6345ce2c8287b529634c62696e"
+  integrity sha512-4lXj3fTPQYGdEtOG9gWDnvmp6wpXNMo9MmWzfZxxPUxMcjulZJa93pYAZ90luFLg2YVdVuUl2tuwdD7tY5K9MA==
+  dependencies:
+    "@cfworker/json-schema" "^4.0.2"
+    "@standard-schema/spec" "^1.1.0"
+    js-tiktoken "^1.0.12"
+    langsmith ">=0.5.0 <1.0.0"
+    mustache "^4.2.0"
+    p-queue "^6.6.2"
+    zod "^3.25.76 || ^4"
+
+"@langchain/langgraph-checkpoint@^1.1.3":
+  version "1.1.3"
+  resolved "https://registry.npmmirror.com/@langchain/langgraph-checkpoint/-/langgraph-checkpoint-1.1.3.tgz#891f2f9a2e96cf2ab0920f9240f9ad1e0a86a4ab"
+  integrity sha512-wgzdQNeEsdw1e+4lvlj0tdq/RYR/k1vPin10g0ymGoehZDDgd9nvIllGXSXN4TFgF9sf5qQP/KTkOcLfeseIhA==
+
+"@langchain/langgraph-sdk@~1.9.28":
+  version "1.9.29"
+  resolved "https://registry.npmmirror.com/@langchain/langgraph-sdk/-/langgraph-sdk-1.9.29.tgz#5723bd228fe145cb0dab63def485b39a4eebf557"
+  integrity sha512-W+ccugM5EzBHvaOieyYxlSbhAy6HWF8Tyn6b/BlTWuFd8xtcnQOz2WuFyofcAc9+aQHE+6yHJfIywGOvjxS+bA==
+  dependencies:
+    "@langchain/protocol" "^0.0.18"
+    "@types/json-schema" "^7.0.15"
+    p-queue "^9.0.1"
+    p-retry "^7.1.1"
+
+"@langchain/langgraph-supervisor@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.npmmirror.com/@langchain/langgraph-supervisor/-/langgraph-supervisor-1.1.1.tgz#e77fed361144f93b8389bb2729a9edd2a0b76452"
+  integrity sha512-CIjHVf1HpQT3emEhl22Md2Bt2qkiUEkqM7G0dmK5OmnBUNhtoXJYeyXOivuQcGT7NkokRh6tiQYs3zhBZnbMSg==
+  dependencies:
+    zod "^3.25.76 || ^4"
+
+"@langchain/langgraph@1.4.9", "@langchain/langgraph@^1.4.8":
+  version "1.4.9"
+  resolved "https://registry.npmmirror.com/@langchain/langgraph/-/langgraph-1.4.9.tgz#8ec6f2ab1200f56dcf7b9e44d838c956b23b7a73"
+  integrity sha512-EvD9rS66Cya09y6rbMgD3Ir8miAkJQFo7FyJOPRPO736Kz3y5TeyeBDOS8ctff/jRc788bPijHx2NVFM79Qqig==
+  dependencies:
+    "@langchain/langgraph-checkpoint" "^1.1.3"
+    "@langchain/langgraph-sdk" "~1.9.28"
+    "@langchain/protocol" "^0.0.18"
+    "@standard-schema/spec" "1.1.0"
+
 "@langchain/openai@1.4.5", "@langchain/openai@^1.4.1":
   version "1.4.5"
   resolved "https://registry.npmmirror.com/@langchain/openai/-/openai-1.4.5.tgz#e2d243d7f6ce64db9bc57dc22ac927ff785dc7be"
@@ -863,6 +940,20 @@
     js-tiktoken "^1.0.12"
     openai "^6.34.0"
     zod "^3.25.76 || ^4"
+
+"@langchain/openai@1.5.6":
+  version "1.5.6"
+  resolved "https://registry.npmmirror.com/@langchain/openai/-/openai-1.5.6.tgz#1459b8ce383534d77e970e2210d017a79643bf30"
+  integrity sha512-1cesvhCXw30tMYWXXQaK2gN4aDIKq266LcMSjZn7O/kue/vPnCOAxiwy54HcGQQf7m/sVKfhOn4QwVRObSeAsg==
+  dependencies:
+    js-tiktoken "^1.0.12"
+    openai "^6.41.0"
+    zod "^3.25.76 || ^4"
+
+"@langchain/protocol@^0.0.18":
+  version "0.0.18"
+  resolved "https://registry.npmmirror.com/@langchain/protocol/-/protocol-0.0.18.tgz#6d96155e7263c958fbce6d4b7241b4725b72fbad"
+  integrity sha512-XW1egQtPfsGI41w2AMZNFZrUIwFSQHTjVMZs0OaTpCAvht/QLoaPN8FQcsysMVypOhupG28J29yOorrc70otBQ==
 
 "@langchain/textsplitters@1.0.1":
   version "1.0.1"
@@ -1344,7 +1435,7 @@
   resolved "https://registry.npmmirror.com/@sqltools/formatter/-/formatter-1.2.5.tgz#3abc203c79b8c3e90fd6c156a0c62d5403520e12"
   integrity sha512-Uy0+khmZqUrUGm5dmMqVlnvufZRSK0FbYzVgp0UMstm+F5+W2/jnEEQyc9vo1ZR/E5ZI/B1WjjoTqBqwJL6Krw==
 
-"@standard-schema/spec@^1.1.0":
+"@standard-schema/spec@1.1.0", "@standard-schema/spec@^1.1.0":
   version "1.1.0"
   resolved "https://registry.npmmirror.com/@standard-schema/spec/-/spec-1.1.0.tgz#a79b55dbaf8604812f52d140b2c9ab41bc150bb8"
   integrity sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==
@@ -1997,6 +2088,11 @@
   dependencies:
     uncrypto "^0.1.3"
 
+"@vercel/oidc@3.1.0":
+  version "3.1.0"
+  resolved "https://registry.npmmirror.com/@vercel/oidc/-/oidc-3.1.0.tgz#066caee449b84079f33c7445fc862464fe10ec32"
+  integrity sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w==
+
 "@vercel/oidc@3.2.0":
   version "3.2.0"
   resolved "https://registry.npmmirror.com/@vercel/oidc/-/oidc-3.2.0.tgz#5782a4d4904443f015808705b5537cf9c3b68528"
@@ -2227,6 +2323,16 @@ acorn@^8.11.0, acorn@^8.15.0, acorn@^8.4.1:
   version "8.16.0"
   resolved "https://registry.npmmirror.com/acorn/-/acorn-8.16.0.tgz#4ce79c89be40afe7afe8f3adb902a1f1ce9ac08a"
   integrity sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==
+
+ai@6.0.146:
+  version "6.0.146"
+  resolved "https://registry.npmmirror.com/ai/-/ai-6.0.146.tgz#1fc53a88fb25547c46118b60c7b2b6ae71c59cd5"
+  integrity sha512-70DE8k1rR0N3mXxyyfjYAx/FxRln/kQ5ym18lt1ys1eUklcPuoIXGbUBwdfCbmkt6YF3jCDZ5+OgkWieP/NGDw==
+  dependencies:
+    "@ai-sdk/gateway" "3.0.88"
+    "@ai-sdk/provider" "3.0.8"
+    "@ai-sdk/provider-utils" "4.0.22"
+    "@opentelemetry/api" "1.9.0"
 
 ai@6.0.177:
   version "6.0.177"
@@ -3719,10 +3825,20 @@ eventemitter3@^4.0.4:
   resolved "https://registry.npmmirror.com/eventemitter3/-/eventemitter3-4.0.7.tgz#2de9b68f6528d5644ef5c59526a1b4a07306169f"
   integrity sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==
 
+eventemitter3@^5.0.4:
+  version "5.0.4"
+  resolved "https://registry.npmmirror.com/eventemitter3/-/eventemitter3-5.0.4.tgz#a86d66170433712dde814707ac52b5271ceb1feb"
+  integrity sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==
+
 events@^3.2.0:
   version "3.3.0"
   resolved "https://registry.npmmirror.com/events/-/events-3.3.0.tgz#31a95ad0a924e2d2c419a813aeb2c4e878ea7400"
   integrity sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==
+
+eventsource-parser@^3.0.6:
+  version "3.1.1"
+  resolved "https://registry.npmmirror.com/eventsource-parser/-/eventsource-parser-3.1.1.tgz#b96cbb7dace4f3774f58a9e3b1ae9a4a524872e2"
+  integrity sha512-EKN1vKAMcZ8MlYMpaNuxN6R9yakzH6uajHcHVTqWJzvu5pWw9DyhbP35HH8MVBQ+dZjAfDxk+A8NiR9KWaXiyQ==
 
 eventsource-parser@^3.0.8:
   version "3.0.8"
@@ -4461,6 +4577,11 @@ is-negative-zero@^2.0.3:
   resolved "https://registry.npmmirror.com/is-negative-zero/-/is-negative-zero-2.0.3.tgz#ced903a027aca6381b777a5743069d7376a49747"
   integrity sha512-5KoIu2Ngpyek75jXodFvnafB6DJgr3u8uuK0LEZJjrU19DrMD3EVERaR8sjz8CCGgpZvxPl9SuE1GMVPFHx1mw==
 
+is-network-error@^1.1.0:
+  version "1.3.2"
+  resolved "https://registry.npmmirror.com/is-network-error/-/is-network-error-1.3.2.tgz#9460bc30f8419a4bca77114f4de88a3ee5e0c519"
+  integrity sha512-PhBY86zaxNZUuWP6h13Vu5oFe0XY6/UlKzQnYFELzGVHygP3MxmvTfYSG7GN3aIab/iWudSMgjSnG9Dq+nHrgA==
+
 is-number-object@^1.1.1:
   version "1.1.1"
   resolved "https://registry.npmmirror.com/is-number-object/-/is-number-object-1.1.1.tgz#144b21e95a1bc148205dcc2814a9134ec41b2541"
@@ -4735,6 +4856,16 @@ keyv@^4.5.4:
   integrity sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==
   dependencies:
     json-buffer "3.0.1"
+
+langchain@1.5.5:
+  version "1.5.5"
+  resolved "https://registry.npmmirror.com/langchain/-/langchain-1.5.5.tgz#28abf40e7f6350e1497c301a25a184b0766a0701"
+  integrity sha512-KhedvQDRvaLIFMSvEy45U/pqR4G0dEfN7wPyHTBMgMIUXbcrVkaqRVlDSMPfMCwNuiRCfWFUHueYGtgSrwBcBA==
+  dependencies:
+    "@langchain/langgraph" "^1.4.8"
+    "@langchain/langgraph-checkpoint" "^1.1.3"
+    langsmith ">=0.5.0 <1.0.0"
+    zod "^3.25.76 || ^4"
 
 langsmith@0.7.15:
   version "0.7.15"
@@ -5778,6 +5909,11 @@ openai@6.37.0, openai@^6.34.0:
   resolved "https://registry.npmmirror.com/openai/-/openai-6.37.0.tgz#397331ae5f4375dcae37e396e259df83903a64e5"
   integrity sha512-0H5dEGFmmLv6KSd0W1w2nyL8WsLkX6yoLeQpU+dZAOuGcany5qkYQMmj35ZrKgb6yiyYqpUzFOpR8mZQkgqeEQ==
 
+openai@^6.41.0:
+  version "6.49.0"
+  resolved "https://registry.npmmirror.com/openai/-/openai-6.49.0.tgz#6e9f798e146935ed38d955b43d57d6796cee5e6b"
+  integrity sha512-aYCc0C6L864eR6WSYIwQGyXriw/nIyZx0ObvhzOEVuk0zoBDpynjSbrionWI7q65B5H8jJX0DXR9snEzM6bfPg==
+
 openapi-types@^12.1.3:
   version "12.1.3"
   resolved "https://registry.npmmirror.com/openapi-types/-/openapi-types-12.1.3.tgz#471995eb26c4b97b7bd356aacf7b91b73e777dd3"
@@ -5851,12 +5987,32 @@ p-queue@6.6.2, p-queue@^6.6.2:
     eventemitter3 "^4.0.4"
     p-timeout "^3.2.0"
 
+p-queue@^9.0.1:
+  version "9.3.3"
+  resolved "https://registry.npmmirror.com/p-queue/-/p-queue-9.3.3.tgz#c5e528c7eb361b7ba8eb5a9406902f7f2e75fc8f"
+  integrity sha512-NXAOdnEe5FsZJfT4oK84lE1Y5cFFdWlRuOo5tww8DyNMxyRXwn39fIkUtNLKppcPC+UYU/bXujNCUGDv01y7CA==
+  dependencies:
+    eventemitter3 "^5.0.4"
+    p-timeout "^7.0.0"
+
+p-retry@^7.1.1:
+  version "7.1.1"
+  resolved "https://registry.npmmirror.com/p-retry/-/p-retry-7.1.1.tgz#7470fdecb1152ba50f1334e48378c9e401330e24"
+  integrity sha512-J5ApzjyRkkf601HpEeykoiCvzHQjWxPAHhyjFcEUP2SWq0+35NKh8TLhpLw+Dkq5TZBFvUM6UigdE9hIVYTl5w==
+  dependencies:
+    is-network-error "^1.1.0"
+
 p-timeout@^3.2.0:
   version "3.2.0"
   resolved "https://registry.npmmirror.com/p-timeout/-/p-timeout-3.2.0.tgz#c7e17abc971d2a7962ef83626b35d635acf23dfe"
   integrity sha512-rhIwUycgwwKcP9yTOOFK/AKsAopjjCakVqLHePO3CC6Mir1Z99xT+R63jZxAT5lFZLa2inS5h+ZS2GvR99/FBg==
   dependencies:
     p-finally "^1.0.0"
+
+p-timeout@^7.0.0:
+  version "7.0.1"
+  resolved "https://registry.npmmirror.com/p-timeout/-/p-timeout-7.0.1.tgz#95680a6aa693c530f14ac337b8bd32d4ec6ae4f0"
+  integrity sha512-AxTM2wDGORHGEkPCt8yqxOTMgpfbEHqF51f/5fJCmwFC3C/zNcGT63SymH2ttOAaiIws2zVg4+izQCjrakcwHg==
 
 package-json-from-dist@^1.0.0:
   version "1.0.1"

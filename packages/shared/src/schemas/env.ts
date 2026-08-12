@@ -43,6 +43,7 @@ export const SharedEnvSchema = z.object({
     .optional()
     .transform((v) => v === "true"),
   LANGSMITH_API_KEY: z.string().min(1).optional(),
+  /** Agent 流量建议 `personal-gpt-agent`（D-18） */
   LANGSMITH_PROJECT: z.string().min(1).optional(),
 
   /** KB API Bearer 鉴权；未设则本地 dev 放行 */
@@ -50,6 +51,42 @@ export const SharedEnvSchema = z.object({
 
   /** agent-service → web /api/chat 内部代理密钥 */
   INTERNAL_PROXY_KEY: z.string().min(1).optional(),
+
+  /**
+   * LangGraph recursionLimit 硬护栏（D-15）。默认 40。
+   */
+  AGENT_RECURSION_LIMIT: z.coerce.number().int().min(1).max(200).default(40),
+
+  /**
+   * Checkpointer 后端（D-08）。Phase 2 默认 memory；sqlite 需另装 checkpoint 包。
+   */
+  AGENT_CHECKPOINTER: z.enum(["memory", "sqlite"]).default("memory"),
+
+  /**
+   * 启用的 Skills 列表（D-12/D-13）。逗号分隔，默认三件套。
+   */
+  ENABLED_SKILLS: z
+    .string()
+    .optional()
+    .transform((v) =>
+      (v ?? "kb-retrieval,web-research,report-writer")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+
+  /** Bocha 联网搜索（D-14）；未配则 Researcher 降级 */
+  BOCHA_API_KEY: z.string().min(1).optional(),
+
+  /**
+   * 前端 Agent 模式 transport 基址（仅 NEXT_PUBLIC_* 可暴露给 client）。
+   * 缺省 http://localhost:3002
+   */
+  NEXT_PUBLIC_AGENT_SERVICE_URL: z
+    .string()
+    .url()
+    .optional()
+    .default("http://localhost:3002"),
 
   /** v0.1 无 workspaceId 的 Astra chunk 回退检索；默认关闭 */
   ASTRA_LEGACY_FALLBACK: z
