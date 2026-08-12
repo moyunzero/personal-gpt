@@ -24,6 +24,7 @@ import { createResearcherAgent } from "../agents/researcher.agent";
 import { createRetrieverAgent } from "../agents/retriever.agent";
 import { SUPERVISOR_PROMPT } from "../agents/supervisor.prompt";
 import { createChatModel } from "../providers/chat-model.provider";
+import { resetWebSearchCallCount } from "../tools/web-search.tool";
 import {
   buildShortReplyMessages,
   isAgentChitchat,
@@ -118,6 +119,9 @@ function shortReplyNode(state: AgentStateType) {
 export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
   const model = options.model ?? createChatModel();
   const checkpointer = await resolveCheckpointer(options.checkpointer);
+
+  // 新图编译重置单任务搜索计数（D-15）；流式/每请求重置见 02-04
+  resetWebSearchCallCount();
 
   const retriever = createRetrieverAgent(model);
   const researcher = createResearcherAgent(model);

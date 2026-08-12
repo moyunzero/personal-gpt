@@ -5,8 +5,9 @@
 import { tool } from "langchain";
 import { z } from "zod";
 
-/** D-15：单员单次任务 web_search 硬上限 */
-export const MAX_WEB_SEARCH_CALLS_PER_TASK = 10;
+import { MAX_WEB_SEARCH_CALLS_PER_TASK } from "../agents/caps";
+
+export { MAX_WEB_SEARCH_CALLS_PER_TASK };
 
 const BOCHA_API_URL = "https://api.bochaai.com/v1/web-search";
 
