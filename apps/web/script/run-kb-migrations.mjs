@@ -24,9 +24,7 @@ async function main() {
   const client = new pg.Client({
     connectionString,
     connectionTimeoutMillis: 20_000,
-    ssl: connectionString.includes("localhost")
-      ? false
-      : { rejectUnauthorized: false },
+    ssl: connectionString.includes("localhost") ? false : { rejectUnauthorized: false },
   });
 
   await client.connect();
@@ -111,15 +109,14 @@ async function main() {
         CONSTRAINT "PK_migrations_id" PRIMARY KEY ("id")
       )
     `);
-    const recorded = await client.query(
-      `SELECT 1 FROM "migrations" WHERE "name" = $1 LIMIT 1`,
-      [MIGRATION_NAME],
-    );
+    const recorded = await client.query(`SELECT 1 FROM "migrations" WHERE "name" = $1 LIMIT 1`, [
+      MIGRATION_NAME,
+    ]);
     if (recorded.rowCount === 0) {
-      await client.query(
-        `INSERT INTO "migrations" ("timestamp", "name") VALUES ($1, $2)`,
-        [MIGRATION_TIMESTAMP, MIGRATION_NAME],
-      );
+      await client.query(`INSERT INTO "migrations" ("timestamp", "name") VALUES ($1, $2)`, [
+        MIGRATION_TIMESTAMP,
+        MIGRATION_NAME,
+      ]);
       console.log(`[migrate] 已记录 ${MIGRATION_NAME}`);
     } else {
       console.log(`[migrate] ${MIGRATION_NAME} 已在 migrations 表中`);
