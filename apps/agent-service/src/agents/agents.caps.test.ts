@@ -80,7 +80,6 @@ describe("agent tool caps (D-07 / D-15)", () => {
     expect(analystSrc).toMatch(/calculatorTool|calculator/);
     expect(editorSrc).toMatch(/tools:\s*\[\s*\]/);
     expect(buildSrc).toMatch(/createRetrieverAgent|createResearcherAgent/);
-    void toolNames;
   });
 
   it("Supervisor prompt has no specialist tool binding and states caps", () => {
