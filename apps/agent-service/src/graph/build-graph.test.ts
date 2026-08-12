@@ -64,6 +64,27 @@ describe("buildAgentGraph", () => {
     expect(typeof graph.stream).toBe("function");
   });
 
+  it("compiles with SqliteSaver when AGENT_CHECKPOINTER=sqlite", async () => {
+    const prevMode = process.env.AGENT_CHECKPOINTER;
+    const prevPath = process.env.AGENT_CHECKPOINTER_SQLITE_PATH;
+    const { mkdtempSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+    const dir = mkdtempSync(join(tmpdir(), "agent-ckpt-"));
+    process.env.AGENT_CHECKPOINTER = "sqlite";
+    process.env.AGENT_CHECKPOINTER_SQLITE_PATH = join(dir, "t.sqlite");
+    try {
+      const graph = await buildAgentGraph({ model: mockChatModel() });
+      expect(graph).toBeTruthy();
+      expect(typeof graph.stream).toBe("function");
+    } finally {
+      if (prevMode === undefined) delete process.env.AGENT_CHECKPOINTER;
+      else process.env.AGENT_CHECKPOINTER = prevMode;
+      if (prevPath === undefined) delete process.env.AGENT_CHECKPOINTER_SQLITE_PATH;
+      else process.env.AGENT_CHECKPOINTER_SQLITE_PATH = prevPath;
+    }
+  });
+
   it("short-circuits chitchat without entering supervisor workers", async () => {
     const graph = await buildAgentGraph({ model: mockChatModel() });
     const run = getAgentRunConfig("chitchat-thread");

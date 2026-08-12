@@ -44,6 +44,8 @@ export type BuildAgentGraphOptions = {
   model?: LanguageModelLike;
   /** 覆盖 checkpointer；缺省按 AGENT_CHECKPOINTER 解析 */
   checkpointer?: BaseCheckpointSaver;
+  /** 当前用户原文：注入 Supervisor 强制调度清单 */
+  userText?: string;
 };
 
 export type AgentRunConfig = {
@@ -101,10 +103,16 @@ async function resolveCheckpointer(
   }
   const mode = (process.env.AGENT_CHECKPOINTER ?? "memory").toLowerCase();
   if (mode === "sqlite") {
-    // Wave 0 未安装 @langchain/langgraph-checkpoint-sqlite；装好后在此接入 SqliteSaver.fromConnString
-    throw new Error(
-      "AGENT_CHECKPOINTER=sqlite 需要 @langchain/langgraph-checkpoint-sqlite（未安装）；请改用 memory 或安装该依赖后接线 SqliteSaver",
+    const { mkdirSync } = await import("node:fs");
+    const { dirname, resolve } = await import("node:path");
+    const { SqliteSaver } = await import(
+      "@langchain/langgraph-checkpoint-sqlite"
     );
+    const dbPath =
+      process.env.AGENT_CHECKPOINTER_SQLITE_PATH?.trim() ||
+      resolve(process.cwd(), ".data/agent-checkpoints.sqlite");
+    mkdirSync(dirname(dbPath), { recursive: true });
+    return SqliteSaver.fromConnString(dbPath);
   }
   return new MemorySaver();
 }
@@ -126,10 +134,8 @@ export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
   const model = options.model ?? createChatModel();
   const checkpointer = await resolveCheckpointer(options.checkpointer);
 
-  // 新图编译重置单任务搜索计数（D-15）；流式/每请求重置见 02-04
   resetWebSearchCallCount();
 
-  // Skills → systemPrompt 注入（D-13）；绝不进入 agents / handoff（D-00c）
   const skills = loadEnabledSkills();
   const retriever = createRetrieverAgent(model, {
     skillPrompt: formatSkillForPrompt(findSkill(skills, "kb-retrieval")),
@@ -150,11 +156,13 @@ export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
       editor.graph,
     ],
     llm: model,
-    prompt: buildSupervisorPrompt(formatSkillsForPrompt(skills)),
+    prompt: buildSupervisorPrompt(
+      formatSkillsForPrompt(skills),
+      options.userText ?? "",
+    ),
   });
 
-  // 子图不单独挂 checkpointer；会话状态由外层 compile 统一保存
-  const supervisorSubgraph = supervisorWorkflow.compile();
+  const supervisorSubgraph = supervisorWorkflow.compile({ checkpointer });
 
   const graph = new StateGraph(AgentState)
     .addNode("router", routerNode)
@@ -170,6 +178,45 @@ export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
     .compile({ checkpointer });
 
   return graph;
+}
+
+/**
+ * 构建 supervisor 子图（用于直接 stream，绕过外层 StateGraph 嵌套问题）。
+ * toUIMessageStream 只能处理扁平 LangGraph stream，嵌套子图的消息不会穿透。
+ */
+export async function buildSupervisorGraph(options: BuildAgentGraphOptions = {}) {
+  const model = options.model ?? createChatModel();
+  const checkpointer = await resolveCheckpointer(options.checkpointer);
+
+  resetWebSearchCallCount();
+
+  const skills = loadEnabledSkills();
+  const retriever = createRetrieverAgent(model, {
+    skillPrompt: formatSkillForPrompt(findSkill(skills, "kb-retrieval")),
+  });
+  const researcher = createResearcherAgent(model, {
+    skillPrompt: formatSkillForPrompt(findSkill(skills, "web-research")),
+  });
+  const analyst = createAnalystAgent(model);
+  const editor = createEditorAgent(model, {
+    skillPrompt: formatSkillForPrompt(findSkill(skills, "report-writer")),
+  });
+
+  const supervisorWorkflow = createSupervisor({
+    agents: [
+      retriever.graph,
+      researcher.graph,
+      analyst.graph,
+      editor.graph,
+    ],
+    llm: model,
+    prompt: buildSupervisorPrompt(
+      formatSkillsForPrompt(skills),
+      options.userText ?? "",
+    ),
+  });
+
+  return supervisorWorkflow.compile({ checkpointer });
 }
 
 /** @deprecated 使用 buildAgentGraph；保留别名避免旧 smoke 误导 */

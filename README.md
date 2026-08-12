@@ -42,7 +42,8 @@ flowchart TB
   end
 
   subgraph Agent["agent-service :3002"]
-    Proxy["POST /agent/chat SSE 透传"]
+    AgentSSE["POST /agent/chat LangGraph SSE"]
+    Super["Supervisor + Retriever/Researcher/Analyst/Editor"]
   end
 
   PG[(PostgreSQL)]
@@ -61,7 +62,9 @@ flowchart TB
   KbAPI --> Redis --> Proc --> Pipe
   Pipe --> NIM --> Astra
   Proc --> PG
-  Proxy --> ChatAPI
+  AgentSSE --> Super
+  Super --> Astra
+  Super --> Groq
 ```
 
 ## 特性
@@ -179,7 +182,7 @@ yarn dev:worker   # → :3001，消费入库队列
 
 确认 `.env` 中 `DATABASE_URL` / `REDIS_URL` 与 `docker-compose.yml` 一致（见 `.env.example` 默认值）。
 
-#### 方案 C — Agent 透传骨架（可选，v2.0 前置）
+#### 方案 C — Agent 多 Agent（v2.0）
 
 ```bash
 yarn dev:agent    # AGENT_SERVICE_PORT 默认 3002，转发 WEB_URL/api/chat
@@ -192,7 +195,7 @@ personal-gpt/
 ├── apps/
 │   ├── web/                 # Next.js — 聊天 UI、/api/chat、/kb、TypeORM、BullMQ producer
 │   ├── ingest-worker/       # NestJS — BullMQ consumer（parse→split→embed→upsert）
-│   └── agent-service/       # NestJS — POST /agent/chat SSE 透传（v2.0 LangGraph 预留）
+│   └── agent-service/       # NestJS — LangGraph 多 Agent SSE（:3002）
 ├── packages/
 │   └── shared/              # 类型、env Zod、Groq/NIM、VectorStore、队列常量
 ├── script/                  # Astra 初始化、seed、repair 等根级脚本
@@ -374,15 +377,17 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 | 知识库 UI  | ✅ `/kb` 上传 / 列表 / 筛选 / CRUD / SSE 进度                  |
 | RAG        | ✅ 引用 + 三层路由 + 双路检索 + 可选 HyDE/Multi-Query/Reranker |
 | 工程       | ✅ CI + 回归 + Playwright 验收 8/8 + LangSmith（可选）         |
-| Agent 骨架 | ✅ `yarn dev:agent` SSE 透传                                   |
+| Agent 多 Agent | ✅ LangGraph Supervisor + SSE + 步骤面板（v2.0 核心） |
 
 **仍未做**：用户认证、聊天历史持久化、多 workspace UI、BM25 混合检索（见 ISSUE-001 / v3.0）。
 
 **演示**：[https://personal-emotion-gpt.vercel.app](https://personal-emotion-gpt.vercel.app) · [GitHub](https://github.com/moyunzero/personal-gpt)
 
-### v2.0 — LangGraph 多 Agent
+### v2.0 — LangGraph 多 Agent ✅ 核心关账
 
-Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天可仍走 `/api/chat`。
+Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天仍走 `/api/chat`。  
+关账说明与验收截图：`tests/acceptance/phase-2-agent/`。  
+延期：`file_read` / QuickJS / agent Docker（→ v3–v4）。
 
 ### v3.0 — 记忆、多存储与高级 RAG
 
@@ -390,7 +395,7 @@ Redis / Mem0 记忆；Milvus · ES · Neo4j · MinIO；Agentic / Graph RAG；ISS
 
 ### v4.0 — 工程化与生产就绪
 
-全栈 Docker Compose、鉴权与多租户、审计、Prometheus / Grafana、CI/CD。
+全栈 Docker Compose（含 agent-service）、鉴权与多租户、审计、Prometheus / Grafana、CI/CD。
 
 ### v5.0 — 高级企业特性
 
@@ -398,7 +403,7 @@ Redis / Mem0 记忆；Milvus · ES · Neo4j · MinIO；Agentic / Graph RAG；ISS
 
 ---
 
-**当前进度**：**v1.0 已封板** → 下一步 **v2.0**。
+**当前进度**：**v1.0 已封板** · **v2.0 核心已关账** → 下一步 **v3.0**。
 
 ## 贡献
 

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase 2 Agent UI · 设计稿目录</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./tokens.css" />
+    <style>
+      .page {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+      }
+      h1 {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 40px;
+        letter-spacing: -0.8px;
+        color: var(--color-ink);
+        margin: 0 0 12px;
+      }
+      .lede {
+        color: var(--color-muted);
+        margin: 0 0 36px;
+        font-size: 16px;
+      }
+      .card {
+        display: block;
+        padding: 24px;
+        margin-bottom: 16px;
+        border-radius: var(--radius-lg);
+        background: var(--color-surface-card);
+        color: inherit;
+        transition: background 0.15s ease;
+      }
+      .card:hover {
+        background: var(--color-surface-cream-strong);
+      }
+      .card h2 {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 26px;
+        letter-spacing: -0.4px;
+        color: var(--color-ink);
+        margin: 0 0 8px;
+      }
+      .card p {
+        margin: 0;
+        color: var(--color-body);
+        font-size: 14.5px;
+      }
+      .tag {
+        display: inline-block;
+        margin-bottom: 10px;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: var(--color-primary);
+      }
+      .rec {
+        margin-top: 28px;
+        padding: 20px 24px;
+        border-radius: var(--radius-lg);
+        background: var(--color-surface-dark);
+        color: var(--color-on-dark);
+      }
+      .rec strong {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: 22px;
+        display: block;
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="brand" style="margin-bottom: 28px">
+        <span class="spike" aria-hidden="true"></span>Personal GPT · Phase 2
+      </div>
+      <h1>Agent 模式 UI 设计稿</h1>
+      <p class="lede">
+        三套方案共用现有奶油画布、珊瑚主色、spike-mark 与引用卡片语言。差异只在「模式入口」与「步骤呈现」。请选一套后继续写
+        UI-SPEC。
+      </p>
+
+      <a class="card" href="./A-segmented-inline.html">
+        <span class="tag">推荐 · 对齐 CONTEXT</span>
+        <h2>A · 分段切换 + 引用式步骤</h2>
+        <p>Header 内 Chat | Agent 分段器；待办列表 + 可折叠步骤卡片，视觉最接近现有 CitationCards。</p>
+      </a>
+
+      <a class="card" href="./B-pill-timeline.html">
+        <span class="tag">编辑式</span>
+        <h2>B · 轻量胶囊 + 时间线</h2>
+        <p>模式收成胶囊下拉；竖向时间线突出 Agent 路径，边框更少，适合「看调度过程」。</p>
+      </a>
+
+      <a class="card" href="./C-composer-dense.html">
+        <span class="tag">开发者 / agui</span>
+        <h2>C · 输入区模式条 + 致密工具面板</h2>
+        <p>模式贴在 composer；深色工具条 + mono 工具名，失败降级态更醒目。</p>
+      </a>
+
+      <div class="rec">
+        <strong>确认方式</strong>
+        回复 <code style="color: #e8a55a">A</code> / <code style="color: #e8a55a">B</code> /
+        <code style="color: #e8a55a">C</code>（可微调）。确认后我再写
+        <code style="color: #e8a55a">02-UI-SPEC.md</code> 并跑 UI checker，然后继续
+        <code style="color: #e8a55a">/gsd-plan-phase 2</code>。
+      </div>
+    </main>
+  </body>
+</html>

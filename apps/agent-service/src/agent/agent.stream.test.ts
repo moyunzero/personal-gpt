@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const streamMock = vi.fn();
 const buildAgentGraphMock = vi.fn();
+const buildSupervisorGraphMock = vi.fn();
 const toBaseMessagesMock = vi.fn();
 const toUIMessageStreamMock = vi.fn();
 const pipeUIMessageStreamToResponseMock = vi.fn();
@@ -13,6 +14,7 @@ const createUIMessageStreamMock = vi.fn();
 
 vi.mock("../graph/build-graph", () => ({
   buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+  buildSupervisorGraph: (...args: unknown[]) => buildSupervisorGraphMock(...args),
   getAgentRunConfig: (threadId: string) => ({
     recursionLimit: 40,
     configurable: { thread_id: threadId },
@@ -47,6 +49,7 @@ describe("Agent SSE stream (AGENT-04)", () => {
     fetchSpy.mockReset();
     streamMock.mockReset();
     buildAgentGraphMock.mockReset();
+    buildSupervisorGraphMock.mockReset();
     toBaseMessagesMock.mockReset();
     toUIMessageStreamMock.mockReset();
     pipeUIMessageStreamToResponseMock.mockReset();
@@ -55,13 +58,20 @@ describe("Agent SSE stream (AGENT-04)", () => {
     process.env.GROQ_API_KEY = "test-groq-key";
 
     toBaseMessagesMock.mockResolvedValue([{ content: "对比 LangGraph 与 AutoGen" }]);
-    streamMock.mockResolvedValue(
+    streamMock.mockImplementation(() =>
       (async function* () {
         yield ["messages", [{ content: "ok" }]];
       })(),
     );
     buildAgentGraphMock.mockResolvedValue({ stream: streamMock });
-    toUIMessageStreamMock.mockReturnValue(new ReadableStream());
+    buildSupervisorGraphMock.mockResolvedValue({ stream: streamMock });
+    toUIMessageStreamMock.mockReturnValue(
+      new ReadableStream({
+        start(controller) {
+          controller.close();
+        },
+      }).pipeThrough(new TransformStream()),
+    );
     createUIMessageStreamMock.mockImplementation(({ execute }) => {
       const writes: unknown[] = [];
       const writer = {
@@ -120,7 +130,8 @@ describe("Agent SSE stream (AGENT-04)", () => {
     };
     await streamArg?.__ready;
 
-    expect(buildAgentGraphMock).toHaveBeenCalled();
+    expect(buildSupervisorGraphMock).toHaveBeenCalled();
+    expect(buildAgentGraphMock).not.toHaveBeenCalled();
     expect(streamMock).toHaveBeenCalled();
     expect(toUIMessageStreamMock).toHaveBeenCalled();
     expect(pipeUIMessageStreamToResponseMock).toHaveBeenCalled();
@@ -159,8 +170,10 @@ describe("Agent SSE stream (AGENT-04)", () => {
   });
 
   it("surfaces 503 when model keys are missing", async () => {
+    delete process.env.CEREBRAS_API_KEY;
     delete process.env.GROQ_API_KEY;
     delete process.env.OPENAI_API_KEY;
+    delete process.env.AGENT_PROVIDER;
     const { AgentService, ModelConfigError } = await import("./agent.service");
     const service = new AgentService();
     const res = { statusCode: 200 } as unknown as import("express").Response;

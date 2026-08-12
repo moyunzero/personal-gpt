@@ -37,6 +37,35 @@ describe("AgentStepPanels (AGENT-05)", () => {
     expect(steps[0]?.status).toBe("active");
   });
 
+  it("keeps latest status when same step id appears twice", () => {
+    const steps = extractAgentSteps(
+      assistantMessage([
+        {
+          type: "data-agent-step",
+          id: "step-supervisor",
+          data: {
+            id: "step-supervisor",
+            agent: "Supervisor",
+            title: "调度专科助手",
+            status: "active",
+          },
+        },
+        {
+          type: "data-agent-step",
+          id: "step-supervisor",
+          data: {
+            id: "step-supervisor",
+            agent: "Supervisor",
+            title: "调度专科助手",
+            status: "completed",
+          },
+        },
+      ]),
+    );
+    expect(steps).toHaveLength(1);
+    expect(steps[0]?.status).toBe("completed");
+  });
+
   it("returns null / empty when no step data (do not render section)", () => {
     expect(extractAgentSteps(assistantMessage([{ type: "text", text: "hi" }]))).toEqual(
       [],

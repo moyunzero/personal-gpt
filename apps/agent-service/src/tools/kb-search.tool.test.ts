@@ -65,6 +65,33 @@ describe("kb_search tool", () => {
     expect(params.limit).toBe(3);
   });
 
+  it("filters low-similarity chunks and returns NO_RELEVANT_HIT", async () => {
+    searchMock.mockResolvedValueOnce([
+      {
+        text: "无关心理问答",
+        similarity: 0.58,
+        title: "psychology-qa",
+        source: "seed",
+        documentId: "psy-1",
+        chunkIndex: 0,
+      },
+    ]);
+    const { invokeKbSearch, KB_SEARCH_NO_HIT_STATUS } = await import(
+      "./kb-search.tool"
+    );
+    const out = await invokeKbSearch({ query: "LangGraph vs AutoGen" });
+    expect(out).toContain(KB_SEARCH_NO_HIT_STATUS);
+    expect(out).toMatch(/禁止编造/);
+    expect(out).not.toMatch(/\[citation/);
+  });
+
+  it("keeps high-similarity hits with HIT status", async () => {
+    const { invokeKbSearch } = await import("./kb-search.tool");
+    const out = await invokeKbSearch({ query: "差旅报销" });
+    expect(out).toContain("KB_SEARCH_STATUS: HIT");
+    expect(out).toMatch(/doc-1/);
+  });
+
   it("does not import @datastax/astra-db-ts in kb-search source path", async () => {
     const fs = await import("node:fs/promises");
     const path = await import("node:path");

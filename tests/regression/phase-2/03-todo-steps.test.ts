@@ -14,6 +14,7 @@ const createUIMessageStreamMock = vi.fn();
 
 vi.mock("../../../apps/agent-service/src/graph/build-graph", () => ({
   buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+  buildSupervisorGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
   getAgentRunConfig: (threadId: string) => ({
     recursionLimit: 40,
     configurable: { thread_id: threadId },
@@ -82,13 +83,20 @@ describe("Phase 2 regression #3: visible todo and agent-step events", () => {
       const text = messages[0]?.parts?.[0]?.text ?? "调研";
       return [{ content: text }];
     });
-    streamMock.mockResolvedValue(
+    streamMock.mockImplementation(() =>
       (async function* () {
-        yield ["messages", [{ content: "ok" }]];
+        yield ["values", { messages: [] }];
       })(),
     );
     buildAgentGraphMock.mockResolvedValue({ stream: streamMock });
-    toUIMessageStreamMock.mockReturnValue(new ReadableStream());
+    toUIMessageStreamMock.mockImplementation(
+      () =>
+        new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        }),
+    );
 
     createUIMessageStreamMock.mockImplementation(({ execute }) => {
       const writes: unknown[] = [];

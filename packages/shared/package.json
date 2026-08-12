@@ -2,26 +2,72 @@
   "name": "@personal-gpt/shared",
   "version": "0.1.0",
   "private": true,
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./types/kb": "./src/types/kb.ts",
-    "./types/agent": "./src/types/agent.ts",
-    "./schemas/env": "./src/schemas/env.ts",
-    "./utils/ingest": "./src/utils/ingest.ts",
-    "./utils/paths": "./src/utils/paths.ts",
-    "./constants/workspace": "./src/constants/workspace.ts",
-    "./constants/queue": "./src/constants/queue.ts",
-    "./stores/vector-store": "./src/stores/vector-store.ts",
-    "./stores/vector-store.astra": "./src/stores/vector-store.astra.ts",
-    "./ai/groq-models": "./src/ai/groq-models.ts",
-    "./ai/groq-chat": "./src/ai/groq-chat.ts",
-    "./ai/embedding-models": "./src/ai/embedding-models.ts",
-    "./ai/embeddings": "./src/ai/embeddings.ts",
-    "./ai/rag-helper": "./src/ai/rag-helper.ts"
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./types/kb": {
+      "types": "./src/types/kb.ts",
+      "default": "./dist/types/kb.js"
+    },
+    "./types/agent": {
+      "types": "./src/types/agent.ts",
+      "default": "./dist/types/agent.js"
+    },
+    "./schemas/env": {
+      "types": "./src/schemas/env.ts",
+      "default": "./dist/schemas/env.js"
+    },
+    "./utils/ingest": {
+      "types": "./src/utils/ingest.ts",
+      "default": "./dist/utils/ingest.js"
+    },
+    "./utils/paths": {
+      "types": "./src/utils/paths.ts",
+      "default": "./dist/utils/paths.js"
+    },
+    "./constants/workspace": {
+      "types": "./src/constants/workspace.ts",
+      "default": "./dist/constants/workspace.js"
+    },
+    "./constants/queue": {
+      "types": "./src/constants/queue.ts",
+      "default": "./dist/constants/queue.js"
+    },
+    "./stores/vector-store": {
+      "types": "./src/stores/vector-store.ts",
+      "default": "./dist/stores/vector-store.js"
+    },
+    "./stores/vector-store.astra": {
+      "types": "./src/stores/vector-store.astra.ts",
+      "default": "./dist/stores/vector-store.astra.js"
+    },
+    "./ai/groq-models": {
+      "types": "./src/ai/groq-models.ts",
+      "default": "./dist/ai/groq-models.js"
+    },
+    "./ai/groq-chat": {
+      "types": "./src/ai/groq-chat.ts",
+      "default": "./dist/ai/groq-chat.js"
+    },
+    "./ai/embedding-models": {
+      "types": "./src/ai/embedding-models.ts",
+      "default": "./dist/ai/embedding-models.js"
+    },
+    "./ai/embeddings": {
+      "types": "./src/ai/embeddings.ts",
+      "default": "./dist/ai/embeddings.js"
+    },
+    "./ai/rag-helper": {
+      "types": "./src/ai/rag-helper.ts",
+      "default": "./dist/ai/rag-helper.js"
+    }
   },
   "scripts": {
+    "build": "tsc",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "validate": "yarn type-check && yarn test"

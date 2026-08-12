@@ -15,6 +15,7 @@ const createUIMessageStreamMock = vi.fn();
 
 vi.mock("../../../apps/agent-service/src/graph/build-graph", () => ({
   buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+  buildSupervisorGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
   getAgentRunConfig: (threadId: string) => ({
     recursionLimit: 40,
     configurable: { thread_id: threadId },
@@ -49,13 +50,20 @@ describe("Phase 2 regression #1: framework compare report", () => {
 
     process.env.GROQ_API_KEY = "test-groq-key";
     toBaseMessagesMock.mockResolvedValue([{ content: "对比 LangGraph 与 AutoGen" }]);
-    streamMock.mockResolvedValue(
+    streamMock.mockImplementation(() =>
       (async function* () {
-        yield ["messages", [{ content: "ok" }]];
+        yield ["values", { messages: [] }];
       })(),
     );
     buildAgentGraphMock.mockResolvedValue({ stream: streamMock });
-    toUIMessageStreamMock.mockReturnValue(new ReadableStream());
+    toUIMessageStreamMock.mockImplementation(
+      () =>
+        new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        }),
+    );
 
     createUIMessageStreamMock.mockImplementation(({ execute }) => {
       const writes: unknown[] = [];

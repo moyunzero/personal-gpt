@@ -39,18 +39,22 @@ function parseStep(data: unknown, fallbackId: string): AgentStep | null {
   };
 }
 
-/** 从 message.parts 提取 data-agent-step（及带 agent/title 的等价 data） */
+/** 从 message.parts 提取 data-agent-step（同 id 保留最新） */
 export function extractAgentSteps(message: UIMessage): AgentStep[] {
-  const steps: AgentStep[] = [];
+  const byId = new Map<string, AgentStep>();
+  let anon = 0;
   for (const part of message.parts) {
     if (!("type" in part) || typeof part.type !== "string") continue;
     if (part.type !== "data-agent-step") continue;
-    const id = "id" in part && typeof part.id === "string" ? part.id : `step-${steps.length}`;
+    const id =
+      "id" in part && typeof part.id === "string"
+        ? part.id
+        : `step-${anon++}`;
     const data = "data" in part ? part.data : undefined;
     const step = parseStep(data, id);
-    if (step) steps.push(step);
+    if (step) byId.set(step.id, step);
   }
-  return steps;
+  return [...byId.values()];
 }
 
 function statusLabel(status: AgentStepStatus): string {

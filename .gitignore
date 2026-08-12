@@ -24,6 +24,7 @@ packages/*/node_modules
 /build
 /apps/ingest-worker/dist
 /apps/agent-service/dist
+/packages/shared/dist
 
 # misc
 .DS_Store
@@ -50,6 +51,7 @@ next-env.d.ts
 
 data/
 uploads/
+.data/
 
 .planning/
 .env*.local

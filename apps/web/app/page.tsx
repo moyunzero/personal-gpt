@@ -28,7 +28,7 @@ export default function Home() {
     [mode],
   );
 
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, error } = useChat({
     id: `home-${mode}`,
     transport,
   });
@@ -140,9 +140,11 @@ export default function Home() {
             </button>
           </div>
           <p className="composer-hint">
-            {mode === "agent"
-              ? "Agent 模式 · 复杂任务走多 Agent · 闲聊会短路回复"
-              : "按 Enter 发送 · 内容可能不准确，仅供参考"}
+            {error
+              ? `出错了：${error.message}`
+              : mode === "agent"
+                ? "Agent 模式 · 复杂任务走多 Agent · 闲聊会短路回复"
+                : "按 Enter 发送 · 内容可能不准确，仅供参考"}
           </p>
         </div>
       </form>
