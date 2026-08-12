@@ -108,3 +108,33 @@ jobs:
 
       - name: Run v1.0 regression suite
         run: yarn test tests/regression/phase-1
+
+  regression-phase-2:
+    name: v2.0 regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ASTRA_DB_COLLECTION: ci_dummy_collection
+      ASTRA_DB_API_ENDPOINT: https://ci-dummy.example.com
+      ASTRA_DB_APPLICATION_TOKEN: AstraCS:ci-dummy-token
+      GOOGLE_GENERATIVE_AI_API_KEY: ci-dummy-google-key
+      GROQ_API_KEY: ci-dummy-groq-key
+      NIM_API_KEY: ci-dummy-nim-key
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run v2.0 regression suite
+        run: yarn test:regression:phase-2
