@@ -64,24 +64,26 @@ describe("Agent SSE stream (AGENT-04)", () => {
     toUIMessageStreamMock.mockReturnValue(new ReadableStream());
     createUIMessageStreamMock.mockImplementation(({ execute }) => {
       const writes: unknown[] = [];
+      const writer = {
+        write: (chunk: unknown) => {
+          writes.push(chunk);
+        },
+        merge: vi.fn(async () => undefined),
+      };
+      // 立即执行（不等待 pipe 消费 ReadableStream），便于断言 writes / graph.stream
+      const ready = Promise.resolve(execute({ writer }));
       const stream = new ReadableStream({
         start(controller) {
-          void Promise.resolve(
-            execute({
-              writer: {
-                write: (chunk: unknown) => {
-                  writes.push(chunk);
-                },
-                merge: vi.fn(),
-              },
-            }),
-          ).finally(() => controller.close());
+          void ready.finally(() => controller.close());
         },
       });
-      (stream as unknown as { __writes: unknown[] }).__writes = writes;
+      Object.assign(stream, { __writes: writes, __ready: ready });
       return stream;
     });
-    pipeUIMessageStreamToResponseMock.mockResolvedValue(undefined);
+    pipeUIMessageStreamToResponseMock.mockImplementation(async ({ stream }) => {
+      const ready = (stream as { __ready?: Promise<void> }).__ready;
+      if (ready) await ready;
+    });
   });
 
   it("rejects invalid body (messages not an array) with 400 semantics", async () => {
@@ -113,6 +115,11 @@ describe("Agent SSE stream (AGENT-04)", () => {
     const fetchUrls = fetchSpy.mock.calls.map((c) => String(c[0]));
     expect(fetchUrls.every((u) => !u.includes("/api/chat"))).toBe(true);
 
+    const streamArg = createUIMessageStreamMock.mock.results[0]?.value as {
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+
     expect(buildAgentGraphMock).toHaveBeenCalled();
     expect(streamMock).toHaveBeenCalled();
     expect(toUIMessageStreamMock).toHaveBeenCalled();
@@ -141,9 +148,9 @@ describe("Agent SSE stream (AGENT-04)", () => {
 
     const streamArg = createUIMessageStreamMock.mock.results[0]?.value as {
       __writes?: unknown[];
+      __ready?: Promise<void>;
     };
-    // execute 异步；稍等 writes 填入
-    await new Promise((r) => setTimeout(r, 20));
+    await streamArg?.__ready;
     const writes = streamArg?.__writes ?? [];
     const types = writes.map((w) => (w as { type?: string }).type);
     expect(types.some((t) => t === "data-todo-update" || t === "data-agent-step")).toBe(
