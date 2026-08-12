@@ -56,9 +56,15 @@ uploads/
 
 docs/
 
+# 本地 Phase 复盘博客（不入库）
+blog/
+
 reference/
 
 .agents/
+
+# ingest bench outputs (local metrics runs)
+script/bench-output/
 
 # CodeGraph local index (machine-specific)
 .codegraph/*

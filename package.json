@@ -15,6 +15,7 @@
     "seed:psychology": "ts-node --project tsconfig.scripts.json ./script/loadPsychologyData.ts",
     "seed:suggestions": "ts-node --project tsconfig.scripts.json ./script/loadPromptSuggestions.ts",
     "astra:init-embedding": "ts-node --project tsconfig.scripts.json ./script/initEmbeddingCollection.ts",
+    "bench:ingest": "ts-node --project tsconfig.scripts.json ./script/bench-ingest-metrics.ts",
     "migrate:legacy": "yarn workspace web migrate:legacy",
     "lint": "eslint packages apps/ingest-worker apps/agent-service script tests && yarn workspace web lint",
     "lint:fix": "eslint packages apps/ingest-worker apps/agent-service script tests --fix && yarn workspace web lint --fix",
