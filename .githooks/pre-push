@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# 与 CI「Format & lint」对齐：push 前本地拦下 Prettier / ESLint 失败。
+# 紧急跳过：SKIP_PREPUSH=1 git push
+
+set -euo pipefail
+
+if [[ "${SKIP_PREPUSH:-}" == "1" ]]; then
+  echo "[pre-push] SKIP_PREPUSH=1 — 跳过检查"
+  exit 0
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "[pre-push] yarn format:check"
+yarn format:check
+
+echo "[pre-push] yarn lint"
+yarn lint
+
+echo "[pre-push] OK"
