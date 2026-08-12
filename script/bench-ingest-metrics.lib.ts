@@ -148,8 +148,7 @@ export function aggregateIngestMetrics(
     uploadError: uploadError.length,
     successRateExpected:
       expectedTerminal.length > 0 ? expectedReady.length / expectedTerminal.length : null,
-    successRateAllTerminal:
-      allTerminal.length > 0 ? ready.length / allTerminal.length : null,
+    successRateAllTerminal: allTerminal.length > 0 ? ready.length / allTerminal.length : null,
     latencyMs: {
       n: latenciesReady.length,
       p50: percentile(latenciesReady, 50),

@@ -4,15 +4,15 @@
 
 ## Canonical posts
 
-| 文件 | 学什么 |
-|------|--------|
-| [blog/phase-1-from-prototype-to-kb.md](../../../blog/phase-1-from-prototype-to-kb.md) | 系列第 0 篇：全景、目录、自洽声明 |
-| [blog/phase-1-01-async-ingest.md](../../../blog/phase-1-01-async-ingest.md) | 长文标杆：取舍、表结构、幂等、观测、诚实边界、实测 |
-| [blog/phase-1-02-query-router.md](../../../blog/phase-1-02-query-router.md) | 「五问」块最完整：是什么/为什么/优势/不做/原理+代码 |
-| [blog/phase-1-03-streaming-citations.md](../../../blog/phase-1-03-streaming-citations.md) | 协议与 UX 张力；流末事件；过滤器原理 |
-| [blog/phase-1-04-dual-path-retrieve.md](../../../blog/phase-1-04-dual-path-retrieve.md) | 较短深挖；升级时应补五问+诚实边界到 checklist 标准 |
-| [blog/phase-1-05-workspace-isolation.md](../../../blog/phase-1-05-workspace-isolation.md) | 同上，契约/断言类主题 |
-| [blog/phase-1-06-vectorstore-consistency.md](../../../blog/phase-1-06-vectorstore-consistency.md) | 同上，一致性/删除顺序类主题 |
+| 文件                                                                                              | 学什么                                              |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [blog/phase-1-from-prototype-to-kb.md](../../../blog/phase-1-from-prototype-to-kb.md)             | 系列第 0 篇：全景、目录、自洽声明                   |
+| [blog/phase-1-01-async-ingest.md](../../../blog/phase-1-01-async-ingest.md)                       | 长文标杆：取舍、表结构、幂等、观测、诚实边界、实测  |
+| [blog/phase-1-02-query-router.md](../../../blog/phase-1-02-query-router.md)                       | 「五问」块最完整：是什么/为什么/优势/不做/原理+代码 |
+| [blog/phase-1-03-streaming-citations.md](../../../blog/phase-1-03-streaming-citations.md)         | 协议与 UX 张力；流末事件；过滤器原理                |
+| [blog/phase-1-04-dual-path-retrieve.md](../../../blog/phase-1-04-dual-path-retrieve.md)           | 较短深挖；升级时应补五问+诚实边界到 checklist 标准  |
+| [blog/phase-1-05-workspace-isolation.md](../../../blog/phase-1-05-workspace-isolation.md)         | 同上，契约/断言类主题                               |
+| [blog/phase-1-06-vectorstore-consistency.md](../../../blog/phase-1-06-vectorstore-consistency.md) | 同上，一致性/删除顺序类主题                         |
 
 ## Snippet：五问节标题模式
 
@@ -29,9 +29,9 @@
 ## Snippet：反事实表头
 
 ```markdown
-| 若取消… | 会发生什么 |
-|---------|------------|
-| **整层 X，永远 Y** | … |
+| 若取消…            | 会发生什么 |
+| ------------------ | ---------- |
+| **整层 X，永远 Y** | …          |
 ```
 
 ## Snippet：对外自洽声明（引文第二行）

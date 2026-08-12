@@ -83,7 +83,9 @@ async function preflight(): Promise<void> {
   }
 }
 
-async function makeFixtures(dir: string): Promise<{ path: string; expectSuccess: boolean; name: string }[]> {
+async function makeFixtures(
+  dir: string,
+): Promise<{ path: string; expectSuccess: boolean; name: string }[]> {
   await fs.mkdir(dir, { recursive: true });
   const files: { path: string; expectSuccess: boolean; name: string }[] = [];
 
@@ -96,7 +98,10 @@ async function makeFixtures(dir: string): Promise<{ path: string; expectSuccess:
       `生成于 ${new Date().toISOString()}，用于入库指标压测。`,
       "",
       "段落重复以产生少量 chunk：",
-      ...Array.from({ length: 8 }, (_, k) => `段落 ${k + 1}：Personal GPT async ingest bench sample ${i}.`),
+      ...Array.from(
+        { length: 8 },
+        (_, k) => `段落 ${k + 1}：Personal GPT async ingest bench sample ${i}.`,
+      ),
       "",
     ].join("\n");
     await fs.writeFile(path, body, "utf8");
@@ -266,12 +271,15 @@ async function main() {
 
   let peakWaiting = 0;
   let peakActive = 0;
-  const sampler = setInterval(() => {
-    void queue.getJobCounts("waiting", "active").then((counts) => {
-      peakWaiting = Math.max(peakWaiting, counts.waiting ?? 0);
-      peakActive = Math.max(peakActive, counts.active ?? 0);
-    });
-  }, Math.min(500, POLL_MS));
+  const sampler = setInterval(
+    () => {
+      void queue.getJobCounts("waiting", "active").then((counts) => {
+        peakWaiting = Math.max(peakWaiting, counts.waiting ?? 0);
+        peakActive = Math.max(peakActive, counts.active ?? 0);
+      });
+    },
+    Math.min(500, POLL_MS),
+  );
 
   // 突发入队：打满 concurrency=2；上传遇 429 会退避
   const uploaded: Uploaded[] = await Promise.all(
