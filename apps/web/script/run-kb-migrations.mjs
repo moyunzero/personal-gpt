@@ -19,7 +19,21 @@ function requireDatabaseUrl() {
   return url;
 }
 
+function formatError(error) {
+  if (!(error instanceof Error)) return String(error);
+  const parts = [error.message || error.name || "unknown error"];
+  if ("code" in error && error.code) parts.push(`code=${error.code}`);
+  if (error.cause) parts.push(`cause=${formatError(error.cause)}`);
+  return parts.join(" | ");
+}
+
 async function main() {
+  // GitHub Actions 设 CI=true 且无 Postgres；Vercel 同时设 VERCEL=1 与真实 DATABASE_URL
+  if (process.env.CI && !process.env.VERCEL) {
+    console.log("[migrate] CI（非 Vercel）跳过 KB schema 迁移");
+    return;
+  }
+
   const connectionString = requireDatabaseUrl();
   const client = new pg.Client({
     connectionString,
@@ -134,6 +148,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("[migrate] 失败:", error instanceof Error ? error.message : error);
+  console.error("[migrate] 失败:", formatError(error));
   process.exit(1);
 });
