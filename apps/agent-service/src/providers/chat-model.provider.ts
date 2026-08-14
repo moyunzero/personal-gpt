@@ -34,16 +34,13 @@ export function resolveAgentProvider(): AgentProvider | null {
  * - AGENT_PROVIDER=cerebras|groq|openai 可强制切换
  * - 未指定时优先 CEREBRAS_API_KEY，其次 GROQ，再次 OPENAI（+ 可选 OPENAI_BASE_URL）
  */
-export function createChatModel(
-  options: CreateChatModelOptions = {},
-): ChatOpenAI {
+export function createChatModel(options: CreateChatModelOptions = {}): ChatOpenAI {
   const provider = resolveAgentProvider();
   const cerebrasKey = process.env.CEREBRAS_API_KEY?.trim();
   const groqKey = process.env.GROQ_API_KEY?.trim();
   const openaiKey = process.env.OPENAI_API_KEY?.trim();
   const openaiBase = process.env.OPENAI_BASE_URL?.trim();
-  const cerebrasBase =
-    process.env.CEREBRAS_BASE_URL?.trim() || CEREBRAS_BASE_URL;
+  const cerebrasBase = process.env.CEREBRAS_BASE_URL?.trim() || CEREBRAS_BASE_URL;
 
   if (provider === "cerebras") {
     if (!cerebrasKey) {

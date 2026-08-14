@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
@@ -217,7 +217,9 @@
         <div class="stream-inner">
           <article class="msg msg-user">
             <div class="msg-role">你</div>
-            <div class="msg-body">调研 2026 年 LangGraph 与 AutoGen 的优缺点，写一份可交付的 Markdown 简报。</div>
+            <div class="msg-body">
+              调研 2026 年 LangGraph 与 AutoGen 的优缺点，写一份可交付的 Markdown 简报。
+            </div>
           </article>
 
           <article class="msg msg-assistant">
@@ -271,7 +273,8 @@
                     </span>
                   </button>
                   <div class="step-body">
-                    调用 <code>kb_search</code>，Top-K=6，过滤 <code>workspaceId=default</code>。命中内部笔记与课程摘要。
+                    调用 <code>kb_search</code>，Top-K=6，过滤
+                    <code>workspaceId=default</code>。命中内部笔记与课程摘要。
                   </div>
                 </div>
                 <div class="step-card">
@@ -299,8 +302,9 @@
             <div class="msg-body">
               <h3>执行摘要</h3>
               <p>
-                LangGraph 更适合<strong>有状态、可检查点</strong>的生产编排；AutoGen 更偏对话式多智能体原型。对你们「知识库
-                + 可观测」路线，Supervisor + 专科 Worker 与现有 Nest 服务更贴合。
+                LangGraph 更适合<strong>有状态、可检查点</strong>的生产编排；AutoGen
+                更偏对话式多智能体原型。对你们「知识库 + 可观测」路线，Supervisor + 专科 Worker
+                与现有 Nest 服务更贴合。
               </p>
             </div>
 
@@ -318,7 +322,8 @@
       <div class="composer">
         <div class="composer-inner">
           <div class="composer-shell">
-            <textarea class="composer-input" rows="1" placeholder="继续追问，或补充约束…">继续对比 token 成本</textarea>
+            <textarea class="composer-input" rows="1" placeholder="继续追问，或补充约束…">
+继续对比 token 成本</textarea>
             <button type="button" class="composer-send" aria-label="发送">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path

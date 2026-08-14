@@ -5,26 +5,15 @@
 import type { LanguageModelLike } from "@langchain/core/language_models/base";
 import { createAgent } from "langchain";
 
-import {
-  MAX_WEB_SEARCH_CALLS_PER_TASK,
-  webSearchTool,
-} from "../tools/web-search.tool";
-import {
-  AGENT_TOOL_CAPS,
-  MAX_PARALLEL_RESEARCH_TOPICS,
-} from "./caps";
+import { MAX_WEB_SEARCH_CALLS_PER_TASK, webSearchTool } from "../tools/web-search.tool";
+import { AGENT_TOOL_CAPS, MAX_PARALLEL_RESEARCH_TOPICS } from "./caps";
 
 export type AgentSkillOptions = {
   skillPrompt?: string;
 };
 
-export function createResearcherAgent(
-  model: LanguageModelLike,
-  options: AgentSkillOptions = {},
-) {
-  const skill = options.skillPrompt?.trim()
-    ? `\n\n${options.skillPrompt.trim()}`
-    : "";
+export function createResearcherAgent(model: LanguageModelLike, options: AgentSkillOptions = {}) {
+  const skill = options.skillPrompt?.trim() ? `\n\n${options.skillPrompt.trim()}` : "";
   return createAgent({
     name: "researcher",
     description: "联网调研与外部资料收集。",

@@ -18,10 +18,7 @@ import type {
 export const TRACE_DETAIL_MAX = 2000;
 export const TRACE_FINAL_MAX = 8000;
 
-export function truncateTraceText(
-  text: string,
-  max = TRACE_DETAIL_MAX,
-): string {
+export function truncateTraceText(text: string, max = TRACE_DETAIL_MAX): string {
   const t = text.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max)}…`;
@@ -32,21 +29,12 @@ function nowIso(): string {
 }
 
 export type AgentTraceCollector = {
-  recordPlan: (
-    items: Array<{ id: string; label: string; status: TodoStatus }>,
-  ) => void;
+  recordPlan: (items: Array<{ id: string; label: string; status: TodoStatus }>) => void;
   recordSpecialist: (agent: string, summary: string, detail?: string) => void;
-  recordTool: (input: {
-    name: string;
-    summary: string;
-    detail?: string;
-    agent?: string;
-  }) => void;
+  recordTool: (input: { name: string; summary: string; detail?: string; agent?: string }) => void;
   recordIntermediate: (agent: string, text: string) => void;
   recordError: (summary: string, detail?: string) => void;
-  setCitations: (
-    citations: AgentTraceDocument["citations"],
-  ) => void;
+  setCitations: (citations: AgentTraceDocument["citations"]) => void;
   appendFinalText: (delta: string) => void;
   setFinalText: (text: string) => void;
   finish: () => AgentTraceDocument;
@@ -68,20 +56,13 @@ export function createAgentTraceCollector(input: {
   let endedAt: string | undefined;
   let persisted = false;
 
-  const push = (
-    kind: AgentTraceEventKind,
-    summary: string,
-    extra?: Partial<AgentTraceEvent>,
-  ) => {
+  const push = (kind: AgentTraceEventKind, summary: string, extra?: Partial<AgentTraceEvent>) => {
     events.push({
       ts: nowIso(),
       kind,
       summary,
       ...extra,
-      detail:
-        extra?.detail !== undefined
-          ? truncateTraceText(extra.detail)
-          : undefined,
+      detail: extra?.detail !== undefined ? truncateTraceText(extra.detail) : undefined,
     });
   };
 
@@ -103,9 +84,7 @@ export function createAgentTraceCollector(input: {
     plan,
     events: [...events],
     citations,
-    finalText: finalText
-      ? truncateTraceText(finalText, TRACE_FINAL_MAX)
-      : undefined,
+    finalText: finalText ? truncateTraceText(finalText, TRACE_FINAL_MAX) : undefined,
     meta: {
       langsmithProject: input.langsmithProject,
       persisted,
@@ -173,11 +152,9 @@ export function createAgentTraceCollector(input: {
         label: i.label,
         status: i.status,
       }));
-      push(
-        "plan",
-        `待办 ${plan.length} 项：${plan.map((p) => p.label).join(" → ") || "(空)"}`,
-        { name: "plan" },
-      );
+      push("plan", `待办 ${plan.length} 项：${plan.map((p) => p.label).join(" → ") || "(空)"}`, {
+        name: "plan",
+      });
     },
     recordSpecialist(agent, summary, detail) {
       push("specialist", summary, { agent, name: agent, detail });
@@ -221,14 +198,10 @@ export function createAgentTraceCollector(input: {
     finish() {
       endedAt = nowIso();
       if (finalText.trim()) {
-        push(
-          "final",
-          `终稿 ${Math.min(finalText.length, TRACE_FINAL_MAX)} 字（可截断）`,
-          {
-            name: "final",
-            detail: truncateTraceText(finalText, 400),
-          },
-        );
+        push("final", `终稿 ${Math.min(finalText.length, TRACE_FINAL_MAX)} 字（可截断）`, {
+          name: "final",
+          detail: truncateTraceText(finalText, 400),
+        });
       }
       return toDocument();
     },
@@ -237,8 +210,7 @@ export function createAgentTraceCollector(input: {
       if (process.env.AGENT_TRACE_PERSIST !== "true") return null;
       endedAt = endedAt ?? nowIso();
       const dir =
-        process.env.AGENT_TRACE_DIR?.trim() ||
-        resolve(process.cwd(), ".data/agent-traces");
+        process.env.AGENT_TRACE_DIR?.trim() || resolve(process.cwd(), ".data/agent-traces");
       mkdirSync(dir, { recursive: true });
       const stamp = (endedAt ?? nowIso()).replace(/[:.]/g, "-");
       const base = resolve(dir, `${input.threadId}-${stamp}`);

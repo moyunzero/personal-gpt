@@ -65,9 +65,7 @@ const Bubble = ({
   const hasAgentChrome =
     agentMode &&
     role === "assistant" &&
-    (extractTodos(message).length > 0 ||
-      extractAgentSteps(message).length > 0 ||
-      showTrace);
+    (extractTodos(message).length > 0 || extractAgentSteps(message).length > 0 || showTrace);
 
   if (!content && !hasAgentChrome) {
     return null;
@@ -78,21 +76,14 @@ const Bubble = ({
       <div className="message message-assistant">
         <AssistantAvatar />
         <div className="message-body">
-          {agentMode ? (
-            <p className="message-role-line">助手 · Agent</p>
-          ) : null}
+          {agentMode ? <p className="message-role-line">助手 · Agent</p> : null}
           {agentMode ? (
             <>
               <AgentTodoList message={message} />
-              <AgentStepPanels
-                message={message}
-                markActiveAsError={streamFailed && !isStreaming}
-              />
+              <AgentStepPanels message={message} markActiveAsError={streamFailed && !isStreaming} />
             </>
           ) : null}
-          {content ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-          ) : null}
+          {content ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown> : null}
           {citations.length > 0 ? <CitationCards citations={citations} /> : null}
           {showTrace ? <AgentTracePanel message={message} /> : null}
         </div>

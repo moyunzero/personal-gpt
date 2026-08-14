@@ -46,10 +46,7 @@ export function extractAgentSteps(message: UIMessage): AgentStep[] {
   for (const part of message.parts) {
     if (!("type" in part) || typeof part.type !== "string") continue;
     if (part.type !== "data-agent-step") continue;
-    const id =
-      "id" in part && typeof part.id === "string"
-        ? part.id
-        : `step-${anon++}`;
+    const id = "id" in part && typeof part.id === "string" ? part.id : `step-${anon++}`;
     const data = "data" in part ? part.data : undefined;
     const step = parseStep(data, id);
     if (step) byId.set(step.id, step);
@@ -140,9 +137,7 @@ export default function AgentStepPanels({
       ? {
           ...step,
           status: "error" as const,
-          summary: step.summary
-            ? `${step.summary} · 执行中断`
-            : "执行中断 · 未能完成",
+          summary: step.summary ? `${step.summary} · 执行中断` : "执行中断 · 未能完成",
         }
       : step,
   );

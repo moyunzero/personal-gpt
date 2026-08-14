@@ -11,13 +11,8 @@ export type AgentSkillOptions = {
   skillPrompt?: string;
 };
 
-export function createEditorAgent(
-  model: LanguageModelLike,
-  options: AgentSkillOptions = {},
-) {
-  const skill = options.skillPrompt?.trim()
-    ? `\n\n${options.skillPrompt.trim()}`
-    : "";
+export function createEditorAgent(model: LanguageModelLike, options: AgentSkillOptions = {}) {
+  const skill = options.skillPrompt?.trim() ? `\n\n${options.skillPrompt.trim()}` : "";
   return createAgent({
     name: "editor",
     description: "将调研与分析结果整理为可读报告。",

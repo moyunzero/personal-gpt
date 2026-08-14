@@ -8,11 +8,7 @@ import {
 } from "@nestjs/common";
 import type { Response } from "express";
 
-import {
-  AgentService,
-  InvalidAgentBodyError,
-  ModelConfigError,
-} from "./agent.service";
+import { AgentService, InvalidAgentBodyError, ModelConfigError } from "./agent.service";
 
 /**
  * AGENT-04：POST /agent/chat → LangGraph UIMessage SSE。
@@ -23,15 +19,9 @@ export class AgentController {
   constructor(private readonly agentService: AgentService) {}
 
   @Post("chat")
-  async chat(
-    @Body() body: unknown,
-    @Res({ passthrough: false }) res: Response,
-  ): Promise<void> {
+  async chat(@Body() body: unknown, @Res({ passthrough: false }) res: Response): Promise<void> {
     try {
-      await this.agentService.streamChat(
-        (body ?? {}) as Record<string, unknown>,
-        res,
-      );
+      await this.agentService.streamChat((body ?? {}) as Record<string, unknown>, res);
     } catch (err) {
       if (err instanceof InvalidAgentBodyError) {
         throw new BadRequestException(err.message);

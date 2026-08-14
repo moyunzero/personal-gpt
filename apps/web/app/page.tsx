@@ -10,12 +10,9 @@ import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
 
-const AGENT_SERVICE_URL =
-  process.env.NEXT_PUBLIC_AGENT_SERVICE_URL || "http://localhost:3002";
+const AGENT_SERVICE_URL = process.env.NEXT_PUBLIC_AGENT_SERVICE_URL || "http://localhost:3002";
 
-function lastUserTextFromMessages(
-  messages: { role?: string; parts?: unknown[] }[],
-): string {
+function lastUserTextFromMessages(messages: { role?: string; parts?: unknown[] }[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (m?.role !== "user" || !Array.isArray(m.parts)) continue;
@@ -44,10 +41,7 @@ export default function Home() {
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api:
-          mode === "agent"
-            ? `${AGENT_SERVICE_URL.replace(/\/$/, "")}/agent/chat`
-            : "/api/chat",
+        api: mode === "agent" ? `${AGENT_SERVICE_URL.replace(/\/$/, "")}/agent/chat` : "/api/chat",
       }),
     [mode],
   );
@@ -94,12 +88,7 @@ export default function Home() {
 
   return (
     <main>
-      <AppHeader
-        activePage="chat"
-        mode={mode}
-        onModeChange={setMode}
-        modeDisabled={isLoading}
-      />
+      <AppHeader activePage="chat" mode={mode} onModeChange={setMode} modeDisabled={isLoading} />
 
       <section ref={streamRef} className="chat-stream">
         <div className="chat-stream-inner">
@@ -125,9 +114,7 @@ export default function Home() {
                     message.role === "assistant"
                   }
                   isStreaming={
-                    isLoading &&
-                    index === messages.length - 1 &&
-                    message.role === "assistant"
+                    isLoading && index === messages.length - 1 && message.role === "assistant"
                   }
                 />
               ))}
@@ -161,11 +148,7 @@ export default function Home() {
               className="composer-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                mode === "agent"
-                  ? "描述复杂任务，例如调研并生成报告…"
-                  : "想问点啥呢~"
-              }
+              placeholder={mode === "agent" ? "描述复杂任务，例如调研并生成报告…" : "想问点啥呢~"}
               disabled={isLoading}
               aria-label="输入消息"
             />

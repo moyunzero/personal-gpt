@@ -59,9 +59,7 @@ export type KbRetrieveResult = {
   topSimilarity?: number;
 };
 
-export async function retrieveKb(
-  params: RetrieveKbParams,
-): Promise<KbRetrieveResult> {
+export async function retrieveKb(params: RetrieveKbParams): Promise<KbRetrieveResult> {
   const workspaceId = resolveWorkspaceId(params.workspaceId);
   if (!workspaceId) {
     throw new Error("retrieveKb requires workspaceId");

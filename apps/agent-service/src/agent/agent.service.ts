@@ -6,10 +6,7 @@
 import { Injectable } from "@nestjs/common";
 import { toBaseMessages, toUIMessageStream } from "@ai-sdk/langchain";
 import type { UIMessage } from "ai";
-import {
-  createUIMessageStream,
-  pipeUIMessageStreamToResponse,
-} from "ai";
+import { createUIMessageStream, pipeUIMessageStreamToResponse } from "ai";
 import type { Response } from "express";
 import { randomUUID } from "node:crypto";
 import type { Citation } from "@personal-gpt/shared";
@@ -87,15 +84,11 @@ function collectCitationsFromUpdate(
       const content =
         typeof (msg as { content?: unknown })?.content === "string"
           ? (msg as { content: string }).content
-          : typeof (msg as { kwargs?: { content?: unknown } })?.kwargs
-                ?.content === "string"
-            ? ((msg as { kwargs: { content: string } }).kwargs.content)
+          : typeof (msg as { kwargs?: { content?: unknown } })?.kwargs?.content === "string"
+            ? (msg as { kwargs: { content: string } }).kwargs.content
             : "";
       if (!content) continue;
-      if (
-        tracker &&
-        /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(content)
-      ) {
+      if (tracker && /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(content)) {
         tracker.kbNoRelevantHit = true;
       }
       if (trace) {
@@ -106,10 +99,7 @@ function collectCitationsFromUpdate(
             summary: summarizeKbToolOutput(content),
             detail: content,
           });
-        } else if (
-          /web_search|bocha|http:\/\//i.test(content) &&
-          content.length > 40
-        ) {
+        } else if (/web_search|bocha|http:\/\//i.test(content) && content.length > 40) {
           trace.recordTool({
             name: "web_search",
             agent: nodeName,
@@ -443,9 +433,7 @@ function applyNodeUpdate(tracker: ProgressTracker, nodeName: string): void {
       agent: "Supervisor",
       title: "调度专科助手",
       status: "active",
-      summary:
-        existing?.summary ??
-        "按任务分派 Retriever / Researcher / Analyst / Editor",
+      summary: existing?.summary ?? "按任务分派 Retriever / Researcher / Analyst / Editor",
     });
     // 专科返回后 supervisor 再调度：把上一个专科标完成
     if (tracker.activeSpecialist) {
@@ -752,318 +740,279 @@ export class AgentService {
 
           try {
             if (route === "short") {
-            const graph = await buildAgentGraph();
-            const lgStream = await graph.stream(
-              { messages: lcMessages },
-              {
-                streamMode: ["messages", "values"] as const,
+              const graph = await buildAgentGraph();
+              const lgStream = await graph.stream(
+                { messages: lcMessages },
+                {
+                  streamMode: ["messages", "values"] as const,
+                  recursionLimit: runConfig.recursionLimit,
+                  configurable: {
+                    ...runConfig.configurable,
+                    workspaceId: parsed.workspaceId,
+                    userText,
+                  },
+                },
+              );
+              await writer.merge(
+                toUIMessageStream(lgStream)
+                  .pipeThrough(stripMergedStart())
+                  .pipeThrough(dropOrphanToolOutputs()),
+              );
+              trace.recordSpecialist("System", "闲聊短路 · 未进入 Supervisor 多 Agent");
+              emitTrace();
+            } else {
+              const required = requiredEarly;
+              const hideUntilEditor = required.includes("editor");
+              const supervisorGraph = await buildSupervisorGraph({
+                userText,
+              });
+              const tracker = createProgressTracker(todos, steps, () => {
+                emitTracker(tracker, writer, parsed.threadId);
+              });
+              const streamConfig = {
+                streamMode: ["updates", "values", "messages"] as ["updates", "values", "messages"],
                 recursionLimit: runConfig.recursionLimit,
                 configurable: {
                   ...runConfig.configurable,
                   workspaceId: parsed.workspaceId,
                   userText,
                 },
-              },
-            );
-            await writer.merge(
-              toUIMessageStream(lgStream)
-                .pipeThrough(stripMergedStart())
-                .pipeThrough(dropOrphanToolOutputs()),
-            );
-            trace.recordSpecialist(
-              "System",
-              "闲聊短路 · 未进入 Supervisor 多 Agent",
-            );
-            emitTrace();
-          } else {
-            const required = requiredEarly;
-            const hideUntilEditor = required.includes("editor");
-            const supervisorGraph = await buildSupervisorGraph({
-              userText,
-            });
-            const tracker = createProgressTracker(todos, steps, () => {
-              emitTracker(tracker, writer, parsed.threadId);
-            });
-            const streamConfig = {
-              streamMode: ["updates", "values", "messages"] as [
-                "updates",
-                "values",
-                "messages",
-              ],
-              recursionLimit: runConfig.recursionLimit,
-              configurable: {
-                ...runConfig.configurable,
-                workspaceId: parsed.workspaceId,
+              };
+              const citationBag = new Map<string, Citation>();
+              const textGate = { open: !hideUntilEditor };
+              let visibleReportChars = 0;
+              let finalBuf = "";
+
+              // 代码侧预检索：不依赖 Retriever LLM 是否真的调用 kb_search
+              const kbPrefetch = await invokeKbSearch({
+                query: userText,
                 userText,
-              },
-            };
-            const citationBag = new Map<string, Citation>();
-            const textGate = { open: !hideUntilEditor };
-            let visibleReportChars = 0;
-            let finalBuf = "";
+                workspaceId: parsed.workspaceId,
+              });
+              trace.recordTool({
+                name: "kb_search",
+                agent: "system",
+                summary: `预检索 · ${summarizeKbToolOutput(kbPrefetch)}`,
+                detail: kbPrefetch,
+              });
+              for (const c of parseKbCitationsFromToolText(kbPrefetch)) {
+                citationBag.set(`${c.documentId}:${c.chunkIndex ?? 0}`, c);
+              }
+              if (/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbPrefetch)) {
+                tracker.kbNoRelevantHit = true;
+              }
+              const seededMessages = [
+                new SystemMessage(
+                  [
+                    "【知识库预检索·工具结果·可信】",
+                    "以下由服务端直接调用 kb_search 得到；子 Agent 必须采信，禁止编造相反的命中/未命中结论。",
+                    kbPrefetch,
+                  ].join("\n"),
+                ),
+                ...lcMessages,
+              ];
 
-            // 代码侧预检索：不依赖 Retriever LLM 是否真的调用 kb_search
-            const kbPrefetch = await invokeKbSearch({
-              query: userText,
-              userText,
-              workspaceId: parsed.workspaceId,
-            });
-            trace.recordTool({
-              name: "kb_search",
-              agent: "system",
-              summary: `预检索 · ${summarizeKbToolOutput(kbPrefetch)}`,
-              detail: kbPrefetch,
-            });
-            for (const c of parseKbCitationsFromToolText(kbPrefetch)) {
-              citationBag.set(`${c.documentId}:${c.chunkIndex ?? 0}`, c);
-            }
-            if (/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbPrefetch)) {
-              tracker.kbNoRelevantHit = true;
-            }
-            const seededMessages = [
-              new SystemMessage(
-                [
-                  "【知识库预检索·工具结果·可信】",
-                  "以下由服务端直接调用 kb_search 得到；子 Agent 必须采信，禁止编造相反的命中/未命中结论。",
-                  kbPrefetch,
-                ].join("\n"),
-              ),
-              ...lcMessages,
-            ];
-
-            const drainGraphStream = async (input: {
-              messages: unknown;
-            }): Promise<void> => {
-              const lgStream = await supervisorGraph.stream(
-                input as { messages: typeof lcMessages },
-                streamConfig,
-              );
-              const uiSource = forwardUiEvents(lgStream, (update) => {
-                collectCitationsFromUpdate(
-                  update,
-                  citationBag,
-                  tracker,
-                  trace,
+              const drainGraphStream = async (input: { messages: unknown }): Promise<void> => {
+                const lgStream = await supervisorGraph.stream(
+                  input as { messages: typeof lcMessages },
+                  streamConfig,
                 );
-                for (const nodeName of Object.keys(update)) {
-                  const before = tracker.activeSpecialist;
-                  applyNodeUpdate(tracker, nodeName);
-                  const key = nodeName.toLowerCase();
-                  if (SPECIALIST_META[key] && tracker.activeSpecialist === key) {
-                    const meta = SPECIALIST_META[key]!;
-                    if (before !== key) {
-                      trace.recordSpecialist(
-                        meta.agent,
-                        `${meta.title} · ${meta.summary}`,
-                      );
+                const uiSource = forwardUiEvents(lgStream, (update) => {
+                  collectCitationsFromUpdate(update, citationBag, tracker, trace);
+                  for (const nodeName of Object.keys(update)) {
+                    const before = tracker.activeSpecialist;
+                    applyNodeUpdate(tracker, nodeName);
+                    const key = nodeName.toLowerCase();
+                    if (SPECIALIST_META[key] && tracker.activeSpecialist === key) {
+                      const meta = SPECIALIST_META[key]!;
+                      if (before !== key) {
+                        trace.recordSpecialist(meta.agent, `${meta.title} · ${meta.summary}`);
+                      }
+                    }
+                    if (nodeName.toLowerCase() === "editor") {
+                      textGate.open = true;
                     }
                   }
-                  if (nodeName.toLowerCase() === "editor") {
-                    textGate.open = true;
-                  }
-                }
-              });
-              const uiStream = toUIMessageStream(uiSource as any)
-                .pipeThrough(stripMergedStart())
-                .pipeThrough(dropOrphanToolOutputs())
-                .pipeThrough(deduplicateTextDeltas())
-                .pipeThrough(
-                  suppressIntermediateText({
-                    hideUntilEditor,
-                    textUnlocked: () =>
-                      textGate.open ||
-                      tracker.activeSpecialist === "editor" ||
-                      tracker.ranSpecialists.has("editor"),
-                    unlockText: () => {
-                      textGate.open = true;
-                    },
-                  }),
-                )
-                .pipeThrough(dropHandoffNoiseText());
+                });
+                const uiStream = toUIMessageStream(uiSource as any)
+                  .pipeThrough(stripMergedStart())
+                  .pipeThrough(dropOrphanToolOutputs())
+                  .pipeThrough(deduplicateTextDeltas())
+                  .pipeThrough(
+                    suppressIntermediateText({
+                      hideUntilEditor,
+                      textUnlocked: () =>
+                        textGate.open ||
+                        tracker.activeSpecialist === "editor" ||
+                        tracker.ranSpecialists.has("editor"),
+                      unlockText: () => {
+                        textGate.open = true;
+                      },
+                    }),
+                  )
+                  .pipeThrough(dropHandoffNoiseText());
 
-              const reader = uiStream.getReader();
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                const obj = value as {
-                  type?: string;
-                  delta?: string;
-                  toolName?: string;
-                };
-                if (obj?.type === "error") tracker.sawError = true;
-                if (obj?.type === "tool-input-start" && obj.toolName) {
-                  trace.recordTool({
-                    name: obj.toolName,
-                    summary: `调用 ${obj.toolName}`,
-                    agent: tracker.activeSpecialist ?? "supervisor",
+                const reader = uiStream.getReader();
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  const obj = value as {
+                    type?: string;
+                    delta?: string;
+                    toolName?: string;
+                  };
+                  if (obj?.type === "error") tracker.sawError = true;
+                  if (obj?.type === "tool-input-start" && obj.toolName) {
+                    trace.recordTool({
+                      name: obj.toolName,
+                      summary: `调用 ${obj.toolName}`,
+                      agent: tracker.activeSpecialist ?? "supervisor",
+                    });
+                  }
+                  if (obj?.type === "text-delta" && obj.delta) {
+                    visibleReportChars += obj.delta.length;
+                    finalBuf += obj.delta;
+                    trace.appendFinalText(obj.delta);
+                  }
+                  writer.write(value);
+                }
+              };
+
+              await drainGraphStream({ messages: seededMessages });
+
+              // 提示词不够时：代码强制续跑缺失专科（尤其 editor）
+              let forceRound = 0;
+              while (!tracker.sawError && forceRound < MAX_FORCE_CONTINUE_ROUNDS) {
+                const next = nextRequiredSpecialist(required, tracker.ranSpecialists);
+                // Editor 已调度但正文几乎为空：继续强制要报告
+                const editorNeedsBody =
+                  required.includes("editor") &&
+                  tracker.ranSpecialists.has("editor") &&
+                  visibleReportChars < 200;
+                if (!next && !editorNeedsBody) break;
+                const missing = missingRequiredSpecialists(required, tracker.ranSpecialists);
+                const target = next ?? "editor";
+                forceRound += 1;
+                trace.recordSpecialist("System", `强制续跑 #${forceRound} → ${target}`);
+                const kbMiss =
+                  target === "editor" &&
+                  (tracker.kbNoRelevantHit ||
+                    (tracker.ranSpecialists.has("retriever") && citationBag.size === 0));
+                await drainGraphStream({
+                  messages: [
+                    new HumanMessage(
+                      buildForceContinueNudge(target, missing.length ? missing : ["editor"], {
+                        kbNoRelevantHit: kbMiss,
+                      }) +
+                        (editorNeedsBody
+                          ? " 上轮未出现报告正文：禁止再输出「请等待」，必须立刻产出完整 Markdown 报告。"
+                          : ""),
+                    ),
+                  ],
+                });
+              }
+
+              if (tracker.ranSpecialists.has("retriever") && citationBag.size === 0) {
+                tracker.kbNoRelevantHit = true;
+              }
+
+              if (!tracker.sawError) {
+                if (
+                  tracker.kbNoRelevantHit ||
+                  (tracker.ranSpecialists.has("retriever") && citationBag.size === 0)
+                ) {
+                  const noteId = `kb-miss-${parsed.threadId}`;
+                  const note =
+                    visibleReportChars >= 200
+                      ? "\n\n> 说明：知识库未找到足够依据；上文对比主要来自联网资料，未使用内部文档编号。\n"
+                      : "\n\n> 说明：知识库未找到足够依据。若上方缺少完整报告，请重试一次。\n";
+                  writer.write({ type: "text-start", id: noteId });
+                  writer.write({
+                    type: "text-delta",
+                    id: noteId,
+                    delta: note,
+                  });
+                  writer.write({ type: "text-end", id: noteId });
+                  finalBuf += note;
+                  trace.appendFinalText(note);
+                }
+                finalizeProgress(tracker);
+                trace.recordPlan(
+                  tracker.todos.map((t) => ({
+                    id: t.id,
+                    label: t.label,
+                    status: t.status,
+                  })),
+                );
+                const citations = [...citationBag.values()];
+                if (citations.length > 0) {
+                  writer.write({
+                    type: "data-citations",
+                    id: `citations-${parsed.threadId}`,
+                    data: { citations },
                   });
                 }
-                if (obj?.type === "text-delta" && obj.delta) {
-                  visibleReportChars += obj.delta.length;
-                  finalBuf += obj.delta;
-                  trace.appendFinalText(obj.delta);
+                trace.setCitations(
+                  citations.map((c) => ({
+                    documentId: c.documentId,
+                    title: c.title,
+                    similarity: c.similarity,
+                    source: c.source,
+                  })),
+                );
+                if (finalBuf.trim()) trace.setFinalText(finalBuf);
+                emitTrace();
+              } else {
+                for (const [id, step] of tracker.stepsById) {
+                  if (step.status === "active") {
+                    tracker.stepsById.set(id, { ...step, status: "error" });
+                  }
                 }
-                writer.write(value);
+                tracker.todos = tracker.todos.map((t) =>
+                  t.status === "active" ? { ...t, status: "pending" } : t,
+                );
+                emitTracker(tracker, writer, parsed.threadId);
+                trace.recordError("流式执行中出现 error 事件");
+                emitTrace();
               }
-            };
-
-            await drainGraphStream({ messages: seededMessages });
-
-            // 提示词不够时：代码强制续跑缺失专科（尤其 editor）
-            let forceRound = 0;
-            while (
-              !tracker.sawError &&
-              forceRound < MAX_FORCE_CONTINUE_ROUNDS
-            ) {
-              const next = nextRequiredSpecialist(
-                required,
-                tracker.ranSpecialists,
-              );
-              // Editor 已调度但正文几乎为空：继续强制要报告
-              const editorNeedsBody =
-                required.includes("editor") &&
-                tracker.ranSpecialists.has("editor") &&
-                visibleReportChars < 200;
-              if (!next && !editorNeedsBody) break;
-              const missing = missingRequiredSpecialists(
-                required,
-                tracker.ranSpecialists,
-              );
-              const target = next ?? "editor";
-              forceRound += 1;
-              trace.recordSpecialist(
-                "System",
-                `强制续跑 #${forceRound} → ${target}`,
-              );
-              const kbMiss =
-                target === "editor" &&
-                (tracker.kbNoRelevantHit ||
-                  (tracker.ranSpecialists.has("retriever") &&
-                    citationBag.size === 0));
-              await drainGraphStream({
-                messages: [
-                  new HumanMessage(
-                    buildForceContinueNudge(
-                      target,
-                      missing.length ? missing : ["editor"],
-                      {
-                        kbNoRelevantHit: kbMiss,
-                      },
-                    ) +
-                      (editorNeedsBody
-                        ? " 上轮未出现报告正文：禁止再输出「请等待」，必须立刻产出完整 Markdown 报告。"
-                        : ""),
-                  ),
-                ],
-              });
             }
+          } catch (err) {
+            const name = err instanceof Error ? err.name : "";
+            const msg = err instanceof Error ? err.message : String(err);
+            const isRecursion = name === "GraphRecursionError" || /recursion/i.test(msg);
+            const errorText = isRecursion
+              ? `任务步数达到上限，已停止继续调度 · 可重试或改回 Chat（${msg}）`
+              : `${msg || "Agent 执行失败"} · 可重试或改回 Chat`;
 
-            if (
-              tracker.ranSpecialists.has("retriever") &&
-              citationBag.size === 0
-            ) {
-              tracker.kbNoRelevantHit = true;
-            }
-
-            if (!tracker.sawError) {
-              if (
-                tracker.kbNoRelevantHit ||
-                (tracker.ranSpecialists.has("retriever") &&
-                  citationBag.size === 0)
-              ) {
-                const noteId = `kb-miss-${parsed.threadId}`;
-                const note =
-                  visibleReportChars >= 200
-                    ? "\n\n> 说明：知识库未找到足够依据；上文对比主要来自联网资料，未使用内部文档编号。\n"
-                    : "\n\n> 说明：知识库未找到足够依据。若上方缺少完整报告，请重试一次。\n";
-                writer.write({ type: "text-start", id: noteId });
-                writer.write({
-                  type: "text-delta",
-                  id: noteId,
-                  delta: note,
-                });
-                writer.write({ type: "text-end", id: noteId });
-                finalBuf += note;
-                trace.appendFinalText(note);
-              }
-              finalizeProgress(tracker);
-              trace.recordPlan(
-                tracker.todos.map((t) => ({
-                  id: t.id,
-                  label: t.label,
-                  status: t.status,
-                })),
-              );
-              const citations = [...citationBag.values()];
-              if (citations.length > 0) {
-                writer.write({
-                  type: "data-citations",
-                  id: `citations-${parsed.threadId}`,
-                  data: { citations },
-                });
-              }
-              trace.setCitations(
-                citations.map((c) => ({
-                  documentId: c.documentId,
-                  title: c.title,
-                  similarity: c.similarity,
-                  source: c.source,
-                })),
-              );
-              if (finalBuf.trim()) trace.setFinalText(finalBuf);
+            const messageId = `err-${parsed.threadId}`;
+            writer.write({ type: "text-start", id: messageId });
+            writer.write({
+              type: "text-delta",
+              id: messageId,
+              delta: errorText,
+            });
+            writer.write({ type: "text-end", id: messageId });
+            writeProgress(
+              writer,
+              parsed.threadId,
+              todos.map((t) => ({ ...t, status: "pending" as const })),
+              [
+                ...steps.map((s) => ({ ...s, status: "error" as const })),
+                {
+                  id: "step-error",
+                  agent: "System",
+                  title: "执行降级",
+                  status: "error" as const,
+                  summary: errorText,
+                },
+              ],
+            );
+            try {
+              trace.recordError(errorText);
               emitTrace();
-            } else {
-              for (const [id, step] of tracker.stepsById) {
-                if (step.status === "active") {
-                  tracker.stepsById.set(id, { ...step, status: "error" });
-                }
-              }
-              tracker.todos = tracker.todos.map((t) =>
-                t.status === "active" ? { ...t, status: "pending" } : t,
-              );
-              emitTracker(tracker, writer, parsed.threadId);
-              trace.recordError("流式执行中出现 error 事件");
-              emitTrace();
+            } catch {
+              /* ignore trace failures */
             }
-          }
-        } catch (err) {
-          const name = err instanceof Error ? err.name : "";
-          const msg = err instanceof Error ? err.message : String(err);
-          const isRecursion =
-            name === "GraphRecursionError" || /recursion/i.test(msg);
-          const errorText = isRecursion
-            ? `任务步数达到上限，已停止继续调度 · 可重试或改回 Chat（${msg}）`
-            : `${msg || "Agent 执行失败"} · 可重试或改回 Chat`;
-
-          const messageId = `err-${parsed.threadId}`;
-          writer.write({ type: "text-start", id: messageId });
-          writer.write({
-            type: "text-delta",
-            id: messageId,
-            delta: errorText,
-          });
-          writer.write({ type: "text-end", id: messageId });
-          writeProgress(
-            writer,
-            parsed.threadId,
-            todos.map((t) => ({ ...t, status: "pending" as const })),
-            [
-              ...steps.map((s) => ({ ...s, status: "error" as const })),
-              {
-                id: "step-error",
-                agent: "System",
-                title: "执行降级",
-                status: "error" as const,
-                summary: errorText,
-              },
-            ],
-          );
-          try {
-            trace.recordError(errorText);
-            emitTrace();
-          } catch {
-            /* ignore trace failures */
-          }
           }
         } finally {
           clearKbSearchContextForThread(parsed.threadId);

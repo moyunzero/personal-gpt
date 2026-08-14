@@ -82,11 +82,7 @@ export const SharedEnvSchema = z.object({
    * 前端 Agent 模式 transport 基址（仅 NEXT_PUBLIC_* 可暴露给 client）。
    * 缺省 http://localhost:3002
    */
-  NEXT_PUBLIC_AGENT_SERVICE_URL: z
-    .string()
-    .url()
-    .optional()
-    .default("http://localhost:3002"),
+  NEXT_PUBLIC_AGENT_SERVICE_URL: z.string().url().optional().default("http://localhost:3002"),
 
   /** v0.1 无 workspaceId 的 Astra chunk 回退检索；默认关闭 */
   ASTRA_LEGACY_FALLBACK: z

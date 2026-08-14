@@ -13,13 +13,8 @@ export type AgentSkillOptions = {
   skillPrompt?: string;
 };
 
-export function createRetrieverAgent(
-  model: LanguageModelLike,
-  options: AgentSkillOptions = {},
-) {
-  const skill = options.skillPrompt?.trim()
-    ? `\n\n${options.skillPrompt.trim()}`
-    : "";
+export function createRetrieverAgent(model: LanguageModelLike, options: AgentSkillOptions = {}) {
+  const skill = options.skillPrompt?.trim() ? `\n\n${options.skillPrompt.trim()}` : "";
   return createAgent({
     name: "retriever",
     description: "企业内部知识库检索与引用；回答需可溯源。",

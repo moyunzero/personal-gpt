@@ -3,16 +3,9 @@
  * 含 D-15 并行主题上限；可追加 Skills 总览（D-13，Skills≠Agent）。
  */
 
-import {
-  MAX_PARALLEL_RESEARCH_TOPICS,
-  MAX_WEB_SEARCH_CALLS_PER_TASK,
-} from "./caps";
+import { MAX_PARALLEL_RESEARCH_TOPICS, MAX_WEB_SEARCH_CALLS_PER_TASK } from "./caps";
 
-export type SpecialistName =
-  | "retriever"
-  | "researcher"
-  | "analyst"
-  | "editor";
+export type SpecialistName = "retriever" | "researcher" | "analyst" | "editor";
 
 export const SUPERVISOR_PROMPT = `你是多智能体调度员（Supervisor），只负责任务分解、选择子 Agent、综合其结果。
 
@@ -48,8 +41,7 @@ export function inferRequiredSpecialists(userText: string): SpecialistName[] {
   const wantsWeb =
     /联网|搜索|web|网页|优缺点|外部.?资料|调研/.test(t) &&
     !/不要联网|无需联网|不用联网|禁止联网|别联网/.test(t);
-  const wantsReport =
-    /报告|markdown|简报|编辑|定稿|整理成|写成/.test(t);
+  const wantsReport = /报告|markdown|简报|编辑|定稿|整理成|写成/.test(t);
   // 「带对比表」交给 editor 排版，不强制 analyst；数值/计算器才走 analyst
   const wantsAnalyst = /数值对比|定量分析|用计算器|算一下|calculator/.test(t);
 
@@ -81,10 +73,7 @@ function formatRequiredChecklist(agents: SpecialistName[]): string {
 }
 
 /** 将已启用 Skills 文本块追加到 Supervisor 提示（不把 skill 名注册为 Agent） */
-export function buildSupervisorPrompt(
-  skillsPrompt = "",
-  userText = "",
-): string {
+export function buildSupervisorPrompt(skillsPrompt = "", userText = ""): string {
   const parts = [SUPERVISOR_PROMPT];
   const required = inferRequiredSpecialists(userText);
   if (required.length > 0) {

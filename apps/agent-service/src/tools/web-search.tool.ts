@@ -126,17 +126,8 @@ export const webSearchTool = tool(
     description:
       "使用 Bocha 联网搜索检索公开网页。无 API Key 或失败时返回降级说明，不会中断流程。单任务最多调用 10 次。",
     schema: z.object({
-      query: z
-        .string()
-        .min(1)
-        .describe("搜索关键词，优先中文"),
-      count: z
-        .number()
-        .int()
-        .min(1)
-        .max(20)
-        .optional()
-        .describe("返回条数，默认 8"),
+      query: z.string().min(1).describe("搜索关键词，优先中文"),
+      count: z.number().int().min(1).max(20).optional().describe("返回条数，默认 8"),
     }),
   },
 );

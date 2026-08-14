@@ -53,14 +53,7 @@ export type AgentChatBody = AgentChatRequest;
 
 /** 执行轨迹事件类型（非模型内部 CoT） */
 export type AgentTraceEventKind =
-  | "intent"
-  | "plan"
-  | "specialist"
-  | "tool"
-  | "intermediate"
-  | "citation"
-  | "final"
-  | "error";
+  "intent" | "plan" | "specialist" | "tool" | "intermediate" | "citation" | "final" | "error";
 
 export interface AgentTraceEvent {
   ts: string;

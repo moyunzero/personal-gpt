@@ -23,8 +23,9 @@
   --color-accent-teal: #5db8a6;
   --color-accent-amber: #e8a55a;
   --font-display: "EB Garamond", "Tiempos Headline", Garamond, "Times New Roman", serif;
-  --font-body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-    "Microsoft YaHei", Roboto, sans-serif;
+  --font-body:
+    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto,
+    sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius-sm: 6px;
   --radius-md: 8px;

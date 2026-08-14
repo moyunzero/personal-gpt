@@ -119,9 +119,7 @@ export function evaluateSafeArithmetic(expression: string): number {
   return parseExpression(tokenize(trimmed));
 }
 
-export async function invokeCalculator(input: {
-  expression: string;
-}): Promise<string> {
+export async function invokeCalculator(input: { expression: string }): Promise<string> {
   try {
     const value = evaluateSafeArithmetic(input.expression);
     return `计算结果: ${value}`;
@@ -134,13 +132,9 @@ export const calculatorTool = tool(
   async (input: { expression: string }) => invokeCalculator(input),
   {
     name: "calculator",
-    description:
-      "安全算术计算器。仅支持数字与 + - * / 括号；禁止代码或系统调用。",
+    description: "安全算术计算器。仅支持数字与 + - * / 括号；禁止代码或系统调用。",
     schema: z.object({
-      expression: z
-        .string()
-        .min(1)
-        .describe("算术表达式，例如 (10 - 4) / 2"),
+      expression: z.string().min(1).describe("算术表达式，例如 (10 - 4) / 2"),
     }),
   },
 );

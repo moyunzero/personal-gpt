@@ -7,11 +7,7 @@ import type { RunnableConfig } from "@langchain/core/runnables";
 import { tool } from "langchain";
 import { z } from "zod";
 
-import {
-  resolveKbMinSimilarity,
-  retrieveKb,
-  type RetrieveKbParams,
-} from "../rag/retrieve";
+import { resolveKbMinSimilarity, retrieveKb, type RetrieveKbParams } from "../rag/retrieve";
 import { getKbSearchContextForThread } from "./kb-search-context";
 
 export type KbSearchInput = {
@@ -55,10 +51,7 @@ function formatKbHitMessage(
   viaUserTextFallback: boolean,
 ): string {
   const lines = chunks.map((c, i) => {
-    const snippet =
-      c.text.length > SNIPPET_MAX
-        ? `${c.text.slice(0, SNIPPET_MAX)}…`
-        : c.text;
+    const snippet = c.text.length > SNIPPET_MAX ? `${c.text.slice(0, SNIPPET_MAX)}…` : c.text;
     return [
       `[citation ${i + 1}]`,
       `title: ${c.title ?? "未命名"}`,
@@ -95,12 +88,7 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
   try {
     const primary = await retrieveKb({ ...base, query: input.query });
     if (primary.chunks.length > 0) {
-      return formatKbHitMessage(
-        primary.workspaceId,
-        minSimilarity,
-        primary.chunks,
-        false,
-      );
+      return formatKbHitMessage(primary.workspaceId, minSimilarity, primary.chunks, false);
     }
 
     const userText = input.userText?.trim();
@@ -108,17 +96,9 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
     if (userText && userText !== q) {
       const fallback = await retrieveKb({ ...base, query: userText });
       if (fallback.chunks.length > 0) {
-        return formatKbHitMessage(
-          fallback.workspaceId,
-          minSimilarity,
-          fallback.chunks,
-          true,
-        );
+        return formatKbHitMessage(fallback.workspaceId, minSimilarity, fallback.chunks, true);
       }
-      const top = Math.max(
-        primary.topSimilarity ?? 0,
-        fallback.topSimilarity ?? 0,
-      );
+      const top = Math.max(primary.topSimilarity ?? 0, fallback.topSimilarity ?? 0);
       return formatKbNoHitMessage(
         fallback.workspaceId,
         minSimilarity,
@@ -126,11 +106,7 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
       );
     }
 
-    return formatKbNoHitMessage(
-      primary.workspaceId,
-      minSimilarity,
-      primary.topSimilarity,
-    );
+    return formatKbNoHitMessage(primary.workspaceId, minSimilarity, primary.topSimilarity);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return `知识库检索失败（降级）：${msg}。请告知用户稍后重试，勿编造文档内容。`;
@@ -166,10 +142,7 @@ export const kbSearchTool = tool(
     description:
       "在企业内部知识库中检索相关片段并返回可引用元数据（title/source/documentId）。query 须保留用户问题中的专有名词与编号。低相似度命中会被过滤；无有效命中时返回 KB_SEARCH_STATUS: NO_RELEVANT_HIT。",
     schema: z.object({
-      query: z
-        .string()
-        .min(1)
-        .describe("检索问题或关键词；须保留用户原文中的专有名词/协议编号"),
+      query: z.string().min(1).describe("检索问题或关键词；须保留用户原文中的专有名词/协议编号"),
     }),
   },
 );

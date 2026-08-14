@@ -9,10 +9,7 @@ export type KbSearchContext = {
 
 const byThread = new Map<string, KbSearchContext>();
 
-export function setKbSearchContextForThread(
-  threadId: string,
-  ctx: KbSearchContext,
-): void {
+export function setKbSearchContextForThread(threadId: string, ctx: KbSearchContext): void {
   if (!threadId?.trim()) return;
   byThread.set(threadId.trim(), ctx);
 }
@@ -22,9 +19,7 @@ export function clearKbSearchContextForThread(threadId: string): void {
   byThread.delete(threadId.trim());
 }
 
-export function getKbSearchContextForThread(
-  threadId?: string,
-): KbSearchContext {
+export function getKbSearchContextForThread(threadId?: string): KbSearchContext {
   if (!threadId?.trim()) return {};
   return byThread.get(threadId.trim()) ?? {};
 }

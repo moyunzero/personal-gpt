@@ -8,9 +8,7 @@ export function missingRequiredSpecialists(
   required: SpecialistName[],
   ran: Iterable<string>,
 ): SpecialistName[] {
-  const done = new Set(
-    [...ran].map((n) => n.toLowerCase().replace(/^transfer_to_/, "")),
-  );
+  const done = new Set([...ran].map((n) => n.toLowerCase().replace(/^transfer_to_/, "")));
   return required.filter((r) => !done.has(r));
 }
 
@@ -51,9 +49,7 @@ export function buildForceContinueNudge(
       );
     }
   } else {
-    lines.push(
-      "完成后若仍有缺失项，继续按清单 transfer，不要自行结束。",
-    );
+    lines.push("完成后若仍有缺失项，继续按清单 transfer，不要自行结束。");
   }
   return lines.join(" ");
 }
@@ -70,10 +66,7 @@ export function isHandoffNoiseText(text: string): boolean {
   ) {
     return true;
   }
-  if (
-    compact.length < 120 &&
-    /已完成全部子Agent|祝您使用愉快/.test(compact)
-  ) {
+  if (compact.length < 120 && /已完成全部子Agent|祝您使用愉快/.test(compact)) {
     return true;
   }
   return false;

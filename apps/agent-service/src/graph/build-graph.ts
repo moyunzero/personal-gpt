@@ -10,12 +10,7 @@
 import type { BaseMessage } from "@langchain/core/messages";
 import type { LanguageModelLike } from "@langchain/core/language_models/base";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
-import {
-  END,
-  MemorySaver,
-  START,
-  StateGraph,
-} from "@langchain/langgraph";
+import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { createSupervisor } from "@langchain/langgraph-supervisor";
 
 import { createAnalystAgent } from "../agents/analyst.agent";
@@ -31,10 +26,7 @@ import {
   loadEnabledSkills,
 } from "../skills/load-skills";
 import { resetWebSearchCallCount } from "../tools/web-search.tool";
-import {
-  buildShortReplyMessages,
-  isAgentChitchat,
-} from "./short-circuit";
+import { buildShortReplyMessages, isAgentChitchat } from "./short-circuit";
 import { AgentState, type AgentStateType } from "./state";
 
 export type AgentRoute = "short" | "supervisor";
@@ -87,17 +79,14 @@ export function getAgentRunConfig(threadId: string): AgentRunConfig {
   }
   const raw = process.env.AGENT_RECURSION_LIMIT;
   const parsed = raw ? Number(raw) : DEFAULT_RECURSION_LIMIT;
-  const recursionLimit =
-    Number.isFinite(parsed) && parsed >= 1 ? parsed : DEFAULT_RECURSION_LIMIT;
+  const recursionLimit = Number.isFinite(parsed) && parsed >= 1 ? parsed : DEFAULT_RECURSION_LIMIT;
   return {
     recursionLimit,
     configurable: { thread_id: threadId.trim() },
   };
 }
 
-async function resolveCheckpointer(
-  override?: BaseCheckpointSaver,
-): Promise<BaseCheckpointSaver> {
+async function resolveCheckpointer(override?: BaseCheckpointSaver): Promise<BaseCheckpointSaver> {
   if (override) {
     return override;
   }
@@ -105,9 +94,7 @@ async function resolveCheckpointer(
   if (mode === "sqlite") {
     const { mkdirSync } = await import("node:fs");
     const { dirname, resolve } = await import("node:path");
-    const { SqliteSaver } = await import(
-      "@langchain/langgraph-checkpoint-sqlite"
-    );
+    const { SqliteSaver } = await import("@langchain/langgraph-checkpoint-sqlite");
     const dbPath =
       process.env.AGENT_CHECKPOINTER_SQLITE_PATH?.trim() ||
       resolve(process.cwd(), ".data/agent-checkpoints.sqlite");
@@ -150,17 +137,9 @@ export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
   });
 
   const supervisorWorkflow = createSupervisor({
-    agents: [
-      retriever.graph,
-      researcher.graph,
-      analyst.graph,
-      editor.graph,
-    ],
+    agents: [retriever.graph, researcher.graph, analyst.graph, editor.graph],
     llm: model,
-    prompt: buildSupervisorPrompt(
-      formatSkillsForPrompt(skills),
-      options.userText ?? "",
-    ),
+    prompt: buildSupervisorPrompt(formatSkillsForPrompt(skills), options.userText ?? ""),
   });
 
   const supervisorSubgraph = supervisorWorkflow.compile({ checkpointer });
@@ -204,17 +183,9 @@ export async function buildSupervisorGraph(options: BuildAgentGraphOptions = {})
   });
 
   const supervisorWorkflow = createSupervisor({
-    agents: [
-      retriever.graph,
-      researcher.graph,
-      analyst.graph,
-      editor.graph,
-    ],
+    agents: [retriever.graph, researcher.graph, analyst.graph, editor.graph],
     llm: model,
-    prompt: buildSupervisorPrompt(
-      formatSkillsForPrompt(skills),
-      options.userText ?? "",
-    ),
+    prompt: buildSupervisorPrompt(formatSkillsForPrompt(skills), options.userText ?? ""),
   });
 
   return supervisorWorkflow.compile({ checkpointer });

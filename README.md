@@ -372,15 +372,15 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 ### v1.0 — RAG 强化与知识库管理（已封板 ✅）
 
-| 模块       | 状态                                                           |
-| ---------- | -------------------------------------------------------------- |
-| 基础设施   | ✅ Monorepo + Docker Compose + BullMQ Worker                   |
-| 数据模型   | ✅ `workspaceId` 全链路（UI 仍为单 workspace）                 |
-| 文档导入   | ✅ PDF/MD/TXT/DOCX                                             |
-| 知识库 UI  | ✅ `/kb` 上传 / 列表 / 筛选 / CRUD / SSE 进度                  |
-| RAG        | ✅ 引用 + 三层路由 + 双路检索 + 可选 HyDE/Multi-Query/Reranker |
-| 工程       | ✅ CI + 回归 + Playwright 验收 8/8 + LangSmith（可选）         |
-| Agent 多 Agent | ✅ LangGraph Supervisor + SSE + 步骤面板（v2.0 **MVP**） |
+| 模块           | 状态                                                           |
+| -------------- | -------------------------------------------------------------- |
+| 基础设施       | ✅ Monorepo + Docker Compose + BullMQ Worker                   |
+| 数据模型       | ✅ `workspaceId` 全链路（UI 仍为单 workspace）                 |
+| 文档导入       | ✅ PDF/MD/TXT/DOCX                                             |
+| 知识库 UI      | ✅ `/kb` 上传 / 列表 / 筛选 / CRUD / SSE 进度                  |
+| RAG            | ✅ 引用 + 三层路由 + 双路检索 + 可选 HyDE/Multi-Query/Reranker |
+| 工程           | ✅ CI + 回归 + Playwright 验收 8/8 + LangSmith（可选）         |
+| Agent 多 Agent | ✅ LangGraph Supervisor + SSE + 步骤面板（v2.0 **MVP**）       |
 
 **仍未做**：用户认证、聊天历史持久化、多 workspace UI、BM25 混合检索、agent 生产部署（见 ISSUE-001 / v3–v4）。
 

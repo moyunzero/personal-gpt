@@ -8,14 +8,14 @@
 
 > 先查知识库里关于 LangGraph 和 AutoGen 的资料，再联网补充优缺点，最后整理成一份带对比表和引用的 Markdown 报告
 
-| 项 | 结果 |
-|----|------|
-| Retriever / Researcher / Editor 步骤完成 | 通过 |
-| 出现 Markdown 对比报告正文 | 通过 |
-| 无「请等待 editor」交接废话 | 通过 |
+| 项                                                   | 结果 |
+| ---------------------------------------------------- | ---- |
+| Retriever / Researcher / Editor 步骤完成             | 通过 |
+| 出现 Markdown 对比报告正文                           | 通过 |
+| 无「请等待 editor」交接废话                          | 通过 |
 | 无 `NO_RELEVANT_HIT` / `KB_SEARCH_STATUS` 技术码外泄 | 通过 |
-| 无假 `DOC-*` | 通过 |
-| 知识库无依据说明 | 通过 |
+| 无假 `DOC-*`                                         | 通过 |
+| 知识库无依据说明                                     | 通过 |
 
 截图：`01`–`07` png（**本地保留，不入库**）。机器结果：`checks.json`（本地）。
 

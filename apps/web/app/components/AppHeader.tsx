@@ -37,11 +37,7 @@ export default function AppHeader({
 
         <div className="app-header-cluster">
           {activePage === "chat" && mode && onModeChange ? (
-            <ModeSegmentedControl
-              mode={mode}
-              onChange={onModeChange}
-              disabled={modeDisabled}
-            />
+            <ModeSegmentedControl mode={mode} onChange={onModeChange} disabled={modeDisabled} />
           ) : null}
           <nav className="app-header-nav" aria-label="主导航">
             {activePage === "chat" ? (

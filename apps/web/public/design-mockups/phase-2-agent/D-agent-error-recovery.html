@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
@@ -455,7 +455,10 @@
             </div>
           </div>
           <div class="frame-composer">
-            <div class="shell"><span>描述复杂任务，例如调研并生成报告…</span><button class="send" aria-hidden="true"></button></div>
+            <div class="shell">
+              <span>描述复杂任务，例如调研并生成报告…</span
+              ><button class="send" aria-hidden="true"></button>
+            </div>
             <p class="hint err">出错了：403 status code (no body)</p>
           </div>
         </div>
@@ -497,13 +500,17 @@
               </div>
               <details class="error-tech">
                 <summary>技术细节（供排查）</summary>
-                <pre>403 status code (no body)
+                <pre>
+403 status code (no body)
 Troubleshooting: agent-service / model gateway</pre>
               </details>
             </article>
           </div>
           <div class="frame-composer">
-            <div class="shell"><span>描述复杂任务，例如调研并生成报告…</span><button class="send" aria-hidden="true"></button></div>
+            <div class="shell">
+              <span>描述复杂任务，例如调研并生成报告…</span
+              ><button class="send" aria-hidden="true"></button>
+            </div>
             <p class="hint">Agent 模式 · 出错时可在上方卡片重试</p>
           </div>
         </div>
@@ -532,7 +539,9 @@ Troubleshooting: agent-service / model gateway</pre>
         <div class="variant panel" data-panel="net" hidden>
           <div class="code">Failed to fetch / ECONNREFUSED</div>
           <h3 class="mini-title">连不上 Agent 服务</h3>
-          <p class="mini-body">请确认本机 agent-service（:3002）已启动，或检查 NEXT_PUBLIC_AGENT_SERVICE_URL。</p>
+          <p class="mini-body">
+            请确认本机 agent-service（:3002）已启动，或检查 NEXT_PUBLIC_AGENT_SERVICE_URL。
+          </p>
           <button type="button" class="btn btn-primary">重试连接</button>
         </div>
         <div class="variant panel" data-panel="model" hidden>
@@ -546,11 +555,20 @@ Troubleshooting: agent-service / model gateway</pre>
       <div class="spec">
         <h2>实现约定（设计 → 开发）</h2>
         <ol>
-          <li>解析 <code>error.message</code> / status：映射为 <code>title + advice + code</code>，禁止只甩原始字符串。</li>
-          <li>消息区渲染 <code>AgentErrorCard</code>（流结束后、<code>!isStreaming</code>）；composer hint 恢复普通提示。</li>
+          <li>
+            解析 <code>error.message</code> / status：映射为
+            <code>title + advice + code</code>，禁止只甩原始字符串。
+          </li>
+          <li>
+            消息区渲染 <code>AgentErrorCard</code>（流结束后、<code>!isStreaming</code>）；composer
+            hint 恢复普通提示。
+          </li>
           <li>若有步骤面板：active → error；文案改为「执行中断」。</li>
           <li>主按钮：用同一 user 文本再 <code>sendMessage</code>；次按钮：切回 Chat。</li>
-          <li>技术细节默认折叠；不展示密钥。若已有 <code>data-agent-trace</code>，卡片下方仍可显示轨迹。</li>
+          <li>
+            技术细节默认折叠；不展示密钥。若已有
+            <code>data-agent-trace</code>，卡片下方仍可显示轨迹。
+          </li>
         </ol>
       </div>
     </div>

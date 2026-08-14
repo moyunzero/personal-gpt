@@ -23,9 +23,7 @@ function isTraceDocument(data: unknown): data is AgentTraceDocument {
 }
 
 /** 从 message.parts 提取最新一条 data-agent-trace */
-export function extractAgentTrace(
-  message: UIMessage,
-): AgentTraceDocument | null {
+export function extractAgentTrace(message: UIMessage): AgentTraceDocument | null {
   let latest: AgentTraceDocument | null = null;
   for (const part of message.parts) {
     if (!("type" in part) || typeof part.type !== "string") continue;
@@ -144,25 +142,16 @@ function TraceEventRow({ event }: { event: AgentTraceEvent }) {
             viewBox="0 0 16 16"
             aria-hidden="true"
           >
-            <path
-              fill="currentColor"
-              d="M4.5 6.5 8 10l3.5-3.5-.7-.7L8 8.6 5.2 5.8z"
-            />
+            <path fill="currentColor" d="M4.5 6.5 8 10l3.5-3.5-.7-.7L8 8.6 5.2 5.8z" />
           </svg>
         ) : null}
       </button>
-      {open && event.detail ? (
-        <pre className="agent-trace-detail">{event.detail}</pre>
-      ) : null}
+      {open && event.detail ? <pre className="agent-trace-detail">{event.detail}</pre> : null}
     </li>
   );
 }
 
-export default function AgentTracePanel({
-  message,
-}: {
-  message: UIMessage;
-}) {
+export default function AgentTracePanel({ message }: { message: UIMessage }) {
   const doc = extractAgentTrace(message);
   if (!doc || doc.events.length === 0) return null;
 
@@ -178,11 +167,7 @@ export default function AgentTracePanel({
             type="button"
             className="agent-trace-download"
             onClick={() =>
-              downloadBlob(
-                `${base}.md`,
-                toMarkdown(doc),
-                "text/markdown;charset=utf-8",
-              )
+              downloadBlob(`${base}.md`, toMarkdown(doc), "text/markdown;charset=utf-8")
             }
           >
             下载 Markdown

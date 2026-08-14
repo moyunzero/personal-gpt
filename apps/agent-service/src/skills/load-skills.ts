@@ -19,11 +19,7 @@ export type LoadSkillsOptions = {
   enabledNames?: string[];
 };
 
-const DEFAULT_ENABLED = [
-  "kb-retrieval",
-  "web-research",
-  "report-writer",
-] as const;
+const DEFAULT_ENABLED = ["kb-retrieval", "web-research", "report-writer"] as const;
 
 /** 默认 skills 根：apps/agent-service/skills（相对本文件编译后路径） */
 export function defaultSkillsRoot(): string {
@@ -67,12 +63,9 @@ export function parseSkillMarkdown(raw: string): LoadedSkill {
  * 按 ENABLED_SKILLS 加载技能；缺失目录 fail-open（跳过 + warn），不抛垮进程。
  * 路径限制在 skillsRoot 下 join(name, SKILL.md)，不接受用户路径参数（T-02-03-01）。
  */
-export function loadEnabledSkills(
-  options: LoadSkillsOptions = {},
-): LoadedSkill[] {
+export function loadEnabledSkills(options: LoadSkillsOptions = {}): LoadedSkill[] {
   const root = options.skillsRoot ?? defaultSkillsRoot();
-  const names =
-    options.enabledNames ?? parseEnabledNames(process.env.ENABLED_SKILLS);
+  const names = options.enabledNames ?? parseEnabledNames(process.env.ENABLED_SKILLS);
 
   const out: LoadedSkill[] = [];
   for (const name of names) {
@@ -105,9 +98,7 @@ export function loadEnabledSkills(
 export function formatSkillsForPrompt(skills: LoadedSkill[]): string {
   if (!skills.length) return "";
   const blocks = skills.map((s) => {
-    const header = s.description
-      ? `### ${s.name} — ${s.description}`
-      : `### ${s.name}`;
+    const header = s.description ? `### ${s.name} — ${s.description}` : `### ${s.name}`;
     return `${header}\n\n${s.body}`.trim();
   });
   return [
@@ -125,9 +116,6 @@ export function formatSkillForPrompt(skill: LoadedSkill | undefined): string {
   return formatSkillsForPrompt([skill]);
 }
 
-export function findSkill(
-  skills: LoadedSkill[],
-  name: string,
-): LoadedSkill | undefined {
+export function findSkill(skills: LoadedSkill[], name: string): LoadedSkill | undefined {
   return skills.find((s) => s.name === name);
 }

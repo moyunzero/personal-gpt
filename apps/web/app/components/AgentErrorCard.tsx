@@ -30,24 +30,18 @@ export function classifyAgentError(rawInput: unknown): ClassifiedAgentError {
     };
   }
 
-  if (
-    /\b429\b/.test(text) ||
-    /rate[_ ]?limit|too many requests|请求过于频繁/i.test(text)
-  ) {
+  if (/\b429\b/.test(text) || /rate[_ ]?limit|too many requests|请求过于频繁/i.test(text)) {
     return {
       code: "429",
       title: "请求太频繁，被限流了",
-      advice:
-        "稍等片刻再试。复杂任务消耗较大，也可缩短问题或拆成两步后重试。",
+      advice: "稍等片刻再试。复杂任务消耗较大，也可缩短问题或拆成两步后重试。",
       retryLabel: "稍后再试",
       raw: text,
     };
   }
 
   if (
-    /failed to fetch|networkerror|econnrefused|enotfound|network|连不上|fetch failed/i.test(
-      lower,
-    )
+    /failed to fetch|networkerror|econnrefused|enotfound|network|连不上|fetch failed/i.test(lower)
   ) {
     return {
       code: "NETWORK",
@@ -59,16 +53,11 @@ export function classifyAgentError(rawInput: unknown): ClassifiedAgentError {
     };
   }
 
-  if (
-    /model_not_found|model.*does not exist|tool call validation|tool.*schema/i.test(
-      text,
-    )
-  ) {
+  if (/model_not_found|model.*does not exist|tool call validation|tool.*schema/i.test(text)) {
     return {
       code: "MODEL",
       title: "模型或工具调用失败",
-      advice:
-        "当前模型不可用，或专科交接参数不合规。可更换模型/提供商后重试，或改回 Chat。",
+      advice: "当前模型不可用，或专科交接参数不合规。可更换模型/提供商后重试，或改回 Chat。",
       retryLabel: "重试本任务",
       raw: text,
     };
