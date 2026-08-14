@@ -104,7 +104,9 @@ export function parseWebSearchSources(text: string): WebSearchSource[] {
 export function formatWebReferencesMarkdown(sources: WebSearchSource[], max = 8): string {
   const list = sources.filter((s) => /^https?:\/\//i.test(s.url)).slice(0, max);
   if (list.length === 0) return "";
-  const lines = list.map((s, i) => `${i + 1}. [${s.title.replace(/[\[\]]/g, "")}](${s.url})`);
+  const lines = list.map(
+    (s, i) => `${i + 1}. [${s.title.replaceAll("[", "").replaceAll("]", "")}](${s.url})`,
+  );
   return `\n\n## 参考来源\n\n${lines.join("\n")}\n`;
 }
 

@@ -172,7 +172,6 @@ export function createSequentialPipelineWorkflow(
   }
   const agents = createSpecialistAgents(model);
   // 动态节点名：用宽松 builder，避免 StateGraph 字面量联合类型卡住
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let g: any = new StateGraph(MessagesAnnotation);
   for (const name of pipeline) {
     g = g.addNode(name, agents[name].graph);

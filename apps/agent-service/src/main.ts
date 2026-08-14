@@ -30,7 +30,6 @@ function loadRootEnv(): void {
 loadRootEnv();
 const outboundProxy = applyOutboundProxyFromEnv();
 if (outboundProxy) {
-  // eslint-disable-next-line no-console
   console.log(`[agent-service] outbound proxy → ${outboundProxy}`);
 }
 /**
