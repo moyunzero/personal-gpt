@@ -79,8 +79,17 @@ export const SharedEnvSchema = z.object({
   BOCHA_API_KEY: z.string().min(1).optional(),
 
   /**
-   * 前端 Agent 模式 transport 基址（仅 NEXT_PUBLIC_* 可暴露给 client）。
-   * 缺省 http://localhost:3002
+   * Agent 临时内部令牌（v2.x）。设置后 POST /agent/chat 需 Bearer；
+   * web 经 `/api/agent/chat` BFF 注入。正式身份/ACL 见 v4。
+   */
+  AGENT_INTERNAL_TOKEN: z.string().min(1).optional(),
+
+  /** 服务端转发 agent-service 基址（BFF 用；优先于 NEXT_PUBLIC_*） */
+  AGENT_SERVICE_URL: z.string().url().optional(),
+
+  /**
+   * 前端 Agent 模式遗留直连基址（仅 NEXT_PUBLIC_* 可暴露给 client）。
+   * v2.x 起浏览器默认走 `/api/agent/chat` BFF。
    */
   NEXT_PUBLIC_AGENT_SERVICE_URL: z.string().url().optional().default("http://localhost:3002"),
 

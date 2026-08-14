@@ -83,6 +83,26 @@ describe("createAgentTraceCollector", () => {
     expect(md).toContain("## 最终输出（截断）");
   });
 
+  it("dedupes identical tool events", () => {
+    const c = createAgentTraceCollector({
+      threadId: "t-dedupe",
+      userText: "x",
+      intent: { route: "supervisor", requiredSpecialists: [] },
+    });
+    c.recordTool({
+      name: "kb_search",
+      summary: "预检索 · NO_RELEVANT_HIT",
+      detail: "KB_SEARCH_STATUS: NO_RELEVANT_HIT\na",
+    });
+    c.recordTool({
+      name: "kb_search",
+      summary: "NO_RELEVANT_HIT",
+      detail: "KB_SEARCH_STATUS: NO_RELEVANT_HIT\nb",
+    });
+    const doc = c.finish();
+    expect(doc.events.filter((e) => e.kind === "tool")).toHaveLength(1);
+  });
+
   it("persists json+md when AGENT_TRACE_PERSIST=true", () => {
     const dir = mkdtempSync(join(tmpdir(), "agent-trace-"));
     dirs.push(dir);

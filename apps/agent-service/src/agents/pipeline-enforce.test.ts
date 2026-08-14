@@ -32,7 +32,7 @@ describe("pipeline-enforce", () => {
       kbNoRelevantHit: true,
     });
     expect(text).toMatch(/知识库未找到足够依据/);
-    expect(text).toMatch(/禁止出现 DOC-\*/);
+    expect(text).toMatch(/禁止(?:编造|出现)?\s*DOC-\*|参考资料禁止 DOC-\*/);
   });
 
   it("detects handoff wait text as noise", () => {

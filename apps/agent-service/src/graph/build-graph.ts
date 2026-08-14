@@ -10,22 +10,25 @@
 import type { BaseMessage } from "@langchain/core/messages";
 import type { LanguageModelLike } from "@langchain/core/language_models/base";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
-import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
+import { END, MemorySaver, MessagesAnnotation, START, StateGraph } from "@langchain/langgraph";
 import { createSupervisor } from "@langchain/langgraph-supervisor";
 
 import { createAnalystAgent } from "../agents/analyst.agent";
 import { createEditorAgent } from "../agents/editor.agent";
 import { createResearcherAgent } from "../agents/researcher.agent";
 import { createRetrieverAgent } from "../agents/retriever.agent";
-import { buildSupervisorPrompt } from "../agents/supervisor.prompt";
+import {
+  buildSupervisorPrompt,
+  inferRequiredSpecialists,
+  type SpecialistName,
+} from "../agents/supervisor.prompt";
 import { createChatModel } from "../providers/chat-model.provider";
 import {
   findSkill,
   formatSkillForPrompt,
-  formatSkillsForPrompt,
+  formatSkillsOverview,
   loadEnabledSkills,
 } from "../skills/load-skills";
-import { resetWebSearchCallCount } from "../tools/web-search.tool";
 import { buildShortReplyMessages, isAgentChitchat } from "./short-circuit";
 import { AgentState, type AgentStateType } from "./state";
 
@@ -34,7 +37,7 @@ export type AgentRoute = "short" | "supervisor";
 export type BuildAgentGraphOptions = {
   /** 注入模型（测试用 mock）；缺省 createChatModel() */
   model?: LanguageModelLike;
-  /** 覆盖 checkpointer；缺省按 AGENT_CHECKPOINTER 解析 */
+  /** 覆盖 checkpointer；缺省按 AGENT_CHECKPOINTER 解析（进程单例） */
   checkpointer?: BaseCheckpointSaver;
   /** 当前用户原文：注入 Supervisor 强制调度清单 */
   userText?: string;
@@ -46,6 +49,11 @@ export type AgentRunConfig = {
 };
 
 const DEFAULT_RECURSION_LIMIT = 40;
+
+/** 进程级 MemorySaver，保证同进程 thread_id 跨请求可续聊 */
+let memorySaverSingleton: MemorySaver | null = null;
+/** 进程级 SqliteSaver（若启用） */
+let sqliteSaverSingleton: BaseCheckpointSaver | null = null;
 
 /** 从 messages 取最近一条用户文本（用于路由） */
 export function lastUserText(messages: BaseMessage[] | undefined): string {
@@ -92,6 +100,9 @@ async function resolveCheckpointer(override?: BaseCheckpointSaver): Promise<Base
   }
   const mode = (process.env.AGENT_CHECKPOINTER ?? "memory").toLowerCase();
   if (mode === "sqlite") {
+    if (sqliteSaverSingleton) {
+      return sqliteSaverSingleton;
+    }
     const { mkdirSync } = await import("node:fs");
     const { dirname, resolve } = await import("node:path");
     const { SqliteSaver } = await import("@langchain/langgraph-checkpoint-sqlite");
@@ -100,9 +111,13 @@ async function resolveCheckpointer(override?: BaseCheckpointSaver): Promise<Base
       resolve(process.cwd(), ".data/agent-checkpoints.sqlite");
     mkdirSync(dirname(dbPath), { recursive: true });
     // SqliteSaver 与当前 BaseCheckpointSaver 泛型略有漂移；运行时可用
-    return SqliteSaver.fromConnString(dbPath) as unknown as BaseCheckpointSaver;
+    sqliteSaverSingleton = SqliteSaver.fromConnString(dbPath) as unknown as BaseCheckpointSaver;
+    return sqliteSaverSingleton;
   }
-  return new MemorySaver();
+  if (!memorySaverSingleton) {
+    memorySaverSingleton = new MemorySaver();
+  }
+  return memorySaverSingleton;
 }
 
 function routerNode(state: AgentStateType) {
@@ -115,36 +130,92 @@ function shortReplyNode(state: AgentStateType) {
   return { messages: buildShortReplyMessages(text) };
 }
 
+type SpecialistBundle = {
+  retriever: ReturnType<typeof createRetrieverAgent>;
+  researcher: ReturnType<typeof createResearcherAgent>;
+  analyst: ReturnType<typeof createAnalystAgent>;
+  editor: ReturnType<typeof createEditorAgent>;
+};
+
+/** 创建四专科 Agent（Supervisor / Sequential 共用） */
+function createSpecialistAgents(model: LanguageModelLike): SpecialistBundle {
+  const skills = loadEnabledSkills();
+  return {
+    retriever: createRetrieverAgent(model, {
+      skillPrompt: formatSkillForPrompt(findSkill(skills, "kb-retrieval")),
+    }),
+    researcher: createResearcherAgent(model, {
+      skillPrompt: formatSkillForPrompt(findSkill(skills, "web-research")),
+    }),
+    analyst: createAnalystAgent(model),
+    editor: createEditorAgent(model, {
+      skillPrompt: formatSkillForPrompt(findSkill(skills, "report-writer")),
+    }),
+  };
+}
+
+/** 多步清单 ≥2 时走确定性流水线（对齐 LangGraph 显式边 / CrewAI sequential） */
+export function shouldUseSequentialPipeline(required: SpecialistName[]): boolean {
+  return required.length >= 2;
+}
+
 /**
- * 编译外层短路图 + 内层 Supervisor。默认 MemorySaver checkpointer。
+ * 确定性 Sequential 子图：START → specialist₁ → … → END。
+ * 不依赖 Supervisor LLM handoff，从根上消灭「强制续跑」主路径。
+ */
+export function createSequentialPipelineWorkflow(
+  model: LanguageModelLike,
+  pipeline: SpecialistName[],
+) {
+  if (pipeline.length === 0) {
+    throw new Error("sequential pipeline requires at least one specialist");
+  }
+  const agents = createSpecialistAgents(model);
+  // 动态节点名：用宽松 builder，避免 StateGraph 字面量联合类型卡住
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let g: any = new StateGraph(MessagesAnnotation);
+  for (const name of pipeline) {
+    g = g.addNode(name, agents[name].graph);
+  }
+  g = g.addEdge(START, pipeline[0]);
+  for (let i = 0; i < pipeline.length - 1; i++) {
+    g = g.addEdge(pipeline[i], pipeline[i + 1]);
+  }
+  g = g.addEdge(pipeline[pipeline.length - 1], END);
+  return g;
+}
+
+/** 共用：专科 + Supervisor workflow（未 compile） */
+function createSupervisorWorkflow(model: LanguageModelLike, userText: string) {
+  const skills = loadEnabledSkills();
+  const agents = createSpecialistAgents(model);
+
+  return createSupervisor({
+    agents: [
+      agents.retriever.graph,
+      agents.researcher.graph,
+      agents.analyst.graph,
+      agents.editor.graph,
+    ],
+    llm: model,
+    prompt: buildSupervisorPrompt(formatSkillsOverview(skills), userText),
+  });
+}
+
+/**
+ * 编译外层短路图 + 内层 Supervisor。默认进程单例 MemorySaver。
  */
 export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
   const model = options.model ?? createChatModel();
   const checkpointer = await resolveCheckpointer(options.checkpointer);
+  const userText = options.userText ?? "";
+  const required = inferRequiredSpecialists(userText);
+  const collab = shouldUseSequentialPipeline(required)
+    ? createSequentialPipelineWorkflow(model, required)
+    : createSupervisorWorkflow(model, userText);
+  const supervisorSubgraph = collab.compile({ checkpointer });
 
-  resetWebSearchCallCount();
-
-  const skills = loadEnabledSkills();
-  const retriever = createRetrieverAgent(model, {
-    skillPrompt: formatSkillForPrompt(findSkill(skills, "kb-retrieval")),
-  });
-  const researcher = createResearcherAgent(model, {
-    skillPrompt: formatSkillForPrompt(findSkill(skills, "web-research")),
-  });
-  const analyst = createAnalystAgent(model);
-  const editor = createEditorAgent(model, {
-    skillPrompt: formatSkillForPrompt(findSkill(skills, "report-writer")),
-  });
-
-  const supervisorWorkflow = createSupervisor({
-    agents: [retriever.graph, researcher.graph, analyst.graph, editor.graph],
-    llm: model,
-    prompt: buildSupervisorPrompt(formatSkillsForPrompt(skills), options.userText ?? ""),
-  });
-
-  const supervisorSubgraph = supervisorWorkflow.compile({ checkpointer });
-
-  const graph = new StateGraph(AgentState)
+  return new StateGraph(AgentState)
     .addNode("router", routerNode)
     .addNode("short_reply", shortReplyNode)
     .addNode("supervisor_subgraph", supervisorSubgraph)
@@ -156,39 +227,22 @@ export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
     .addEdge("short_reply", END)
     .addEdge("supervisor_subgraph", END)
     .compile({ checkpointer });
-
-  return graph;
 }
 
 /**
- * 构建 supervisor 子图（用于直接 stream，绕过外层 StateGraph 嵌套问题）。
- * toUIMessageStream 只能处理扁平 LangGraph stream，嵌套子图的消息不会穿透。
+ * 构建可 stream 的协作子图（绕过外层嵌套，便于 toUIMessageStream）。
+ * - 多步强制清单 → Sequential 确定性边（LangGraph multi-agent 显式工作流）
+ * - 否则 → createSupervisor hub-and-spoke
  */
 export async function buildSupervisorGraph(options: BuildAgentGraphOptions = {}) {
   const model = options.model ?? createChatModel();
   const checkpointer = await resolveCheckpointer(options.checkpointer);
-
-  resetWebSearchCallCount();
-
-  const skills = loadEnabledSkills();
-  const retriever = createRetrieverAgent(model, {
-    skillPrompt: formatSkillForPrompt(findSkill(skills, "kb-retrieval")),
-  });
-  const researcher = createResearcherAgent(model, {
-    skillPrompt: formatSkillForPrompt(findSkill(skills, "web-research")),
-  });
-  const analyst = createAnalystAgent(model);
-  const editor = createEditorAgent(model, {
-    skillPrompt: formatSkillForPrompt(findSkill(skills, "report-writer")),
-  });
-
-  const supervisorWorkflow = createSupervisor({
-    agents: [retriever.graph, researcher.graph, analyst.graph, editor.graph],
-    llm: model,
-    prompt: buildSupervisorPrompt(formatSkillsForPrompt(skills), options.userText ?? ""),
-  });
-
-  return supervisorWorkflow.compile({ checkpointer });
+  const userText = options.userText ?? "";
+  const required = inferRequiredSpecialists(userText);
+  if (shouldUseSequentialPipeline(required)) {
+    return createSequentialPipelineWorkflow(model, required).compile({ checkpointer });
+  }
+  return createSupervisorWorkflow(model, userText).compile({ checkpointer });
 }
 
 /** @deprecated 使用 buildAgentGraph；保留别名避免旧 smoke 误导 */

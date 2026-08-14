@@ -94,7 +94,7 @@ export function loadEnabledSkills(options: LoadSkillsOptions = {}): LoadedSkill[
   return out;
 }
 
-/** 生成可追加到 systemPrompt 的 Skills 文本块 */
+/** 生成可追加到 systemPrompt 的 Skills 文本块（专科 Agent 用，含正文） */
 export function formatSkillsForPrompt(skills: LoadedSkill[]): string {
   if (!skills.length) return "";
   const blocks = skills.map((s) => {
@@ -107,6 +107,24 @@ export function formatSkillsForPrompt(skills: LoadedSkill[]): string {
     "以下 Skills 仅指导流程与委派；切勿将 skill 名当作 handoff / subagent 目标。",
     "",
     ...blocks,
+  ].join("\n");
+}
+
+/**
+ * Supervisor 仅注入 Skills 名录（无正文），降低 token / 与专科指令冲突。
+ * 流程细节由各专科 systemPrompt + 单 skill 注入承担。
+ */
+export function formatSkillsOverview(skills: LoadedSkill[]): string {
+  if (!skills.length) return "";
+  const lines = skills.map((s) =>
+    s.description ? `- ${s.name}：${s.description}` : `- ${s.name}`,
+  );
+  return [
+    "## Skills 名录（不是子 Agent）",
+    "",
+    "仅作路由参考；切勿将 skill 名当作 handoff / subagent 目标。流程细节已注入对应专科。",
+    "",
+    ...lines,
   ].join("\n");
 }
 

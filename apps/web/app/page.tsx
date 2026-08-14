@@ -10,8 +10,6 @@ import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
 
-const AGENT_SERVICE_URL = process.env.NEXT_PUBLIC_AGENT_SERVICE_URL || "http://localhost:3002";
-
 function lastUserTextFromMessages(messages: { role?: string; parts?: unknown[] }[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
@@ -41,7 +39,8 @@ export default function Home() {
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: mode === "agent" ? `${AGENT_SERVICE_URL.replace(/\/$/, "")}/agent/chat` : "/api/chat",
+        // Agent 走 BFF，便于注入 AGENT_INTERNAL_TOKEN，避免浏览器直连暴露密钥
+        api: mode === "agent" ? "/api/agent/chat" : "/api/chat",
       }),
     [mode],
   );

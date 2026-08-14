@@ -51,8 +51,9 @@ export function inferRequiredSpecialists(userText: string): SpecialistName[] {
   if (wantsAnalyst) need.push("analyst");
   if (wantsReport) need.push("editor");
 
-  // 「先 A 再 B 再 C」类多步，至少要有 2 个才强制
-  return need.length >= 2 ? need : [];
+  // 多步强制：≥2 专科，或「库/网 + 报告」组合（即使启发式只命中两项语义）
+  const comboReport = wantsReport && (wantsKb || wantsWeb);
+  return need.length >= 2 || comboReport ? need : [];
 }
 
 function formatRequiredChecklist(agents: SpecialistName[]): string {

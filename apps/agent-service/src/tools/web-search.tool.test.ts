@@ -57,4 +57,58 @@ describe("web_search tool", () => {
     expect(src).toMatch(/api\.bochaai\.com/);
     expect(src).not.toMatch(/input\.url|userUrl|fetch\(query\)/);
   });
+
+  it("isolates quota by threadId and enforces per-thread cap", async () => {
+    process.env.BOCHA_API_KEY = "test-key";
+    fetchSpy.mockResolvedValue(
+      new Response(JSON.stringify({ code: 200, data: { webPages: { value: [] } } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const {
+      invokeWebSearch,
+      resetWebSearchCallCount,
+      getWebSearchCallCount,
+      MAX_WEB_SEARCH_CALLS_PER_TASK,
+    } = await import("./web-search.tool");
+
+    resetWebSearchCallCount("t-a");
+    resetWebSearchCallCount("t-b");
+
+    for (let i = 0; i < MAX_WEB_SEARCH_CALLS_PER_TASK; i++) {
+      await invokeWebSearch({ query: `a-${i}`, threadId: "t-a" });
+    }
+    const capped = await invokeWebSearch({ query: "a-over", threadId: "t-a" });
+    expect(capped).toMatch(/上限/);
+    expect(getWebSearchCallCount("t-a")).toBe(MAX_WEB_SEARCH_CALLS_PER_TASK + 1);
+
+    const other = await invokeWebSearch({ query: "b-1", threadId: "t-b" });
+    expect(other).not.toMatch(/上限/);
+    expect(getWebSearchCallCount("t-b")).toBe(1);
+  });
+
+  it("parses web sources and formats markdown references", async () => {
+    const { parseWebSearchSources, formatWebReferencesMarkdown } = await import(
+      "./web-search.tool"
+    );
+    const text = `引用: 1
+标题: LangGraph Docs
+URL: https://langchain-ai.github.io/langgraph/
+摘要: x
+
+引用: 2
+标题: AutoGen
+URL: https://microsoft.github.io/autogen/
+摘要: y`;
+    const sources = parseWebSearchSources(text);
+    expect(sources).toEqual([
+      { title: "LangGraph Docs", url: "https://langchain-ai.github.io/langgraph/" },
+      { title: "AutoGen", url: "https://microsoft.github.io/autogen/" },
+    ]);
+    const md = formatWebReferencesMarkdown(sources);
+    expect(md).toContain("## 参考来源");
+    expect(md).toContain("[LangGraph Docs](https://langchain-ai.github.io/langgraph/)");
+  });
 });

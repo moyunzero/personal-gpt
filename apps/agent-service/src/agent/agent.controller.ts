@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Headers,
   Post,
   Res,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import type { Response } from "express";
 
@@ -12,14 +14,26 @@ import { AgentService, InvalidAgentBodyError, ModelConfigError } from "./agent.s
 
 /**
  * AGENT-04：POST /agent/chat → LangGraph UIMessage SSE。
- * 不再默认 fetch WEB_URL/api/chat（D-00b）。health 仍在 AppModule。
+ * 可选 AGENT_INTERNAL_TOKEN：设置后需 Authorization: Bearer <token>（v2.x 临时护栏，正式身份见 v4）。
  */
 @Controller("agent")
 export class AgentController {
   constructor(private readonly agentService: AgentService) {}
 
   @Post("chat")
-  async chat(@Body() body: unknown, @Res({ passthrough: false }) res: Response): Promise<void> {
+  async chat(
+    @Body() body: unknown,
+    @Headers("authorization") authorization: string | undefined,
+    @Res({ passthrough: false }) res: Response,
+  ): Promise<void> {
+    const expected = process.env.AGENT_INTERNAL_TOKEN?.trim();
+    if (expected) {
+      const got = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+      if (!got || got !== expected) {
+        throw new UnauthorizedException("Unauthorized: missing or invalid AGENT_INTERNAL_TOKEN");
+      }
+    }
+
     try {
       await this.agentService.streamChat((body ?? {}) as Record<string, unknown>, res);
     } catch (err) {

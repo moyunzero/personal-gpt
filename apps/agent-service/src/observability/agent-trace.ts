@@ -55,6 +55,7 @@ export function createAgentTraceCollector(input: {
   let finalText = "";
   let endedAt: string | undefined;
   let persisted = false;
+  const toolFingerprints = new Set<string>();
 
   const push = (kind: AgentTraceEventKind, summary: string, extra?: Partial<AgentTraceEvent>) => {
     events.push({
@@ -160,6 +161,13 @@ export function createAgentTraceCollector(input: {
       push("specialist", summary, { agent, name: agent, detail });
     },
     recordTool({ name, summary, detail, agent }) {
+      const blob = `${summary}\n${detail ?? ""}`;
+      const fp =
+        name === "kb_search" && /NO_RELEVANT_HIT/i.test(blob)
+          ? "kb_search:NO_RELEVANT_HIT"
+          : `${name}\0${summary}\0${(detail ?? "").slice(0, 160)}`;
+      if (toolFingerprints.has(fp)) return;
+      toolFingerprints.add(fp);
       push("tool", summary, { name, agent, detail });
     },
     recordIntermediate(agent, text) {

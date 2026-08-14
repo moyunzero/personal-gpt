@@ -389,7 +389,10 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 ### v2.0 — LangGraph 多 Agent ✅ MVP 关账（非生产就绪）
 
 Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天仍走 `/api/chat`。  
-证据：人工截图 + `yarn acceptance:phase-2-smoke`（KB 命中 live citation）→ `tests/acceptance/phase-2-agent/`。  
+证据：人工截图 + `yarn acceptance:phase-2-smoke`（KB 命中 live citation）→ `tests/acceptance/phase-2-agent/`。
+
+**v2.x（2026-08-14）**：配额按 thread 隔离、模型默认值修复、checkpointer 单例、body Zod、可选内部令牌 + `/api/agent/chat` BFF。后续债务见 `docs/enterprise-roadmap.md`「v2.x → 后续版本」。
+
 **v2 收口**：不再扩办事型工具；详细对标与后续规划见 `docs/enterprise-roadmap.md`。
 
 ### v3.0 — 检索可信度 + 记忆 + 评测 🔜
@@ -407,7 +410,7 @@ Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单
 
 ---
 
-**当前进度**：**v1.0 已封板** · **v2.0 MVP 已关账** → 下一步 **v3.0（检索与评测）**。完整路线图：`docs/enterprise-roadmap.md`。
+**当前进度**：**v1.0 已封板** · **v2.0 MVP + v2.x 加固** → 下一步 **v3.0（检索与评测）**。完整路线图：`docs/enterprise-roadmap.md`。
 
 ## 贡献
 

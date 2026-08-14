@@ -21,6 +21,13 @@ describe("inferRequiredSpecialists", () => {
     const q = "先查知识库，再联网补充优缺点，最后整理成带对比表和引用的 Markdown 报告";
     expect(inferRequiredSpecialists(q)).toEqual(["retriever", "researcher", "editor"]);
   });
+
+  it("forces kb+report combo even without web", () => {
+    expect(inferRequiredSpecialists("查知识库并写一份 Markdown 报告")).toEqual([
+      "retriever",
+      "editor",
+    ]);
+  });
 });
 
 describe("buildSupervisorPrompt", () => {

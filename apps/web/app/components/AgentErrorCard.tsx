@@ -47,7 +47,7 @@ export function classifyAgentError(rawInput: unknown): ClassifiedAgentError {
       code: "NETWORK",
       title: "连不上 Agent 服务",
       advice:
-        "请确认本机 agent-service（:3002）已启动，或检查 NEXT_PUBLIC_AGENT_SERVICE_URL 是否正确。",
+        "请确认本机 agent-service（:3002）与 web（:3000）已启动；Agent 经 `/api/agent/chat` BFF 转发。也可检查 AGENT_SERVICE_URL。",
       retryLabel: "重试连接",
       raw: text,
     };

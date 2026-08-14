@@ -2,6 +2,7 @@
  * 多步清单强制续跑：提示词不够时由代码补刀。
  */
 
+import { KB_CITATION_RULES } from "../prompts/fragments/kb-citation-rules";
 import type { SpecialistName } from "./supervisor.prompt";
 
 export function missingRequiredSpecialists(
@@ -40,13 +41,10 @@ export function buildForceContinueNudge(
       "Editor 须输出面向用户的完整中文 Markdown 终稿（含标题、对比表、参考来源），禁止只回一句「已完成」。",
     );
     if (options.kbNoRelevantHit) {
-      lines.push(
-        "知识库状态=无命中：报告中必须写「知识库未找到足够依据」；参考资料禁止出现 DOC-*、DocumentId、内部文档号；只能引用 web_search 返回的真实标题与 URL；没有网页 URL 就写「暂无可用网页来源」。",
-      );
+      lines.push("知识库状态=无命中。");
+      lines.push(KB_CITATION_RULES);
     } else {
-      lines.push(
-        "禁止编造 DOC-* / 假 DocumentId；只能使用上游 kb_search HIT 或 web_search 的真实来源。",
-      );
+      lines.push(KB_CITATION_RULES);
     }
   } else {
     lines.push("完成后若仍有缺失项，继续按清单 transfer，不要自行结束。");

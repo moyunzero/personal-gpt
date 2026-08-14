@@ -7,8 +7,10 @@ import { ChatOpenAI } from "@langchain/openai";
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1";
-const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
-const DEFAULT_CEREBRAS_MODEL = "gpt-oss-120b";
+
+export const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
+export const DEFAULT_CEREBRAS_MODEL = "gpt-oss-120b";
+export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 
 export type CreateChatModelOptions = {
   model?: string;
@@ -71,7 +73,7 @@ export function createChatModel(options: CreateChatModelOptions = {}): ChatOpenA
       throw new Error("AGENT_PROVIDER=openai 但未设置 OPENAI_API_KEY");
     }
     return new ChatOpenAI({
-      model: options.model ?? process.env.AGENT_MODEL ?? DEFAULT_GROQ_MODEL,
+      model: options.model ?? process.env.AGENT_MODEL ?? DEFAULT_OPENAI_MODEL,
       apiKey: openaiKey,
       temperature: options.temperature ?? 0,
       ...(openaiBase ? { configuration: { baseURL: openaiBase } } : {}),
