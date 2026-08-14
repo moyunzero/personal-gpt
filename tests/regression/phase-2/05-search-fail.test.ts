@@ -11,9 +11,8 @@ describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)
   beforeEach(async () => {
     fetchSpy.mockReset();
     delete process.env.BOCHA_API_KEY;
-    const { resetWebSearchCallCount } = await import(
-      "../../../apps/agent-service/src/tools/web-search.tool"
-    );
+    const { resetWebSearchCallCount } =
+      await import("../../../apps/agent-service/src/tools/web-search.tool");
     resetWebSearchCallCount();
   });
 
@@ -30,9 +29,8 @@ describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)
   });
 
   it("surfaces visible error when web_search / Bocha fails", async () => {
-    const { invokeWebSearch } = await import(
-      "../../../apps/agent-service/src/tools/web-search.tool"
-    );
+    const { invokeWebSearch } =
+      await import("../../../apps/agent-service/src/tools/web-search.tool");
 
     const missingKey = await invokeWebSearch({ query: "竞品对比" });
     expect(missingKey).toMatch(/不可用|降级|未配置|BOCHA/i);
@@ -44,15 +42,11 @@ describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)
   });
 
   it("still returns partial results from other agents when search degrades", async () => {
-    const { invokeWebSearch } = await import(
-      "../../../apps/agent-service/src/tools/web-search.tool"
-    );
-    const { invokeKbSearch } = await import(
-      "../../../apps/agent-service/src/tools/kb-search.tool"
-    );
-    const { createResearcherAgent } = await import(
-      "../../../apps/agent-service/src/agents/researcher.agent"
-    );
+    const { invokeWebSearch } =
+      await import("../../../apps/agent-service/src/tools/web-search.tool");
+    const { invokeKbSearch } = await import("../../../apps/agent-service/src/tools/kb-search.tool");
+    const { createResearcherAgent } =
+      await import("../../../apps/agent-service/src/agents/researcher.agent");
     const { ChatOpenAI } = await import("@langchain/openai");
 
     // 搜索降级不抛错
@@ -72,9 +66,7 @@ describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)
       },
     ]);
     const embedMock = vi.fn().mockResolvedValue([0.1, 0.2]);
-    const { retrieveKb } = await import(
-      "../../../apps/agent-service/src/rag/retrieve"
-    );
+    const { retrieveKb } = await import("../../../apps/agent-service/src/rag/retrieve");
     const partial = await retrieveKb({
       query: "Q1 营收",
       store: {

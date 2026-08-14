@@ -19,8 +19,7 @@ vi.mock("../../../apps/agent-service/src/graph/build-graph", () => ({
     recursionLimit: 40,
     configurable: { thread_id: threadId },
   }),
-  resolveAgentRoute: (text: string) =>
-    /你好|天气/.test(text) ? "short" : "supervisor",
+  resolveAgentRoute: (text: string) => (/你好|天气/.test(text) ? "short" : "supervisor"),
   lastUserText: (messages: { content?: unknown }[]) => {
     const last = messages?.at(-1);
     return typeof last?.content === "string" ? last.content : "调研并写报告";
@@ -43,9 +42,7 @@ vi.mock("ai", async (importOriginal) => {
 });
 
 async function runAgentChat(text: string) {
-  const { AgentService } = await import(
-    "../../../apps/agent-service/src/agent/agent.service"
-  );
+  const { AgentService } = await import("../../../apps/agent-service/src/agent/agent.service");
   const service = new AgentService();
   const res = {} as import("express").Response;
   await service.streamChat(
@@ -141,8 +138,8 @@ describe("Phase 2 regression #3: visible todo and agent-step events", () => {
       data?: { agent?: string; title?: string };
     }[];
     expect(steps.length).toBeGreaterThan(0);
-    expect(steps.some((s) => /Supervisor|调度/i.test(`${s.data?.agent ?? ""} ${s.data?.title ?? ""}`))).toBe(
-      true,
-    );
+    expect(
+      steps.some((s) => /Supervisor|调度/i.test(`${s.data?.agent ?? ""} ${s.data?.title ?? ""}`)),
+    ).toBe(true);
   });
 });

@@ -19,8 +19,7 @@ vi.mock("../graph/build-graph", () => ({
     recursionLimit: 40,
     configurable: { thread_id: threadId },
   }),
-  resolveAgentRoute: (text: string) =>
-    /你好|天气/.test(text) ? "short" : "supervisor",
+  resolveAgentRoute: (text: string) => (/你好|天气/.test(text) ? "short" : "supervisor"),
   lastUserText: (messages: { content?: unknown }[]) => {
     const last = messages?.at(-1);
     return typeof last?.content === "string" ? last.content : "";
@@ -44,10 +43,7 @@ vi.mock("ai", async (importOriginal) => {
 
 vi.mock("../tools/kb-search.tool", () => ({
   invokeKbSearch: vi.fn(async () =>
-    [
-      "KB_SEARCH_STATUS: NO_RELEVANT_HIT",
-      "No relevant knowledge base hits.",
-    ].join("\n"),
+    ["KB_SEARCH_STATUS: NO_RELEVANT_HIT", "No relevant knowledge base hits."].join("\n"),
   ),
 }));
 
@@ -173,12 +169,9 @@ describe("Agent SSE stream (AGENT-04)", () => {
     await streamArg?.__ready;
     const writes = streamArg?.__writes ?? [];
     const types = writes.map((w) => (w as { type?: string }).type);
-    expect(types.some((t) => t === "data-todo-update" || t === "data-agent-step")).toBe(
-      true,
-    );
-    const tracePart = writes.find(
-      (w) => (w as { type?: string }).type === "data-agent-trace",
-    ) as { data?: { events?: unknown[] } } | undefined;
+    expect(types.some((t) => t === "data-todo-update" || t === "data-agent-step")).toBe(true);
+    const tracePart = writes.find((w) => (w as { type?: string }).type === "data-agent-trace") as
+      { data?: { events?: unknown[] } } | undefined;
     expect(tracePart).toBeTruthy();
     expect(Array.isArray(tracePart?.data?.events)).toBe(true);
     expect((tracePart?.data?.events ?? []).length).toBeGreaterThan(0);

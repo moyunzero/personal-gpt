@@ -26,13 +26,9 @@ describe("truncateTraceText", () => {
 describe("summarizeKbToolOutput", () => {
   it("summarizes HIT with document ids", () => {
     expect(
-      summarizeKbToolOutput(
-        "KB_SEARCH_STATUS: HIT\ndocumentId: doc-a\ndocumentId: doc-b",
-      ),
+      summarizeKbToolOutput("KB_SEARCH_STATUS: HIT\ndocumentId: doc-a\ndocumentId: doc-b"),
     ).toContain("HIT");
-    expect(
-      summarizeKbToolOutput("KB_SEARCH_STATUS: NO_RELEVANT_HIT"),
-    ).toBe("NO_RELEVANT_HIT");
+    expect(summarizeKbToolOutput("KB_SEARCH_STATUS: NO_RELEVANT_HIT")).toBe("NO_RELEVANT_HIT");
   });
 });
 

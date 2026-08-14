@@ -17,12 +17,8 @@ describe("pipeline-enforce", () => {
       "researcher",
       "editor",
     ]);
-    expect(
-      nextRequiredSpecialist([...required], ["retriever", "researcher"]),
-    ).toBe("editor");
-    expect(
-      nextRequiredSpecialist([...required], ["retriever", "researcher", "editor"]),
-    ).toBeNull();
+    expect(nextRequiredSpecialist([...required], ["retriever", "researcher"])).toBe("editor");
+    expect(nextRequiredSpecialist([...required], ["retriever", "researcher", "editor"])).toBeNull();
   });
 
   it("nudge tells supervisor to transfer_to next", () => {
@@ -46,9 +42,7 @@ describe("pipeline-enforce", () => {
       ),
     ).toBe(true);
     expect(
-      isHandoffNoiseText(
-        "# LangGraph 与 AutoGen 对比报告\n\n## 执行摘要\n- 要点一\n- 要点二\n",
-      ),
+      isHandoffNoiseText("# LangGraph 与 AutoGen 对比报告\n\n## 执行摘要\n- 要点一\n- 要点二\n"),
     ).toBe(false);
   });
 });

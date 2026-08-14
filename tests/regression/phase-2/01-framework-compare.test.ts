@@ -93,9 +93,7 @@ describe("Phase 2 regression #1: framework compare report", () => {
   });
 
   it("emits todo steps for LangGraph vs AutoGen compare task", async () => {
-    const { AgentService } = await import(
-      "../../../apps/agent-service/src/agent/agent.service"
-    );
+    const { AgentService } = await import("../../../apps/agent-service/src/agent/agent.service");
     const service = new AgentService();
     const res = {} as import("express").Response;
     await service.streamChat(
@@ -124,8 +122,7 @@ describe("Phase 2 regression #1: framework compare report", () => {
     await streamArg?.__ready;
     const writes = streamArg?.__writes ?? [];
     const todo = writes.find((w) => (w as { type?: string }).type === "data-todo-update") as
-      | { data?: { todos?: unknown[] } }
-      | undefined;
+      { data?: { todos?: unknown[] } } | undefined;
     expect(todo?.data?.todos?.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -155,9 +152,7 @@ describe("Phase 2 regression #1: framework compare report", () => {
       },
     ]);
     const embedMock = vi.fn().mockResolvedValue([0.1, 0.2, 0.3]);
-    const { retrieveKb } = await import(
-      "../../../apps/agent-service/src/rag/retrieve"
-    );
+    const { retrieveKb } = await import("../../../apps/agent-service/src/rag/retrieve");
     const result = await retrieveKb({
       query: "LangGraph vs AutoGen",
       store: {

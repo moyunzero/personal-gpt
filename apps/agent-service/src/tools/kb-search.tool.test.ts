@@ -76,9 +76,7 @@ describe("kb_search tool", () => {
         chunkIndex: 0,
       },
     ]);
-    const { invokeKbSearch, KB_SEARCH_NO_HIT_STATUS } = await import(
-      "./kb-search.tool"
-    );
+    const { invokeKbSearch, KB_SEARCH_NO_HIT_STATUS } = await import("./kb-search.tool");
     const out = await invokeKbSearch({ query: "LangGraph vs AutoGen" });
     expect(out).toContain(KB_SEARCH_NO_HIT_STATUS);
     expect(out).toMatch(/禁止编造/);
@@ -128,14 +126,8 @@ describe("kb_search tool", () => {
   it("does not import @datastax/astra-db-ts in kb-search source path", async () => {
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
-    const src = await fs.readFile(
-      path.join(__dirname, "kb-search.tool.ts"),
-      "utf8",
-    );
-    const retrieveSrc = await fs.readFile(
-      path.join(__dirname, "../rag/retrieve.ts"),
-      "utf8",
-    );
+    const src = await fs.readFile(path.join(__dirname, "kb-search.tool.ts"), "utf8");
+    const retrieveSrc = await fs.readFile(path.join(__dirname, "../rag/retrieve.ts"), "utf8");
     expect(src).not.toMatch(/@datastax\/astra-db-ts/);
     expect(retrieveSrc).not.toMatch(/@datastax\/astra-db-ts/);
     expect(retrieveSrc).toMatch(/createVectorStore|VectorStore/);

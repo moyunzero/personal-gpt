@@ -6,10 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { UIMessage } from "ai";
 
-import {
-  AgentStepPanels,
-  extractAgentSteps,
-} from "./AgentStepPanels";
+import { AgentStepPanels, extractAgentSteps } from "./AgentStepPanels";
 
 function assistantMessage(parts: UIMessage["parts"]): UIMessage {
   return { id: "m1", role: "assistant", parts };
@@ -67,9 +64,7 @@ describe("AgentStepPanels (AGENT-05)", () => {
   });
 
   it("returns null / empty when no step data (do not render section)", () => {
-    expect(extractAgentSteps(assistantMessage([{ type: "text", text: "hi" }]))).toEqual(
-      [],
-    );
+    expect(extractAgentSteps(assistantMessage([{ type: "text", text: "hi" }]))).toEqual([]);
     const html = renderToStaticMarkup(
       createElement(AgentStepPanels, {
         message: assistantMessage([{ type: "text", text: "hi" }]),

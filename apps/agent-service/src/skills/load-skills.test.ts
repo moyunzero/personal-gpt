@@ -6,16 +6,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  formatSkillsForPrompt,
-  loadEnabledSkills,
-  parseSkillMarkdown,
-} from "./load-skills";
+import { formatSkillsForPrompt, loadEnabledSkills, parseSkillMarkdown } from "./load-skills";
 
-const REAL_SKILLS_ROOT = path.resolve(
-  __dirname,
-  "../../skills",
-);
+const REAL_SKILLS_ROOT = path.resolve(__dirname, "../../skills");
 
 describe("parseSkillMarkdown", () => {
   it("extracts name, description, and body from frontmatter", () => {

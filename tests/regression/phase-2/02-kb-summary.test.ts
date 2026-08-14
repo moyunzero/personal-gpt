@@ -42,16 +42,12 @@ describe("Phase 2 regression #2: KB summary triggers Retriever + KB citation", (
   });
 
   it("invokes Retriever / kb_search for knowledge-base summary prompt", async () => {
-    const { invokeKbSearch, kbSearchTool } = await import(
-      "../../../apps/agent-service/src/tools/kb-search.tool"
-    );
-    const { createRetrieverAgent } = await import(
-      "../../../apps/agent-service/src/agents/retriever.agent"
-    );
+    const { invokeKbSearch, kbSearchTool } =
+      await import("../../../apps/agent-service/src/tools/kb-search.tool");
+    const { createRetrieverAgent } =
+      await import("../../../apps/agent-service/src/agents/retriever.agent");
     const { ChatOpenAI } = await import("@langchain/openai");
-    const { resolveAgentRoute } = await import(
-      "../../../apps/agent-service/src/graph/build-graph"
-    );
+    const { resolveAgentRoute } = await import("../../../apps/agent-service/src/graph/build-graph");
 
     const prompt = "请根据知识库总结差旅报销政策并列出条款出处";
     expect(resolveAgentRoute(prompt)).toBe("supervisor");
@@ -74,9 +70,7 @@ describe("Phase 2 regression #2: KB summary triggers Retriever + KB citation", (
   });
 
   it("emits citation sourced from KB (not web) under mocked store", async () => {
-    const { invokeKbSearch } = await import(
-      "../../../apps/agent-service/src/tools/kb-search.tool"
-    );
+    const { invokeKbSearch } = await import("../../../apps/agent-service/src/tools/kb-search.tool");
     const out = await invokeKbSearch({ query: "差旅报销" });
     expect(out).toMatch(/来源=知识库|source: kb-policy\.md/);
     expect(out).toMatch(/documentId: kb-doc-1/);

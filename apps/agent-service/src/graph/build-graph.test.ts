@@ -5,11 +5,7 @@ import { HumanMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  buildAgentGraph,
-  getAgentRunConfig,
-  resolveAgentRoute,
-} from "./build-graph";
+import { buildAgentGraph, getAgentRunConfig, resolveAgentRoute } from "./build-graph";
 
 function mockChatModel() {
   return new ChatOpenAI({
@@ -26,9 +22,7 @@ describe("resolveAgentRoute", () => {
   });
 
   it("routes research queries to supervisor", () => {
-    expect(
-      resolveAgentRoute("请根据知识库总结差旅报销政策并列出条款出处"),
-    ).toBe("supervisor");
+    expect(resolveAgentRoute("请根据知识库总结差旅报销政策并列出条款出处")).toBe("supervisor");
   });
 });
 
@@ -88,10 +82,7 @@ describe("buildAgentGraph", () => {
   it("short-circuits chitchat without entering supervisor workers", async () => {
     const graph = await buildAgentGraph({ model: mockChatModel() });
     const run = getAgentRunConfig("chitchat-thread");
-    const result = await graph.invoke(
-      { messages: [new HumanMessage("你好")] },
-      run,
-    );
+    const result = await graph.invoke({ messages: [new HumanMessage("你好")] }, run);
     const texts = (result.messages ?? []).map((m) =>
       typeof m.content === "string" ? m.content : "",
     );
@@ -105,8 +96,6 @@ describe("buildAgentGraph", () => {
   });
 
   it("marks non-chitchat as supervisor route before subgraph invoke", () => {
-    expect(
-      resolveAgentRoute("对比三家供应商报价并输出结构化分析报告"),
-    ).toBe("supervisor");
+    expect(resolveAgentRoute("对比三家供应商报价并输出结构化分析报告")).toBe("supervisor");
   });
 });

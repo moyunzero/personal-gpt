@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  buildShortReplyMessages,
-  isAgentChitchat,
-} from "./short-circuit";
+import { buildShortReplyMessages, isAgentChitchat } from "./short-circuit";
 
 describe("isAgentChitchat (D-03/D-17)", () => {
   it('returns true for greeting "你好"', () => {
@@ -27,16 +24,10 @@ describe("isAgentChitchat (D-03/D-17)", () => {
   });
 
   it("returns false for clear research / KB queries", () => {
-    expect(
-      isAgentChitchat(
-        "请根据知识库总结我们公司的差旅报销政策，并列出关键条款与出处",
-      ),
-    ).toBe(false);
-    expect(
-      isAgentChitchat(
-        "对比三家供应商的报价方案，输出结构化分析报告",
-      ),
-    ).toBe(false);
+    expect(isAgentChitchat("请根据知识库总结我们公司的差旅报销政策，并列出关键条款与出处")).toBe(
+      false,
+    );
+    expect(isAgentChitchat("对比三家供应商的报价方案，输出结构化分析报告")).toBe(false);
   });
 });
 
@@ -46,10 +37,7 @@ describe("buildShortReplyMessages", () => {
     expect(msgs.length).toBeGreaterThanOrEqual(1);
     const last = msgs[msgs.length - 1];
     expect(last).toBeTruthy();
-    const content =
-      typeof last.content === "string"
-        ? last.content
-        : JSON.stringify(last.content);
+    const content = typeof last.content === "string" ? last.content : JSON.stringify(last.content);
     expect(content.length).toBeGreaterThan(0);
     expect(content).toMatch(/你好|有什么|帮|聊聊|问题/);
   });

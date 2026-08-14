@@ -39,8 +39,7 @@ describe("Phase 2 regression #4: chitchat skips full multi-agent graph (D-03/D-1
 
     expect(invokeSpy).not.toHaveBeenCalled();
     const last = result.messages?.at(-1);
-    const content =
-      typeof last?.content === "string" ? last.content : String(last?.content ?? "");
+    const content = typeof last?.content === "string" ? last.content : String(last?.content ?? "");
     expect(content.length).toBeGreaterThan(0);
     expect(content).toMatch(/闲聊|短路|调研|知识库|助手/);
   });

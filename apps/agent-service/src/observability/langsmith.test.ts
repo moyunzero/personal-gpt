@@ -31,11 +31,8 @@ describe("ensureAgentLangSmithEnv", () => {
       traceable: traceableMock,
     }));
 
-    const {
-      ensureAgentLangSmithEnv,
-      resetAgentLangSmithConfigForTests,
-      traceAgentRun,
-    } = await import("./langsmith");
+    const { ensureAgentLangSmithEnv, resetAgentLangSmithConfigForTests, traceAgentRun } =
+      await import("./langsmith");
     resetAgentLangSmithConfigForTests();
     expect(ensureAgentLangSmithEnv()).toBe(true);
     expect(process.env.LANGSMITH_PROJECT).toBe("personal-gpt-agent");

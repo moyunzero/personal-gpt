@@ -68,10 +68,7 @@ describe("agent tool caps (D-07 / D-15)", () => {
     const researcherSrc = await fs.readFile(path.join(dir, "researcher.agent.ts"), "utf8");
     const analystSrc = await fs.readFile(path.join(dir, "analyst.agent.ts"), "utf8");
     const editorSrc = await fs.readFile(path.join(dir, "editor.agent.ts"), "utf8");
-    const buildSrc = await fs.readFile(
-      path.join(dir, "../graph/build-graph.ts"),
-      "utf8",
-    );
+    const buildSrc = await fs.readFile(path.join(dir, "../graph/build-graph.ts"), "utf8");
 
     expect(retrieverSrc).toMatch(/kbSearchTool|kb_search/);
     expect(retrieverSrc).not.toMatch(/webSearchTool/);

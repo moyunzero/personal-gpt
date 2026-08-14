@@ -53,10 +53,7 @@ describe("web_search tool", () => {
   it("does not accept arbitrary user URLs (SSRF guard — only Bocha endpoint)", async () => {
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
-    const src = await fs.readFile(
-      path.join(__dirname, "web-search.tool.ts"),
-      "utf8",
-    );
+    const src = await fs.readFile(path.join(__dirname, "web-search.tool.ts"), "utf8");
     expect(src).toMatch(/api\.bochaai\.com/);
     expect(src).not.toMatch(/input\.url|userUrl|fetch\(query\)/);
   });
