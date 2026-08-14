@@ -76,6 +76,10 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      # package.json exports 指向 dist/；dist 未入库，测试/校验前必须先编译。
+      - name: Build shared package
+        run: yarn workspace @personal-gpt/shared build
+
       - name: Validate ${{ matrix.workspace }}
         run: yarn workspace ${{ matrix.workspace }} ${{ matrix.command }}
 
@@ -106,6 +110,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build shared package
+        run: yarn workspace @personal-gpt/shared build
+
       - name: Run v1.0 regression suite
         run: yarn test tests/regression/phase-1
 
@@ -135,6 +142,9 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Build shared package
+        run: yarn workspace @personal-gpt/shared build
 
       - name: Run v2.0 regression suite
         run: yarn test:regression:phase-2
