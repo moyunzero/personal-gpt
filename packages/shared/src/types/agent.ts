@@ -1,6 +1,7 @@
 /**
  * Agent 模式跨端类型（web / agent-service）。
  * Phase 2：todo 进度、步骤面板、chat body 约定。
+ * Phase 2.x：执行轨迹可观测（data-agent-trace）。
  */
 
 /** 单条 todo（Supervisor / 前端步骤面板） */
@@ -49,3 +50,60 @@ export interface AgentChatRequest {
 
 /** 与计划 must_haves 命名对齐的别名 */
 export type AgentChatBody = AgentChatRequest;
+
+/** 执行轨迹事件类型（非模型内部 CoT） */
+export type AgentTraceEventKind =
+  | "intent"
+  | "plan"
+  | "specialist"
+  | "tool"
+  | "intermediate"
+  | "citation"
+  | "final"
+  | "error";
+
+export interface AgentTraceEvent {
+  ts: string;
+  kind: AgentTraceEventKind;
+  /** 专科名或 System */
+  agent?: string;
+  /** 工具名 / 步骤名 */
+  name?: string;
+  summary: string;
+  /** 截断后的详情 */
+  detail?: string;
+}
+
+export interface AgentTraceIntent {
+  route: "short" | "supervisor";
+  requiredSpecialists: string[];
+}
+
+export interface AgentTracePlanItem {
+  id: string;
+  label: string;
+  status: TodoStatus;
+}
+
+/** SSE `data-agent-trace` 载荷：可下载复盘文档 */
+export interface AgentTraceDocument {
+  threadId: string;
+  startedAt: string;
+  endedAt?: string;
+  userText: string;
+  intent: AgentTraceIntent;
+  plan: AgentTracePlanItem[];
+  events: AgentTraceEvent[];
+  citations: Array<{
+    documentId: string;
+    title: string;
+    similarity?: number;
+    source?: string;
+  }>;
+  /** 截断后的终稿正文 */
+  finalText?: string;
+  meta?: {
+    langsmithProject?: string;
+    persisted?: boolean;
+  };
+}

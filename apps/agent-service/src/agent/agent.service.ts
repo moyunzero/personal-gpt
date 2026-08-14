@@ -31,7 +31,17 @@ import {
 } from "../agents/pipeline-enforce";
 import { inferRequiredSpecialists } from "../agents/supervisor.prompt";
 import { ensureAgentLangSmithEnv } from "../observability/langsmith";
-import { HumanMessage } from "@langchain/core/messages";
+import {
+  createAgentTraceCollector,
+  summarizeKbToolOutput,
+  type AgentTraceCollector,
+} from "../observability/agent-trace";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import {
+  clearKbSearchContextForThread,
+  setKbSearchContextForThread,
+} from "../tools/kb-search-context";
+import { invokeKbSearch } from "../tools/kb-search.tool";
 
 /**
  * 从 kb_search 工具返回文本解析真实 Citation（禁止依赖模型在正文里自造 DOC-*）。
@@ -67,8 +77,9 @@ function collectCitationsFromUpdate(
   update: Record<string, unknown>,
   bag: Map<string, Citation>,
   tracker?: { kbNoRelevantHit: boolean },
+  trace?: AgentTraceCollector,
 ): void {
-  for (const nodeVal of Object.values(update)) {
+  for (const [nodeName, nodeVal] of Object.entries(update)) {
     if (!nodeVal || typeof nodeVal !== "object") continue;
     const messages = (nodeVal as { messages?: unknown }).messages;
     if (!Array.isArray(messages)) continue;
@@ -86,6 +97,32 @@ function collectCitationsFromUpdate(
         /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(content)
       ) {
         tracker.kbNoRelevantHit = true;
+      }
+      if (trace) {
+        if (/KB_SEARCH_STATUS:/i.test(content) || content.includes("[citation")) {
+          trace.recordTool({
+            name: "kb_search",
+            agent: nodeName,
+            summary: summarizeKbToolOutput(content),
+            detail: content,
+          });
+        } else if (
+          /web_search|bocha|http:\/\//i.test(content) &&
+          content.length > 40
+        ) {
+          trace.recordTool({
+            name: "web_search",
+            agent: nodeName,
+            summary: `联网结果摘要 ${Math.min(content.length, 2000)} 字`,
+            detail: content,
+          });
+        } else if (
+          !isHandoffNoiseText(content) &&
+          content.length > 80 &&
+          /retriever|researcher|analyst|editor/i.test(nodeName)
+        ) {
+          trace.recordIntermediate(nodeName, content);
+        }
       }
       for (const c of parseKbCitationsFromToolText(content)) {
         const key = `${c.documentId}:${c.chunkIndex ?? 0}`;
@@ -672,14 +709,49 @@ export class AgentService {
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
-        const { todos, steps } = buildInitialProgress(route, userText);
-
-        // start 必须在自定义 data-* 之前，否则 useChat 会拆成两条助手消息
-        writer.write({ type: "start", messageId: `agent-${parsed.threadId}` });
-        writeProgress(writer, parsed.threadId, todos, steps);
-
+        setKbSearchContextForThread(parsed.threadId, {
+          userText,
+          workspaceId: parsed.workspaceId,
+        });
         try {
-          if (route === "short") {
+          const requiredEarly = inferRequiredSpecialists(userText);
+          const trace = createAgentTraceCollector({
+            threadId: parsed.threadId,
+            userText,
+            intent: {
+              route,
+              requiredSpecialists: requiredEarly,
+            },
+            langsmithProject: process.env.LANGSMITH_PROJECT?.trim(),
+          });
+          const { todos, steps } = buildInitialProgress(route, userText);
+          trace.recordPlan(
+            todos.map((t) => ({
+              id: t.id,
+              label: t.label,
+              status: t.status,
+            })),
+          );
+
+          // start 必须在自定义 data-* 之前，否则 useChat 会拆成两条助手消息
+          writer.write({ type: "start", messageId: `agent-${parsed.threadId}` });
+          writeProgress(writer, parsed.threadId, todos, steps);
+
+          const emitTrace = () => {
+            const doc = trace.finish();
+            const path = trace.persistIfEnabled();
+            if (path) {
+              doc.meta = { ...doc.meta, persisted: true };
+            }
+            writer.write({
+              type: "data-agent-trace",
+              id: `trace-${parsed.threadId}`,
+              data: doc,
+            });
+          };
+
+          try {
+            if (route === "short") {
             const graph = await buildAgentGraph();
             const lgStream = await graph.stream(
               { messages: lcMessages },
@@ -689,6 +761,7 @@ export class AgentService {
                 configurable: {
                   ...runConfig.configurable,
                   workspaceId: parsed.workspaceId,
+                  userText,
                 },
               },
             );
@@ -697,8 +770,13 @@ export class AgentService {
                 .pipeThrough(stripMergedStart())
                 .pipeThrough(dropOrphanToolOutputs()),
             );
+            trace.recordSpecialist(
+              "System",
+              "闲聊短路 · 未进入 Supervisor 多 Agent",
+            );
+            emitTrace();
           } else {
-            const required = inferRequiredSpecialists(userText);
+            const required = requiredEarly;
             const hideUntilEditor = required.includes("editor");
             const supervisorGraph = await buildSupervisorGraph({
               userText,
@@ -716,11 +794,42 @@ export class AgentService {
               configurable: {
                 ...runConfig.configurable,
                 workspaceId: parsed.workspaceId,
+                userText,
               },
             };
             const citationBag = new Map<string, Citation>();
             const textGate = { open: !hideUntilEditor };
             let visibleReportChars = 0;
+            let finalBuf = "";
+
+            // 代码侧预检索：不依赖 Retriever LLM 是否真的调用 kb_search
+            const kbPrefetch = await invokeKbSearch({
+              query: userText,
+              userText,
+              workspaceId: parsed.workspaceId,
+            });
+            trace.recordTool({
+              name: "kb_search",
+              agent: "system",
+              summary: `预检索 · ${summarizeKbToolOutput(kbPrefetch)}`,
+              detail: kbPrefetch,
+            });
+            for (const c of parseKbCitationsFromToolText(kbPrefetch)) {
+              citationBag.set(`${c.documentId}:${c.chunkIndex ?? 0}`, c);
+            }
+            if (/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbPrefetch)) {
+              tracker.kbNoRelevantHit = true;
+            }
+            const seededMessages = [
+              new SystemMessage(
+                [
+                  "【知识库预检索·工具结果·可信】",
+                  "以下由服务端直接调用 kb_search 得到；子 Agent 必须采信，禁止编造相反的命中/未命中结论。",
+                  kbPrefetch,
+                ].join("\n"),
+              ),
+              ...lcMessages,
+            ];
 
             const drainGraphStream = async (input: {
               messages: unknown;
@@ -730,9 +839,25 @@ export class AgentService {
                 streamConfig,
               );
               const uiSource = forwardUiEvents(lgStream, (update) => {
-                collectCitationsFromUpdate(update, citationBag, tracker);
+                collectCitationsFromUpdate(
+                  update,
+                  citationBag,
+                  tracker,
+                  trace,
+                );
                 for (const nodeName of Object.keys(update)) {
+                  const before = tracker.activeSpecialist;
                   applyNodeUpdate(tracker, nodeName);
+                  const key = nodeName.toLowerCase();
+                  if (SPECIALIST_META[key] && tracker.activeSpecialist === key) {
+                    const meta = SPECIALIST_META[key]!;
+                    if (before !== key) {
+                      trace.recordSpecialist(
+                        meta.agent,
+                        `${meta.title} · ${meta.summary}`,
+                      );
+                    }
+                  }
                   if (nodeName.toLowerCase() === "editor") {
                     textGate.open = true;
                   }
@@ -760,16 +885,29 @@ export class AgentService {
               while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                const obj = value as { type?: string; delta?: string };
+                const obj = value as {
+                  type?: string;
+                  delta?: string;
+                  toolName?: string;
+                };
                 if (obj?.type === "error") tracker.sawError = true;
+                if (obj?.type === "tool-input-start" && obj.toolName) {
+                  trace.recordTool({
+                    name: obj.toolName,
+                    summary: `调用 ${obj.toolName}`,
+                    agent: tracker.activeSpecialist ?? "supervisor",
+                  });
+                }
                 if (obj?.type === "text-delta" && obj.delta) {
                   visibleReportChars += obj.delta.length;
+                  finalBuf += obj.delta;
+                  trace.appendFinalText(obj.delta);
                 }
                 writer.write(value);
               }
             };
 
-            await drainGraphStream({ messages: lcMessages });
+            await drainGraphStream({ messages: seededMessages });
 
             // 提示词不够时：代码强制续跑缺失专科（尤其 editor）
             let forceRound = 0;
@@ -793,6 +931,10 @@ export class AgentService {
               );
               const target = next ?? "editor";
               forceRound += 1;
+              trace.recordSpecialist(
+                "System",
+                `强制续跑 #${forceRound} → ${target}`,
+              );
               const kbMiss =
                 target === "editor" &&
                 (tracker.kbNoRelevantHit ||
@@ -841,8 +983,17 @@ export class AgentService {
                   delta: note,
                 });
                 writer.write({ type: "text-end", id: noteId });
+                finalBuf += note;
+                trace.appendFinalText(note);
               }
               finalizeProgress(tracker);
+              trace.recordPlan(
+                tracker.todos.map((t) => ({
+                  id: t.id,
+                  label: t.label,
+                  status: t.status,
+                })),
+              );
               const citations = [...citationBag.values()];
               if (citations.length > 0) {
                 writer.write({
@@ -851,6 +1002,16 @@ export class AgentService {
                   data: { citations },
                 });
               }
+              trace.setCitations(
+                citations.map((c) => ({
+                  documentId: c.documentId,
+                  title: c.title,
+                  similarity: c.similarity,
+                  source: c.source,
+                })),
+              );
+              if (finalBuf.trim()) trace.setFinalText(finalBuf);
+              emitTrace();
             } else {
               for (const [id, step] of tracker.stepsById) {
                 if (step.status === "active") {
@@ -861,6 +1022,8 @@ export class AgentService {
                 t.status === "active" ? { ...t, status: "pending" } : t,
               );
               emitTracker(tracker, writer, parsed.threadId);
+              trace.recordError("流式执行中出现 error 事件");
+              emitTrace();
             }
           }
         } catch (err) {
@@ -895,6 +1058,15 @@ export class AgentService {
               },
             ],
           );
+          try {
+            trace.recordError(errorText);
+            emitTrace();
+          } catch {
+            /* ignore trace failures */
+          }
+          }
+        } finally {
+          clearKbSearchContextForThread(parsed.threadId);
         }
       },
       onError: (error) => {

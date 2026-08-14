@@ -182,11 +182,14 @@ yarn dev:worker   # → :3001，消费入库队列
 
 确认 `.env` 中 `DATABASE_URL` / `REDIS_URL` 与 `docker-compose.yml` 一致（见 `.env.example` 默认值）。
 
-#### 方案 C — Agent 多 Agent（v2.0）
+#### 方案 C — Agent 多 Agent（v2.0 MVP）
 
 ```bash
-yarn dev:agent    # AGENT_SERVICE_PORT 默认 3002，转发 WEB_URL/api/chat
+yarn dev:agent    # AGENT_SERVICE_PORT 默认 3002 → POST /agent/chat
+yarn acceptance:phase-2-smoke   # live SSE：KB 命中 + 主链路门禁（需 embedding/Astra）
 ```
+
+说明：v2.0 为 **MVP 关账 / 可演示**，不是生产就绪（无鉴权多租户、无 agent Docker）。关账与证据见 `tests/acceptance/phase-2-agent/`。
 
 ## 项目结构
 
@@ -201,8 +204,8 @@ personal-gpt/
 ├── script/                  # Astra 初始化、seed、repair 等根级脚本
 ├── apps/web/script/         # migrateLegacy、KB 迁移辅助
 ├── tests/
-│   ├── regression/phase-1/  # Phase 1 回归
-│   └── acceptance/phase-1/  # Playwright 验收
+│   ├── regression/phase-1|2/ # 回归（phase-2 mock-only）
+│   └── acceptance/phase-1|2-agent/ # Playwright / live SSE smoke
 ├── docs/                    # 开发笔记与路线图（见下方文档）
 ├── assets/readme/           # README 截图（Playwright 采集）
 ├── docker-compose.yml       # PostgreSQL 16 + Redis 7
@@ -356,10 +359,10 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 **架构原则**
 
-- 保留并增强 Next.js（聊天 + 知识库工作台）
-- v2.0 起在 `agent-service` 落地 LangGraph 多 Agent
-- 异步导入：BullMQ + Redis；元数据：PostgreSQL；向量：Astra（v3.0 扩展多存储）
-- 生产工程能力集中在 v4.0
+- Chat（稳定问答）与 Agent（研究型任务）双模并存
+- 检索质量与评测优先于再堆子 Agent（v3）；身份与 ACL 优先于连接器（v4）
+- 异步导入：BullMQ + Redis；元数据：PostgreSQL；向量：Astra（v3 扩展混合检索 / 多存储）
+- 生产治理集中在 v4；连接器与 HITL 在 v5
 
 ### v0.1 — RAG 聊天原型（已完成）
 
@@ -377,33 +380,34 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 | 知识库 UI  | ✅ `/kb` 上传 / 列表 / 筛选 / CRUD / SSE 进度                  |
 | RAG        | ✅ 引用 + 三层路由 + 双路检索 + 可选 HyDE/Multi-Query/Reranker |
 | 工程       | ✅ CI + 回归 + Playwright 验收 8/8 + LangSmith（可选）         |
-| Agent 多 Agent | ✅ LangGraph Supervisor + SSE + 步骤面板（v2.0 核心） |
+| Agent 多 Agent | ✅ LangGraph Supervisor + SSE + 步骤面板（v2.0 **MVP**） |
 
-**仍未做**：用户认证、聊天历史持久化、多 workspace UI、BM25 混合检索（见 ISSUE-001 / v3.0）。
+**仍未做**：用户认证、聊天历史持久化、多 workspace UI、BM25 混合检索、agent 生产部署（见 ISSUE-001 / v3–v4）。
 
 **演示**：[https://personal-emotion-gpt.vercel.app](https://personal-emotion-gpt.vercel.app) · [GitHub](https://github.com/moyunzero/personal-gpt)
 
-### v2.0 — LangGraph 多 Agent ✅ 核心关账
+### v2.0 — LangGraph 多 Agent ✅ MVP 关账（非生产就绪）
 
 Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天仍走 `/api/chat`。  
-关账说明与验收截图：`tests/acceptance/phase-2-agent/`。  
-延期：`file_read` / QuickJS / agent Docker（→ v3–v4）。
+证据：人工截图 + `yarn acceptance:phase-2-smoke`（KB 命中 live citation）→ `tests/acceptance/phase-2-agent/`。  
+**v2 收口**：不再扩办事型工具；详细对标与后续规划见 `docs/enterprise-roadmap.md`。
 
-### v3.0 — 记忆、多存储与高级 RAG
+### v3.0 — 检索可信度 + 记忆 + 评测 🔜
 
-Redis / Mem0 记忆；Milvus · ES · Neo4j · MinIO；Agentic / Graph RAG；ISSUE-001 根治方向。
+对标 RAGFlow/FastGPT「答得准」：混合检索默认路径、Corrective RAG、黄金集评测、Postgres checkpointer、Redis/Mem0 记忆。  
+**不做**：登录、连接器、业务写操作。
 
-### v4.0 — 工程化与生产就绪
+### v4.0 — 身份治理 + 可生产部署
 
-全栈 Docker Compose（含 agent-service）、鉴权与多租户、审计、Prometheus / Grafana、CI/CD。
+对标 MaxKB/企业交付 + Copilot 权限裁剪：Auth、RBAC、ACL 过滤检索、全栈 Docker（含 agent）、会话历史、审计。
 
-### v5.0 — 高级企业特性
+### v5.0 — 连接器 Lite / HITL / 谨慎行动
 
-语音、定时 Agent、RAGAS、协作与成本优化等。
+对标 Glean·Dify 浅层子集：1–2 个只读连接器、人机确认、工具白名单；语音/定时为 P2。
 
 ---
 
-**当前进度**：**v1.0 已封板** · **v2.0 核心已关账** → 下一步 **v3.0**。
+**当前进度**：**v1.0 已封板** · **v2.0 MVP 已关账** → 下一步 **v3.0（检索与评测）**。完整路线图：`docs/enterprise-roadmap.md`。
 
 ## 贡献
 

@@ -89,8 +89,11 @@ function StepCard({ step }: { step: AgentStep }) {
           <span>{step.title}</span>
         </span>
         <span className="agent-step-meta">
-          {step.status === "active" ? (
-            <span className="agent-step-status-dot" aria-hidden="true" />
+          {step.status === "active" || step.status === "error" ? (
+            <span
+              className={`agent-step-status-dot${step.status === "error" ? " agent-step-status-dot-error" : ""}`}
+              aria-hidden="true"
+            />
           ) : null}
           <span>{statusLabel(step.status)}</span>
           <svg
@@ -124,8 +127,25 @@ function StepCard({ step }: { step: AgentStep }) {
   );
 }
 
-export default function AgentStepPanels({ message }: { message: UIMessage }) {
-  const steps = extractAgentSteps(message);
+export default function AgentStepPanels({
+  message,
+  markActiveAsError = false,
+}: {
+  message: UIMessage;
+  /** 流失败时：把仍在进行中的步骤显示为失败 */
+  markActiveAsError?: boolean;
+}) {
+  const steps = extractAgentSteps(message).map((step) =>
+    markActiveAsError && step.status === "active"
+      ? {
+          ...step,
+          status: "error" as const,
+          summary: step.summary
+            ? `${step.summary} · 执行中断`
+            : "执行中断 · 未能完成",
+        }
+      : step,
+  );
   if (steps.length === 0) return null;
 
   return (

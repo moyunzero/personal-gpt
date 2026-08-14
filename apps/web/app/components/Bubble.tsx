@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 
 import AgentStepPanels, { extractAgentSteps } from "./AgentStepPanels";
 import AgentTodoList, { extractTodos } from "./AgentTodoList";
+import AgentTracePanel, { extractAgentTrace } from "./AgentTracePanel";
 import CitationCards from "./CitationCards";
 
 interface BubbleProps {
@@ -13,6 +14,8 @@ interface BubbleProps {
   isStreaming?: boolean;
   /** Agent 模式：展示待办 / 步骤；角色行「助手 · Agent」 */
   agentMode?: boolean;
+  /** 本轮流式失败：步骤 active → 失败展示 */
+  streamFailed?: boolean;
 }
 
 function extractCitations(message: UIMessage): Citation[] {
@@ -44,7 +47,12 @@ const AssistantAvatar = () => (
   </span>
 );
 
-const Bubble = ({ message, isStreaming = false, agentMode = false }: BubbleProps) => {
+const Bubble = ({
+  message,
+  isStreaming = false,
+  agentMode = false,
+  streamFailed = false,
+}: BubbleProps) => {
   const content = message.parts
     .filter((part) => "type" in part && part.type === "text" && "text" in part)
     .map((part) => ("text" in part ? (part.text as string) : ""))
@@ -52,10 +60,14 @@ const Bubble = ({ message, isStreaming = false, agentMode = false }: BubbleProps
 
   const { role } = message;
   const citations = role === "assistant" && !isStreaming ? extractCitations(message) : [];
+  const showTrace =
+    agentMode && role === "assistant" && !isStreaming && Boolean(extractAgentTrace(message));
   const hasAgentChrome =
     agentMode &&
     role === "assistant" &&
-    (extractTodos(message).length > 0 || extractAgentSteps(message).length > 0);
+    (extractTodos(message).length > 0 ||
+      extractAgentSteps(message).length > 0 ||
+      showTrace);
 
   if (!content && !hasAgentChrome) {
     return null;
@@ -72,13 +84,17 @@ const Bubble = ({ message, isStreaming = false, agentMode = false }: BubbleProps
           {agentMode ? (
             <>
               <AgentTodoList message={message} />
-              <AgentStepPanels message={message} />
+              <AgentStepPanels
+                message={message}
+                markActiveAsError={streamFailed && !isStreaming}
+              />
             </>
           ) : null}
           {content ? (
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
           ) : null}
           {citations.length > 0 ? <CitationCards citations={citations} /> : null}
+          {showTrace ? <AgentTracePanel message={message} /> : null}
         </div>
       </div>
     );

@@ -112,7 +112,8 @@ async function resolveCheckpointer(
       process.env.AGENT_CHECKPOINTER_SQLITE_PATH?.trim() ||
       resolve(process.cwd(), ".data/agent-checkpoints.sqlite");
     mkdirSync(dirname(dbPath), { recursive: true });
-    return SqliteSaver.fromConnString(dbPath);
+    // SqliteSaver 与当前 BaseCheckpointSaver 泛型略有漂移；运行时可用
+    return SqliteSaver.fromConnString(dbPath) as unknown as BaseCheckpointSaver;
   }
   return new MemorySaver();
 }

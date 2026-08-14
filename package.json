@@ -30,6 +30,7 @@
     "test:regression:phase-1": "vitest run tests/regression/phase-1",
     "test:regression:phase-2": "vitest run tests/regression/phase-2",
     "acceptance:phase-1": "node tests/acceptance/phase-1/run.mjs && prettier --write tests/acceptance/phase-1/RESULT.json",
+    "acceptance:phase-2-smoke": "node tests/acceptance/phase-2-agent/smoke-sse.mjs && prettier --write tests/acceptance/phase-2-agent/SMOKE-RESULT.json tests/acceptance/phase-2-agent/checks-kb-hit.json",
     "vercel-build": "yarn workspace web build"
   },
   "devDependencies": {
