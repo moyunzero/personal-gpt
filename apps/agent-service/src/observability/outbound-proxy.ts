@@ -15,3 +15,9 @@ export function applyOutboundProxyFromEnv(): string | null {
   setGlobalDispatcher(new ProxyAgent(proxy));
   return proxy;
 }
+
+/** 启动日志：仅提示已启用，绝不打印 proxy URL / 凭据 / host / port */
+export function logOutboundProxyStatus(proxy: string | null): void {
+  if (!proxy) return;
+  console.log("[agent-service] outbound proxy enabled");
+}

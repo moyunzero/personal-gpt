@@ -9,20 +9,26 @@ describe("outbound proxy logging contract", () => {
       if (saved[k] === undefined) delete process.env[k];
       else process.env[k] = saved[k];
     }
+    vi.restoreAllMocks();
     vi.resetModules();
   });
 
-  it("applyOutboundProxyFromEnv returns proxy URL but callers must not log it", async () => {
+  it("logOutboundProxyStatus does not print URL, credentials, host, or port", async () => {
     for (const k of keys) saved[k] = process.env[k];
     for (const k of keys) delete process.env[k];
     process.env.HTTPS_PROXY = "http://user:pass@127.0.0.1:7890";
 
-    const { applyOutboundProxyFromEnv } = await import("../observability/outbound-proxy");
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const { applyOutboundProxyFromEnv, logOutboundProxyStatus } = await import(
+      "../observability/outbound-proxy"
+    );
     const returned = applyOutboundProxyFromEnv();
     expect(returned).toContain("user:pass");
 
-    // 契约：日志文案不得包含 URL / 凭据（与 main.ts 对齐）
-    const safeLog = returned ? "[agent-service] outbound proxy enabled" : "";
-    expect(safeLog).not.toMatch(/user:pass|127\.0\.0\.1|7890|http:\/\//);
+    logOutboundProxyStatus(returned);
+    expect(logSpy).toHaveBeenCalled();
+    const captured = logSpy.mock.calls.map((c) => c.map(String).join(" ")).join("\n");
+    expect(captured).toContain("outbound proxy enabled");
+    expect(captured).not.toMatch(/user:pass|127\.0\.0\.1|7890|http:\/\//);
   });
 });

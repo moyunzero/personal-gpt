@@ -1,8 +1,9 @@
-# CR 修复后全链路验收记录
+# CR 修复后全链路验收记录（条件通过）
 
 日期：2026-08-14  
 分支：`moyunzero/feat/langgraph-multi-agent`  
-范围：P0 → P1 → P2 代码审查项修复 + 单元测试 + 浏览器验收
+范围：P0 → P1 → P2 代码审查项修复 + 单元测试 + 浏览器验收  
+验收状态：**条件通过（conditional）** — 主链路可用，报告首段粘连未关账
 
 ## 单元测试结果（本轮）
 
@@ -49,10 +50,18 @@
 | UI Agent 模式闲聊「你好」               | ✅      | 步骤面板 + 执行轨迹可见，无 console error                                                                                  |
 | UI Agent「查知识库并写报告」            | ✅      | `retriever → editor`，产出 Markdown 报告与轨迹                                                                             |
 | 正文交错重复（验收中发现）              | ⚠️→已修 | 无 `seq` 时 autoSeq 放行合并重复；已改回「有 seq 用序号 / 无 seq 连续内容去重」；复测后交错消失                            |
-| 报告开头轻微拼接                        | ⚠️ 记录 | 仍见「知识库未找到…」前缀与标题粘连一行；疑似 held 段 flush + editor 开场，非阻塞，后续可再收紧 `suppressIntermediateText` |
+| 报告开头轻微拼接                        | ⚠️ 阻塞关账 | 仍见「知识库未找到…」前缀与标题粘连一行；疑似 held 段 flush + editor 开场；见下方开放项 |
 
-### 复测结论
+### 开放项：报告首段粘连（条件通过原因）
+
+| 字段 | 内容 |
+| ---- | ---- |
+| Owner | `@moyunzero`（分支维护者） |
+| Tracking | 待开 GitHub Issue：`held-segment flush / editor 开场粘连`（本文件先行记账） |
+| 退出标准 | Agent「查知识库并写报告」浏览器复测：报告标题独立成行，不再与「知识库未找到…」等 held 中间段粘在同一行；必要时收紧 `suppressIntermediateText` / held flush 与 editor 开场顺序后再关账 |
+
+### 复测结论（条件通过）
 
 - 主链路（BFF → agent-service → SSE → 步骤/轨迹/报告）可用
 - 闲聊短路与多专科流水线均可达
-- 剩余：报告首段粘连属体验瑕疵，记入后续验收；编排向回归加深另排期
+- **未无条件关账**：报告首段粘连仍开放；编排向回归加深另排期

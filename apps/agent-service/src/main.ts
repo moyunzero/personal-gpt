@@ -7,7 +7,10 @@ import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module";
 import { ensureAgentLangSmithEnv } from "./observability/langsmith";
-import { applyOutboundProxyFromEnv } from "./observability/outbound-proxy";
+import {
+  applyOutboundProxyFromEnv,
+  logOutboundProxyStatus,
+} from "./observability/outbound-proxy";
 import { parseCorsOrigins } from "./observability/cors-origins";
 
 /** 兼容 nest dist/ 与源码路径，加载仓库根 .env（与 ingest-worker 一致） */
@@ -29,11 +32,7 @@ function loadRootEnv(): void {
 }
 
 loadRootEnv();
-const outboundProxy = applyOutboundProxyFromEnv();
-if (outboundProxy) {
-  // 勿打印 proxy URL（可能含凭据）
-  console.log("[agent-service] outbound proxy enabled");
-}
+logOutboundProxyStatus(applyOutboundProxyFromEnv());
 /**
  * agent-service 进程入口：LangGraph Agent SSE（AGENT-04）。
  * CORS：限制为 web origin（默认 http://localhost:3000）；禁止 credentials + 裸 "*"。
