@@ -20,4 +20,12 @@ describe("sanitizeUserFacingAgentText", () => {
     );
     expect(sanitizeUserFacingAgentText("code NO_RELEVANT_HIT here")).toMatch(/未找到足够依据/);
   });
+
+  it("preserves whitespace inside fenced code blocks", () => {
+    const raw = ["前言  双空格", "```", "  indented", "\t\ttabbed", "```", "结尾"].join("\n");
+    const out = sanitizeUserFacingAgentText(raw);
+    expect(out).toContain("  indented");
+    expect(out).toContain("\t\ttabbed");
+    expect(out).toMatch(/前言 双空格/);
+  });
 });

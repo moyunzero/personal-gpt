@@ -8,6 +8,7 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ensureAgentLangSmithEnv } from "./observability/langsmith";
 import { applyOutboundProxyFromEnv } from "./observability/outbound-proxy";
+import { parseCorsOrigins } from "./observability/cors-origins";
 
 /** 兼容 nest dist/ 与源码路径，加载仓库根 .env（与 ingest-worker 一致） */
 function loadRootEnv(): void {
@@ -30,7 +31,8 @@ function loadRootEnv(): void {
 loadRootEnv();
 const outboundProxy = applyOutboundProxyFromEnv();
 if (outboundProxy) {
-  console.log(`[agent-service] outbound proxy → ${outboundProxy}`);
+  // 勿打印 proxy URL（可能含凭据）
+  console.log("[agent-service] outbound proxy enabled");
 }
 /**
  * agent-service 进程入口：LangGraph Agent SSE（AGENT-04）。
@@ -39,15 +41,19 @@ if (outboundProxy) {
 async function bootstrap() {
   ensureAgentLangSmithEnv();
 
+  // 生产环境：要求内部令牌，避免公网裸奔 agent-service（本地/MVP 演示可跳过）
+  if (process.env.NODE_ENV === "production" && !process.env.AGENT_INTERNAL_TOKEN?.trim()) {
+    throw new Error(
+      "AGENT_INTERNAL_TOKEN is required in production (or keep agent-service on a private network only)",
+    );
+  }
+
   const app = await NestFactory.create(AppModule);
 
-  const origins = (process.env.CORS_ORIGIN ?? "http://localhost:3000")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const origins = parseCorsOrigins(process.env.CORS_ORIGIN);
 
   app.enableCors({
-    origin: origins.length === 1 ? origins[0] : origins,
+    origin: origins,
     credentials: true,
   });
 

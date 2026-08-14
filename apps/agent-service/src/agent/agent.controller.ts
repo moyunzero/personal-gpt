@@ -11,6 +11,7 @@ import {
 import type { Response } from "express";
 
 import { AgentService, InvalidAgentBodyError, ModelConfigError } from "./agent.service";
+import { bearerMatchesInternalToken } from "./internal-token";
 
 /**
  * AGENT-04：POST /agent/chat → LangGraph UIMessage SSE。
@@ -27,11 +28,8 @@ export class AgentController {
     @Res({ passthrough: false }) res: Response,
   ): Promise<void> {
     const expected = process.env.AGENT_INTERNAL_TOKEN?.trim();
-    if (expected) {
-      const got = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-      if (!got || got !== expected) {
-        throw new UnauthorizedException("Unauthorized: missing or invalid AGENT_INTERNAL_TOKEN");
-      }
+    if (expected && !bearerMatchesInternalToken(authorization, expected)) {
+      throw new UnauthorizedException("Unauthorized: missing or invalid AGENT_INTERNAL_TOKEN");
     }
 
     try {

@@ -5,6 +5,12 @@
 
 import { NextResponse } from "next/server";
 
+import {
+  AGENT_UPSTREAM_TIMEOUT_MS,
+  combineAbortSignals,
+  createUpstreamTimeoutSignal,
+} from "./abort-signals";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -28,17 +34,34 @@ export async function POST(req: Request) {
     headers.set("authorization", `Bearer ${token}`);
   }
 
+  const timeout = createUpstreamTimeoutSignal(AGENT_UPSTREAM_TIMEOUT_MS);
+  const signal = combineAbortSignals(req.signal, timeout.signal);
+
   let upstreamRes: Response;
   try {
     upstreamRes = await fetch(upstream, {
       method: "POST",
       headers,
       body: await req.arrayBuffer(),
+      signal,
     });
   } catch (err) {
+    timeout.clear();
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: `agent-service 不可达：${message}` }, { status: 502 });
+    const aborted =
+      (err instanceof Error && err.name === "AbortError") ||
+      req.signal.aborted ||
+      timeout.signal.aborted;
+    return NextResponse.json(
+      {
+        error: aborted
+          ? `agent-service 请求已取消或超时：${message}`
+          : `agent-service 不可达：${message}`,
+      },
+      { status: aborted ? 504 : 502 },
+    );
   }
+  timeout.clear();
 
   const outHeaders = new Headers();
   const pass = ["content-type", "x-vercel-ai-ui-message-stream", "cache-control"];

@@ -34,10 +34,14 @@ describe("summarizeKbToolOutput", () => {
 
 describe("createAgentTraceCollector", () => {
   const dirs: string[] = [];
+  const initialPersist = process.env.AGENT_TRACE_PERSIST;
+  const initialDir = process.env.AGENT_TRACE_DIR;
 
   afterEach(() => {
-    delete process.env.AGENT_TRACE_PERSIST;
-    delete process.env.AGENT_TRACE_DIR;
+    if (initialPersist === undefined) delete process.env.AGENT_TRACE_PERSIST;
+    else process.env.AGENT_TRACE_PERSIST = initialPersist;
+    if (initialDir === undefined) delete process.env.AGENT_TRACE_DIR;
+    else process.env.AGENT_TRACE_DIR = initialDir;
     for (const d of dirs.splice(0)) {
       rmSync(d, { recursive: true, force: true });
     }
@@ -123,5 +127,27 @@ describe("createAgentTraceCollector", () => {
     expect(json.events.length).toBeGreaterThan(0);
     const md = readFileSync(`${base}.md`, "utf8");
     expect(md).toContain("Agent 执行轨迹");
+  });
+
+  it("bounds event count and sanitizes unsafe threadId in persist path", async () => {
+    const { TRACE_EVENTS_MAX } = await import("./agent-trace");
+    const dir = mkdtempSync(join(tmpdir(), "agent-trace-"));
+    dirs.push(dir);
+    process.env.AGENT_TRACE_PERSIST = "true";
+    process.env.AGENT_TRACE_DIR = dir;
+
+    const c = createAgentTraceCollector({
+      threadId: "../evil/../thread",
+      userText: "x",
+      intent: { route: "supervisor", requiredSpecialists: [] },
+    });
+    for (let i = 0; i < TRACE_EVENTS_MAX + 40; i++) {
+      c.recordSpecialist("retriever", `s-${i}`);
+    }
+    const doc = c.finish();
+    expect(doc.events.length).toBeLessThanOrEqual(TRACE_EVENTS_MAX);
+    const base = c.persistIfEnabled();
+    expect(base).toBeTruthy();
+    expect(base!.split("/").pop() ?? "").not.toMatch(/\.\./);
   });
 });

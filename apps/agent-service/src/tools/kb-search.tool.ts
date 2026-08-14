@@ -114,6 +114,8 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
 }
 
 function threadIdFromConfig(config?: RunnableConfig): string | undefined {
+  const runId = config?.configurable?.run_id;
+  if (typeof runId === "string" && runId.trim()) return runId.trim();
   const raw = config?.configurable?.thread_id;
   return typeof raw === "string" && raw.trim() ? raw.trim() : undefined;
 }

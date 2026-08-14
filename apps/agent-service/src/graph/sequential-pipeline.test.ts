@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import { inferRequiredSpecialists } from "../agents/supervisor.prompt";
-import { shouldUseSequentialPipeline } from "./build-graph";
+import { ensureTerminalEditor, shouldUseSequentialPipeline } from "./build-graph";
 
 describe("shouldUseSequentialPipeline", () => {
   it("enables sequential for KB→web→report acceptance prompt", () => {
@@ -18,5 +18,27 @@ describe("shouldUseSequentialPipeline", () => {
   it("keeps open supervisor for single-specialist / vague asks", () => {
     expect(shouldUseSequentialPipeline(inferRequiredSpecialists("帮我查一下知识库"))).toBe(false);
     expect(shouldUseSequentialPipeline([])).toBe(false);
+  });
+});
+
+describe("ensureTerminalEditor", () => {
+  it("appends editor when multi-specialist pipeline omits it", () => {
+    expect(ensureTerminalEditor(["retriever", "researcher"])).toEqual([
+      "retriever",
+      "researcher",
+      "editor",
+    ]);
+  });
+
+  it("moves mid-pipeline editor to the end", () => {
+    expect(ensureTerminalEditor(["retriever", "editor", "researcher"])).toEqual([
+      "retriever",
+      "researcher",
+      "editor",
+    ]);
+  });
+
+  it("preserves single-specialist pipelines", () => {
+    expect(ensureTerminalEditor(["retriever"])).toEqual(["retriever"]);
   });
 });

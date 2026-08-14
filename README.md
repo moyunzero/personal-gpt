@@ -189,7 +189,9 @@ yarn dev:agent    # AGENT_SERVICE_PORT 默认 3002 → POST /agent/chat
 yarn acceptance:phase-2-smoke   # live SSE：KB 命中 + 主链路门禁（需 embedding/Astra）
 ```
 
-说明：v2.0 为 **MVP 关账 / 可演示**，不是生产就绪（无鉴权多租户、无 agent Docker）。关账与证据见 `tests/acceptance/phase-2-agent/`。
+说明：浏览器经 Next BFF `/api/agent/chat` 转发；服务端上游基址为 `AGENT_SERVICE_URL`（默认 `http://localhost:3002`）。v2.0 为 **MVP 关账 / 可演示**，不是生产就绪（无鉴权多租户、无 agent Docker）。关账与证据见 `tests/acceptance/phase-2-agent/`。
+
+> 联网搜索断言：若要验证真实 web_search / Bocha 结果，需配置 `BOCHA_API_KEY`；未配置时相关断言视为可选跳过，embedding / Astra 等 KB 前置条件仍须满足。
 
 ## 项目结构
 
@@ -314,14 +316,14 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 ### 知识库 / Worker
 
-| 变量                 | 说明                                         |
-| -------------------- | -------------------------------------------- |
-| `DATABASE_URL`       | PostgreSQL（`/kb` CRUD、ingest_jobs）        |
-| `REDIS_URL`          | BullMQ                                       |
-| `UPLOAD_MAX_BYTES`   | 上传上限，默认 `20971520`（20MB）            |
-| `INGEST_WORKER_PORT` | 默认 `3001`                                  |
-| `WEB_URL`            | agent 转发目标，默认 `http://localhost:3000` |
-| `AGENT_SERVICE_PORT` | 默认 `3002`                                  |
+| 变量                 | 说明                                                   |
+| -------------------- | ------------------------------------------------------ |
+| `DATABASE_URL`       | PostgreSQL（`/kb` CRUD、ingest_jobs）                  |
+| `REDIS_URL`          | BullMQ                                                 |
+| `UPLOAD_MAX_BYTES`   | 上传上限，默认 `20971520`（20MB）                      |
+| `INGEST_WORKER_PORT` | 默认 `3001`                                            |
+| `AGENT_SERVICE_URL`  | BFF → agent-service 基址，默认 `http://localhost:3002` |
+| `AGENT_SERVICE_PORT` | agent-service 监听端口，默认 `3002`                    |
 
 ### 可选
 
@@ -372,21 +374,24 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 ### v1.0 — RAG 强化与知识库管理（已封板 ✅）
 
-| 模块           | 状态                                                           |
-| -------------- | -------------------------------------------------------------- |
-| 基础设施       | ✅ Monorepo + Docker Compose + BullMQ Worker                   |
-| 数据模型       | ✅ `workspaceId` 全链路（UI 仍为单 workspace）                 |
-| 文档导入       | ✅ PDF/MD/TXT/DOCX                                             |
-| 知识库 UI      | ✅ `/kb` 上传 / 列表 / 筛选 / CRUD / SSE 进度                  |
-| RAG            | ✅ 引用 + 三层路由 + 双路检索 + 可选 HyDE/Multi-Query/Reranker |
-| 工程           | ✅ CI + 回归 + Playwright 验收 8/8 + LangSmith（可选）         |
-| Agent 多 Agent | ✅ LangGraph Supervisor + SSE + 步骤面板（v2.0 **MVP**）       |
+| 模块      | 状态                                                           |
+| --------- | -------------------------------------------------------------- |
+| 基础设施  | ✅ Monorepo + Docker Compose + BullMQ Worker                   |
+| 数据模型  | ✅ `workspaceId` 全链路（UI 仍为单 workspace）                 |
+| 文档导入  | ✅ PDF/MD/TXT/DOCX                                             |
+| 知识库 UI | ✅ `/kb` 上传 / 列表 / 筛选 / CRUD / SSE 进度                  |
+| RAG       | ✅ 引用 + 三层路由 + 双路检索 + 可选 HyDE/Multi-Query/Reranker |
+| 工程      | ✅ CI + 回归 + Playwright 验收 8/8 + LangSmith（可选）         |
 
 **仍未做**：用户认证、聊天历史持久化、多 workspace UI、BM25 混合检索、agent 生产部署（见 ISSUE-001 / v3–v4）。
 
 **演示**：[https://personal-emotion-gpt.vercel.app](https://personal-emotion-gpt.vercel.app) · [GitHub](https://github.com/moyunzero/personal-gpt)
 
 ### v2.0 — LangGraph 多 Agent ✅ MVP 关账（非生产就绪）
+
+| 模块           | 状态                                                     |
+| -------------- | -------------------------------------------------------- |
+| Agent 多 Agent | ✅ LangGraph Supervisor + SSE + 步骤面板（v2.0 **MVP**） |
 
 Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天仍走 `/api/chat`。  
 证据：人工截图 + `yarn acceptance:phase-2-smoke`（KB 命中 live citation）→ `tests/acceptance/phase-2-agent/`。

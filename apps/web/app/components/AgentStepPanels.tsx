@@ -68,8 +68,15 @@ function statusLabel(status: AgentStepStatus): string {
 }
 
 function StepCard({ step }: { step: AgentStep }) {
-  const defaultOpen = step.status === "active";
-  const [expanded, setExpanded] = useState(defaultOpen);
+  const [expanded, setExpanded] = useState(step.status === "active");
+  const [prevStatus, setPrevStatus] = useState(step.status);
+  // status → active 时自动展开；其它状态变化保留用户手动折叠/展开
+  if (step.status !== prevStatus) {
+    setPrevStatus(step.status);
+    if (step.status === "active") {
+      setExpanded(true);
+    }
+  }
   const bodyId = `${step.id}-body`;
 
   return (

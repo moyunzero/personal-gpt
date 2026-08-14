@@ -14,12 +14,12 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 function isTraceDocument(data: unknown): data is AgentTraceDocument {
   if (!isRecord(data)) return false;
-  return (
-    typeof data.threadId === "string" &&
-    typeof data.startedAt === "string" &&
-    isRecord(data.intent) &&
-    Array.isArray(data.events)
-  );
+  if (typeof data.threadId !== "string" || typeof data.startedAt !== "string") return false;
+  if (!isRecord(data.intent) || !Array.isArray(data.events)) return false;
+  const route = data.intent.route;
+  if (route !== "short" && route !== "supervisor") return false;
+  if (!Array.isArray(data.intent.requiredSpecialists)) return false;
+  return true;
 }
 
 /** 从 message.parts 提取最新一条 data-agent-trace */
@@ -57,14 +57,17 @@ function kindLabel(kind: AgentTraceEventKind): string {
   }
 }
 
-function downloadBlob(filename: string, content: string, mime: string) {
+export function downloadBlob(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // 延后 revoke，避免部分浏览器尚未开始下载就失效
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function toMarkdown(doc: AgentTraceDocument): string {

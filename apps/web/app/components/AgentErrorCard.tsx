@@ -19,12 +19,26 @@ export function classifyAgentError(rawInput: unknown): ClassifiedAgentError {
   const text = raw.trim() || "未知错误";
   const lower = text.toLowerCase();
 
-  if (/\b403\b/.test(text) || /forbidden|permission|unauthorized/i.test(text)) {
+  if (
+    /\b401\b/.test(text) ||
+    /unauthorized|未授权|鉴权失败|invalid.*token|missing.*token/i.test(text)
+  ) {
+    return {
+      code: "401",
+      title: "身份校验未通过",
+      advice:
+        "Agent 服务返回了未授权（401）。常见原因：内部令牌缺失或无效。可直接重试；切换到 Chat 会进入另一套会话历史。",
+      retryLabel: "重试本任务",
+      raw: text,
+    };
+  }
+
+  if (/\b403\b/.test(text) || /forbidden|permission denied|无权限|禁止访问/i.test(text)) {
     return {
       code: "403",
       title: "服务拒绝了这次请求",
       advice:
-        "Agent 服务返回了禁止访问（403）。常见原因：密钥无效、模型无权，或网关拦截。已保留上方进度，可直接重试，或先改回 Chat 模式。",
+        "Agent 服务返回了禁止访问（403）。常见原因：模型无权，或网关拦截。可直接重试；切换到 Chat 会进入另一套会话历史。",
       retryLabel: "重试本任务",
       raw: text,
     };

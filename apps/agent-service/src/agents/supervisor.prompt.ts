@@ -38,9 +38,12 @@ export function inferRequiredSpecialists(userText: string): SpecialistName[] {
   if (!t) return [];
 
   const wantsKb = /知识库|企业.?库|内部.?文档|kb\b|引用/.test(t);
-  const wantsWeb =
-    /联网|搜索|web|网页|优缺点|外部.?资料|调研/.test(t) &&
-    !/不要联网|无需联网|不用联网|禁止联网|别联网/.test(t);
+  // 统一拒词：用户明确拒绝外网检索时不选 researcher
+  const refusesWeb =
+    /不要使用联网搜索|不要用网络搜索|禁止访问互联网|不要联网|无需联网|不用联网|禁止联网|别联网/.test(
+      t,
+    );
+  const wantsWeb = /联网|搜索|web|网页|优缺点|外部.?资料|调研/.test(t) && !refusesWeb;
   const wantsReport = /报告|markdown|简报|编辑|定稿|整理成|写成/.test(t);
   // 「带对比表」交给 editor 排版，不强制 analyst；数值/计算器才走 analyst
   const wantsAnalyst = /数值对比|定量分析|用计算器|算一下|calculator/.test(t);

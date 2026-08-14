@@ -9,6 +9,7 @@ import type { UIMessage } from "ai";
 import { createUIMessageStream, pipeUIMessageStreamToResponse } from "ai";
 import type { Response } from "express";
 import { randomUUID } from "node:crypto";
+import { EventEmitter } from "node:events";
 import type { Citation } from "@personal-gpt/shared";
 import { z } from "zod";
 
@@ -140,17 +141,48 @@ function collectCitationsFromUpdate(
     }
   }
 }
-function deduplicateTextDeltas(): TransformStream<any, any> {
-  let lastTextKey = "";
+/**
+ * 客户端断开（res close/error）时 abort，供 LangGraph stream 取消。
+ * Express Response 继承 EventEmitter；测试 mock 无事件时仍返回可用 AbortSignal。
+ */
+export function attachResponseAbortSignal(res: Response): AbortSignal {
+  const ac = new AbortController();
+  const abort = () => {
+    if (!ac.signal.aborted) ac.abort();
+  };
+  const ee = res as unknown as EventEmitter;
+  if (typeof ee?.once === "function") {
+    ee.once("close", abort);
+    ee.once("error", abort);
+  }
+  return ac.signal;
+}
+
+/**
+ * 合并流可能重复 enqueue 同一 text-delta 事件。
+ * - 有 seq：按 id 单调序号去重，保留合法连续相同正文
+ * - 无 seq：回退为连续相同 id+delta 去重（合并流伪影启发式）
+ */
+export function deduplicateTextDeltas(): TransformStream<any, any> {
+  const lastSeqById = new Map<string, number>();
+  let lastContentKey = "";
   return new TransformStream({
     transform(chunk, controller) {
-      const obj = chunk as { type?: string; id?: string; delta?: string };
+      const obj = chunk as { type?: string; id?: string; delta?: string; seq?: number };
       if (obj?.type === "text-delta") {
-        const key = `${obj.id}:${obj.delta}`;
-        if (key === lastTextKey) return;
-        lastTextKey = key;
+        const id = obj.id ?? "_";
+        if (typeof obj.seq === "number" && Number.isFinite(obj.seq)) {
+          const prev = lastSeqById.get(id);
+          if (prev !== undefined && obj.seq <= prev) return;
+          lastSeqById.set(id, obj.seq);
+          lastContentKey = "";
+        } else {
+          const key = `${id}:${obj.delta ?? ""}`;
+          if (key === lastContentKey) return;
+          lastContentKey = key;
+        }
       } else {
-        lastTextKey = "";
+        lastContentKey = "";
       }
       controller.enqueue(chunk);
     },
@@ -248,6 +280,8 @@ const AgentChatBodySchema = z.object({
   workspaceId: z.string().optional().nullable(),
 });
 
+const SAFE_THREAD_ID = /^[A-Za-z0-9_.:-]{1,128}$/;
+
 /** 校验 POST /agent/chat body；非法抛 InvalidAgentBodyError（→ 400） */
 export function parseAgentChatBody(body: unknown): ParsedAgentChat {
   const result = AgentChatBodySchema.safeParse(body ?? {});
@@ -256,8 +290,13 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
   }
 
   const { messages, thread_id, workspaceId } = result.data;
-  const threadRaw =
-    typeof thread_id === "string" && thread_id.trim() ? thread_id.trim() : randomUUID();
+  const trimmedThread = typeof thread_id === "string" ? thread_id.trim() : "";
+  if (trimmedThread && !SAFE_THREAD_ID.test(trimmedThread)) {
+    throw new InvalidAgentBodyError(
+      "Invalid body: thread_id must be a safe id (letters, digits, _.:-; max 128)",
+    );
+  }
+  const threadRaw = trimmedThread || randomUUID();
   const workspaceRaw =
     typeof workspaceId === "string" && workspaceId.trim() ? workspaceId.trim() : "default";
 
@@ -763,9 +802,8 @@ function suppressIntermediateText(opts: {
       controller.enqueue(chunk);
     },
     flush(controller) {
-      if (!opts.hideUntilEditor || opts.textUnlocked()) {
-        flushHeld(controller);
-      }
+      // gate 未开时仍发出最后完整段，避免整段终稿被丢弃
+      flushHeld(controller);
     },
   });
 }
@@ -785,14 +823,17 @@ export class AgentService {
     const userText = lastUserText(lcMessages);
     const route = resolveAgentRoute(userText);
     const runConfig = getAgentRunConfig(parsed.threadId);
+    const abortSignal = attachResponseAbortSignal(res);
+    // 请求级 runId：避免同 thread 并发互相覆盖 KB/web 配额状态
+    const runId = randomUUID();
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
-        setKbSearchContextForThread(parsed.threadId, {
+        setKbSearchContextForThread(runId, {
           userText,
           workspaceId: parsed.workspaceId,
         });
-        resetWebSearchCallCount(parsed.threadId);
+        resetWebSearchCallCount(runId);
         try {
           const requiredEarly = inferRequiredSpecialists(userText);
           const trace = createAgentTraceCollector({
@@ -838,8 +879,10 @@ export class AgentService {
                 {
                   streamMode: ["messages", "values"] as const,
                   recursionLimit: runConfig.recursionLimit,
+                  signal: abortSignal,
                   configurable: {
                     ...runConfig.configurable,
+                    run_id: runId,
                     workspaceId: parsed.workspaceId,
                     userText,
                   },
@@ -864,8 +907,10 @@ export class AgentService {
               const streamConfig = {
                 streamMode: ["updates", "values", "messages"] as ["updates", "values", "messages"],
                 recursionLimit: runConfig.recursionLimit,
+                signal: abortSignal,
                 configurable: {
                   ...runConfig.configurable,
+                  run_id: runId,
                   workspaceId: parsed.workspaceId,
                   userText,
                 },
@@ -891,33 +936,45 @@ export class AgentService {
                 ...lcMessages,
               ];
               if (shouldPrefetchKb) {
-                const kbPrefetch = await invokeKbSearch({
-                  query: userText,
-                  userText,
-                  workspaceId: parsed.workspaceId,
+                const KB_PREFETCH_TIMEOUT_MS = 8_000;
+                let timer: ReturnType<typeof setTimeout> | undefined;
+                const kbPrefetch = await Promise.race([
+                  invokeKbSearch({
+                    query: userText,
+                    userText,
+                    workspaceId: parsed.workspaceId,
+                  }),
+                  new Promise<undefined>((resolve) => {
+                    timer = setTimeout(() => resolve(undefined), KB_PREFETCH_TIMEOUT_MS);
+                    timer.unref?.();
+                  }),
+                ]).finally(() => {
+                  if (timer) clearTimeout(timer);
                 });
-                trace.recordTool({
-                  name: "kb_search",
-                  agent: "system",
-                  summary: `预检索 · ${summarizeKbToolOutput(kbPrefetch)}`,
-                  detail: kbPrefetch,
-                });
-                for (const c of parseKbCitationsFromToolText(kbPrefetch)) {
-                  citationBag.set(`${c.documentId}:${c.chunkIndex ?? 0}`, c);
+                if (kbPrefetch) {
+                  trace.recordTool({
+                    name: "kb_search",
+                    agent: "system",
+                    summary: `预检索 · ${summarizeKbToolOutput(kbPrefetch)}`,
+                    detail: kbPrefetch,
+                  });
+                  for (const c of parseKbCitationsFromToolText(kbPrefetch)) {
+                    citationBag.set(`${c.documentId}:${c.chunkIndex ?? 0}`, c);
+                  }
+                  if (/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbPrefetch)) {
+                    tracker.kbNoRelevantHit = true;
+                  }
+                  seededMessages = [
+                    new SystemMessage(
+                      [
+                        "【知识库预检索·工具结果·可信】",
+                        "以下由服务端直接调用 kb_search 得到；子 Agent 必须采信，禁止编造相反的命中/未命中结论。",
+                        kbPrefetch,
+                      ].join("\n"),
+                    ),
+                    ...lcMessages,
+                  ];
                 }
-                if (/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbPrefetch)) {
-                  tracker.kbNoRelevantHit = true;
-                }
-                seededMessages = [
-                  new SystemMessage(
-                    [
-                      "【知识库预检索·工具结果·可信】",
-                      "以下由服务端直接调用 kb_search 得到；子 Agent 必须采信，禁止编造相反的命中/未命中结论。",
-                      kbPrefetch,
-                    ].join("\n"),
-                  ),
-                  ...lcMessages,
-                ];
               }
 
               const drainGraphStream = async (input: { messages: unknown }): Promise<void> => {
@@ -962,33 +1019,45 @@ export class AgentService {
                   .pipeThrough(dropHandoffNoiseText());
 
                 const reader = uiStream.getReader();
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  const obj = value as {
-                    type?: string;
-                    delta?: string;
-                    toolName?: string;
-                  };
-                  if (obj?.type === "error") tracker.sawError = true;
-                  // 工具结果已由 collectCitationsFromUpdate 记入；此处仅记 handoff，避免重复噪声
-                  if (
-                    obj?.type === "tool-input-start" &&
-                    obj.toolName &&
-                    /transfer_to_/i.test(obj.toolName)
-                  ) {
-                    trace.recordTool({
-                      name: obj.toolName,
-                      summary: `handoff ${obj.toolName}`,
-                      agent: tracker.activeSpecialist ?? "supervisor",
-                    });
+                try {
+                  while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const obj = value as {
+                      type?: string;
+                      delta?: string;
+                      toolName?: string;
+                    };
+                    if (obj?.type === "error") tracker.sawError = true;
+                    if (
+                      obj?.type === "tool-input-start" &&
+                      obj.toolName &&
+                      /transfer_to_/i.test(obj.toolName)
+                    ) {
+                      trace.recordTool({
+                        name: obj.toolName,
+                        summary: `handoff ${obj.toolName}`,
+                        agent: tracker.activeSpecialist ?? "supervisor",
+                      });
+                    }
+                    if (obj?.type === "text-delta" && obj.delta) {
+                      visibleReportChars += obj.delta.length;
+                      finalBuf += obj.delta;
+                      trace.appendFinalText(obj.delta);
+                    }
+                    writer.write(value);
                   }
-                  if (obj?.type === "text-delta" && obj.delta) {
-                    visibleReportChars += obj.delta.length;
-                    finalBuf += obj.delta;
-                    trace.appendFinalText(obj.delta);
+                } finally {
+                  try {
+                    await reader.cancel();
+                  } catch {
+                    /* ignore */
                   }
-                  writer.write(value);
+                  try {
+                    reader.releaseLock();
+                  } catch {
+                    /* ignore */
+                  }
                 }
               };
 
@@ -1140,8 +1209,8 @@ export class AgentService {
             }
           }
         } finally {
-          clearKbSearchContextForThread(parsed.threadId);
-          clearWebSearchCallCount(parsed.threadId);
+          clearKbSearchContextForThread(runId);
+          clearWebSearchCallCount(runId);
         }
       },
       onError: (error) => {
@@ -1150,7 +1219,7 @@ export class AgentService {
       },
     });
 
-    pipeUIMessageStreamToResponse({
+    await pipeUIMessageStreamToResponse({
       response: res,
       stream,
     });

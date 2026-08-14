@@ -17,11 +17,20 @@ import type {
 
 export const TRACE_DETAIL_MAX = 2000;
 export const TRACE_FINAL_MAX = 8000;
+export const TRACE_EVENTS_MAX = 200;
 
 export function truncateTraceText(text: string, max = TRACE_DETAIL_MAX): string {
   const t = text.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max)}…`;
+}
+
+function sanitizeTracePathSegment(raw: string): string {
+  const cleaned = raw
+    .replace(/\.\./g, "_")
+    .replace(/[^A-Za-z0-9_.:-]/g, "_")
+    .slice(0, 128);
+  return cleaned || "thread";
 }
 
 function nowIso(): string {
@@ -65,6 +74,11 @@ export function createAgentTraceCollector(input: {
       ...extra,
       detail: extra?.detail !== undefined ? truncateTraceText(extra.detail) : undefined,
     });
+    while (events.length > TRACE_EVENTS_MAX) {
+      const dropIdx = events.findIndex((e, i) => i > 0 && e.kind !== "intent");
+      if (dropIdx >= 0) events.splice(dropIdx, 1);
+      else events.shift();
+    }
   };
 
   push(
@@ -217,16 +231,21 @@ export function createAgentTraceCollector(input: {
     persistIfEnabled() {
       if (process.env.AGENT_TRACE_PERSIST !== "true") return null;
       endedAt = endedAt ?? nowIso();
-      const dir =
-        process.env.AGENT_TRACE_DIR?.trim() || resolve(process.cwd(), ".data/agent-traces");
-      mkdirSync(dir, { recursive: true });
-      const stamp = (endedAt ?? nowIso()).replace(/[:.]/g, "-");
-      const base = resolve(dir, `${input.threadId}-${stamp}`);
-      persisted = true;
-      const doc = toDocument();
-      writeFileSync(`${base}.json`, `${JSON.stringify(doc, null, 2)}\n`);
-      writeFileSync(`${base}.md`, toMarkdown());
-      return base;
+      try {
+        const dir =
+          process.env.AGENT_TRACE_DIR?.trim() || resolve(process.cwd(), ".data/agent-traces");
+        mkdirSync(dir, { recursive: true });
+        const stamp = (endedAt ?? nowIso()).replace(/[:.]/g, "-");
+        const safeThread = sanitizeTracePathSegment(input.threadId);
+        const base = resolve(dir, `${safeThread}-${stamp}`);
+        const doc = toDocument();
+        writeFileSync(`${base}.json`, `${JSON.stringify(doc, null, 2)}\n`);
+        writeFileSync(`${base}.md`, toMarkdown());
+        persisted = true;
+        return base;
+      } catch {
+        return null;
+      }
     },
   };
 }

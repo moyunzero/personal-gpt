@@ -1,15 +1,28 @@
 /**
  * Agent LangSmith fail-open 单测（禁止 live LangSmith）。
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const traceableMock = vi.fn();
 
 describe("ensureAgentLangSmithEnv", () => {
-  afterEach(async () => {
+  const initial = {
+    LANGSMITH_API_KEY: process.env.LANGSMITH_API_KEY,
+    LANGSMITH_TRACING: process.env.LANGSMITH_TRACING,
+    LANGSMITH_PROJECT: process.env.LANGSMITH_PROJECT,
+  };
+
+  beforeEach(() => {
     delete process.env.LANGSMITH_API_KEY;
     delete process.env.LANGSMITH_TRACING;
     delete process.env.LANGSMITH_PROJECT;
+  });
+
+  afterEach(async () => {
+    for (const [k, v] of Object.entries(initial)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
     vi.doUnmock("langsmith/traceable");
     vi.resetModules();
   });

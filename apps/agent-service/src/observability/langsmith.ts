@@ -40,14 +40,19 @@ export async function traceAgentRun<T>(
     return fn();
   }
 
-  const { traceable } = await import("langsmith/traceable");
-  const clean = Object.fromEntries(
-    Object.entries(metadata).filter(
-      (e): e is [string, string] => typeof e[1] === "string" && e[1].length > 0,
-    ),
-  );
-  const wrapped = traceable(fn, { name, metadata: clean });
-  return wrapped();
+  try {
+    const { traceable } = await import("langsmith/traceable");
+    const clean = Object.fromEntries(
+      Object.entries(metadata).filter(
+        (e): e is [string, string] => typeof e[1] === "string" && e[1].length > 0,
+      ),
+    );
+    const wrapped = traceable(fn, { name, metadata: clean });
+    return await wrapped();
+  } catch {
+    // fail-open：追踪失败不阻断主路径
+    return fn();
+  }
 }
 
 /** 测试用：重置单例 */

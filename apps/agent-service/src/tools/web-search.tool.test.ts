@@ -37,6 +37,7 @@ describe("web_search tool", () => {
     const { invokeWebSearch } = await import("./web-search.tool");
     const out = await invokeWebSearch({ query: "竞品调研" });
     expect(out).toMatch(/不可用|降级|失败|错误/i);
+    expect(fetchSpy).toHaveBeenCalled();
   });
 
   it("returns degrade string on non-OK HTTP without throwing", async () => {
@@ -48,14 +49,22 @@ describe("web_search tool", () => {
     const { invokeWebSearch } = await import("./web-search.tool");
     const out = await invokeWebSearch({ query: "市场报告" });
     expect(out).toMatch(/失败|不可用|降级|502/i);
+    expect(fetchSpy).toHaveBeenCalled();
   });
 
   it("does not accept arbitrary user URLs (SSRF guard — only Bocha endpoint)", async () => {
-    const fs = await import("node:fs/promises");
-    const path = await import("node:path");
-    const src = await fs.readFile(path.join(__dirname, "web-search.tool.ts"), "utf8");
-    expect(src).toMatch(/api\.bochaai\.com/);
-    expect(src).not.toMatch(/input\.url|userUrl|fetch\(query\)/);
+    process.env.BOCHA_API_KEY = "test-key";
+    fetchSpy.mockResolvedValue(
+      new Response(JSON.stringify({ code: 200, data: { webPages: { value: [] } } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const { invokeWebSearch } = await import("./web-search.tool");
+    await invokeWebSearch({ query: "https://evil.example/ssrf" });
+    expect(fetchSpy).toHaveBeenCalled();
+    const [url] = fetchSpy.mock.calls[0] as [string];
+    expect(new URL(url).hostname).toBe("api.bochaai.com");
   });
 
   it("isolates quota by threadId and enforces per-thread cap", async () => {
@@ -80,9 +89,11 @@ describe("web_search tool", () => {
     for (let i = 0; i < MAX_WEB_SEARCH_CALLS_PER_TASK; i++) {
       await invokeWebSearch({ query: `a-${i}`, threadId: "t-a" });
     }
+    const fetchCountBeforeCap = fetchSpy.mock.calls.length;
     const capped = await invokeWebSearch({ query: "a-over", threadId: "t-a" });
     expect(capped).toMatch(/上限/);
     expect(getWebSearchCallCount("t-a")).toBe(MAX_WEB_SEARCH_CALLS_PER_TASK + 1);
+    expect(fetchSpy.mock.calls.length).toBe(fetchCountBeforeCap);
 
     const other = await invokeWebSearch({ query: "b-1", threadId: "t-b" });
     expect(other).not.toMatch(/上限/);

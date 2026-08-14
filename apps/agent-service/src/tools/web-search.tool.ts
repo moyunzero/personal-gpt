@@ -111,6 +111,9 @@ export function formatWebReferencesMarkdown(sources: WebSearchSource[], max = 8)
 }
 
 function threadIdFromConfig(config?: RunnableConfig): string | undefined {
+  // 优先 run_id（请求级），避免同 thread 并发配额互相覆盖
+  const runId = config?.configurable?.run_id;
+  if (typeof runId === "string" && runId.trim()) return runId.trim();
   const raw = config?.configurable?.thread_id;
   return typeof raw === "string" && raw.trim() ? raw.trim() : undefined;
 }
@@ -127,6 +130,13 @@ export async function invokeWebSearch(input: WebSearchInput): Promise<string> {
   }
 
   const count = input.count ?? 8;
+  const controller = new AbortController();
+  const timeoutMs = Number(process.env.BOCHA_TIMEOUT_MS ?? 12_000);
+  const timer = setTimeout(
+    () => controller.abort(),
+    Number.isFinite(timeoutMs) ? timeoutMs : 12_000,
+  );
+  timer.unref?.();
   try {
     const response = await fetch(BOCHA_API_URL, {
       method: "POST",
@@ -140,6 +150,7 @@ export async function invokeWebSearch(input: WebSearchInput): Promise<string> {
         summary: true,
         count,
       }),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -182,6 +193,8 @@ export async function invokeWebSearch(input: WebSearchInput): Promise<string> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return `联网搜索不可用（降级）：上游请求异常 ${msg}。请继续完成任务并标明外网资料缺失。`;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

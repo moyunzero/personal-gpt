@@ -28,6 +28,20 @@ describe("inferRequiredSpecialists", () => {
       "editor",
     ]);
   });
+
+  it("never selects researcher when user refuses external search (normalized refusals)", () => {
+    const variants = [
+      "先查知识库，不要使用联网搜索，最后写 Markdown 报告",
+      "先查知识库，不要用网络搜索，最后写 Markdown 报告",
+      "先查知识库，禁止访问互联网，最后写 Markdown 报告",
+    ];
+    for (const q of variants) {
+      const need = inferRequiredSpecialists(q);
+      expect(need).not.toContain("researcher");
+      expect(need).toContain("editor");
+      expect(need).toContain("retriever");
+    }
+  });
 });
 
 describe("buildSupervisorPrompt", () => {

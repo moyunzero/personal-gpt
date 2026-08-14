@@ -3,8 +3,10 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const searchMock = vi.fn();
-const embedTextMock = vi.fn();
+const { searchMock, embedTextMock } = vi.hoisted(() => ({
+  searchMock: vi.fn(),
+  embedTextMock: vi.fn(),
+}));
 
 vi.mock("@personal-gpt/shared", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@personal-gpt/shared")>();
@@ -118,6 +120,8 @@ describe("kb_search tool", () => {
       userText: "请检索蓝莓河豚协议 ZX-7749 的生效条件",
     });
     expect(searchMock).toHaveBeenCalledTimes(2);
+    expect(embedTextMock).toHaveBeenNthCalledWith(1, "生效条件");
+    expect(embedTextMock).toHaveBeenNthCalledWith(2, "请检索蓝莓河豚协议 ZX-7749 的生效条件");
     expect(out).toContain("KB_SEARCH_STATUS: HIT");
     expect(out).toContain("phase2-kb-hit-zx7749");
     expect(out).toMatch(/用户原话回退/);

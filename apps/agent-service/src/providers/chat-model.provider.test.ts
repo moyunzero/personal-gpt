@@ -35,6 +35,12 @@ describe("chat-model.provider", () => {
     expect(resolveAgentProvider()).toBe("openai");
   });
 
+  it("throws on nonempty invalid AGENT_PROVIDER before key fallback", () => {
+    process.env.AGENT_PROVIDER = "anthropic";
+    process.env.GROQ_API_KEY = "g";
+    expect(() => resolveAgentProvider()).toThrow(/Invalid AGENT_PROVIDER/i);
+  });
+
   it("openai branch defaults to DEFAULT_OPENAI_MODEL not Groq model", () => {
     delete process.env.AGENT_MODEL;
     process.env.AGENT_PROVIDER = "openai";

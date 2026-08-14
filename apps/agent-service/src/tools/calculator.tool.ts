@@ -113,8 +113,26 @@ export function evaluateSafeArithmetic(expression: string): number {
   if (!trimmed) {
     throw new Error("空表达式");
   }
+  const MAX_EXPR_LEN = 200;
+  const MAX_DEPTH = 32;
+  if (trimmed.length > MAX_EXPR_LEN) {
+    throw new Error("表达式过长");
+  }
   if (FORBIDDEN.test(trimmed) || !SAFE_EXPR.test(trimmed)) {
     throw new Error("不安全或不支持的表达式");
+  }
+  let depth = 0;
+  let maxDepth = 0;
+  for (const ch of trimmed) {
+    if (ch === "(") {
+      depth += 1;
+      maxDepth = Math.max(maxDepth, depth);
+    } else if (ch === ")") {
+      depth -= 1;
+    }
+  }
+  if (maxDepth > MAX_DEPTH) {
+    throw new Error("括号嵌套过深");
   }
   return parseExpression(tokenize(trimmed));
 }

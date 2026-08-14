@@ -24,6 +24,8 @@ vi.mock("../graph/build-graph", () => ({
     const last = messages?.at(-1);
     return typeof last?.content === "string" ? last.content : "";
   },
+  shouldUseSequentialPipeline: (required: unknown[]) =>
+    Array.isArray(required) && required.length >= 2,
 }));
 
 vi.mock("@ai-sdk/langchain", () => ({
@@ -105,6 +107,29 @@ describe("Agent SSE stream (AGENT-04)", () => {
     const { parseAgentChatBody } = await import("./agent.service");
     expect(() => parseAgentChatBody({})).toThrow(/messages/i);
     expect(() => parseAgentChatBody({ messages: "nope" })).toThrow(/messages/i);
+  });
+
+  it("rejects unsafe thread_id and falls back to UUID when blank", async () => {
+    const { parseAgentChatBody } = await import("./agent.service");
+    expect(() =>
+      parseAgentChatBody({
+        messages: [{ role: "user" }],
+        thread_id: "../etc/passwd",
+      }),
+    ).toThrow(/thread_id/i);
+    expect(() =>
+      parseAgentChatBody({
+        messages: [{ role: "user" }],
+        thread_id: "a/b",
+      }),
+    ).toThrow(/thread_id/i);
+    const ok = parseAgentChatBody({
+      messages: [{ role: "user" }],
+      thread_id: "  ",
+    });
+    expect(ok.threadId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
   });
 
   it("streams via LangGraph + toUIMessageStream and does not fetch web /api/chat", async () => {
@@ -199,5 +224,117 @@ describe("Agent SSE stream (AGENT-04)", () => {
         res,
       ),
     ).rejects.toBeInstanceOf(ModelConfigError);
+  });
+
+  it("awaits pipeUIMessageStreamToResponse before streamChat resolves", async () => {
+    let pipeFinished = false;
+    pipeUIMessageStreamToResponseMock.mockImplementation(async ({ stream }) => {
+      const ready = (stream as { __ready?: Promise<void> }).__ready;
+      if (ready) await ready;
+      await new Promise((r) => setTimeout(r, 20));
+      pipeFinished = true;
+    });
+
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "你好" }] }],
+        thread_id: "t-await-pipe",
+      },
+      res,
+    );
+    expect(pipeFinished).toBe(true);
+  });
+
+  it("passes AbortSignal and run_id into graph.stream config", async () => {
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const { EventEmitter } = await import("node:events");
+    const res = Object.assign(new EventEmitter(), {
+      statusCode: 200,
+    }) as unknown as import("express").Response;
+
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "1",
+            role: "user",
+            parts: [{ type: "text", text: "对比 LangGraph 与 AutoGen 并写报告" }],
+          },
+        ],
+        thread_id: "t-run-id",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+
+    expect(streamMock).toHaveBeenCalled();
+    const cfg = streamMock.mock.calls[0]?.[1] as {
+      signal?: AbortSignal;
+      configurable?: { run_id?: string; thread_id?: string };
+    };
+    expect(cfg?.signal).toBeInstanceOf(AbortSignal);
+    expect(cfg?.configurable?.run_id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(cfg?.configurable?.thread_id).toBe("t-run-id");
+  });
+
+  it("attachResponseAbortSignal aborts when response closes", async () => {
+    const { attachResponseAbortSignal } = await import("./agent.service");
+    const { EventEmitter } = await import("node:events");
+    const res = new EventEmitter() as unknown as import("express").Response;
+    const signal = attachResponseAbortSignal(res);
+    expect(signal.aborted).toBe(false);
+    (res as unknown as EventEmitter).emit("close");
+    expect(signal.aborted).toBe(true);
+  });
+
+  it("deduplicateTextDeltas keeps consecutive identical deltas with rising seq", async () => {
+    const { deduplicateTextDeltas } = await import("./agent.service");
+    const out: unknown[] = [];
+    const writer = new WritableStream({
+      write(chunk) {
+        out.push(chunk);
+      },
+    });
+    const rs = new ReadableStream({
+      start(c) {
+        c.enqueue({ type: "text-delta", id: "t1", delta: "好", seq: 1 });
+        c.enqueue({ type: "text-delta", id: "t1", delta: "好", seq: 2 });
+        c.enqueue({ type: "text-delta", id: "t1", delta: "好", seq: 2 }); // 重复事件
+        c.close();
+      },
+    });
+    await rs.pipeThrough(deduplicateTextDeltas()).pipeTo(writer);
+    expect(out).toHaveLength(2);
+    expect((out[0] as { delta: string }).delta).toBe("好");
+    expect((out[1] as { delta: string }).delta).toBe("好");
+  });
+
+  it("deduplicateTextDeltas without seq drops consecutive identical merge artifacts", async () => {
+    const { deduplicateTextDeltas } = await import("./agent.service");
+    const out: unknown[] = [];
+    const writer = new WritableStream({
+      write(chunk) {
+        out.push(chunk);
+      },
+    });
+    const rs = new ReadableStream({
+      start(c) {
+        c.enqueue({ type: "text-delta", id: "t1", delta: "你好" });
+        c.enqueue({ type: "text-delta", id: "t1", delta: "你好" });
+        c.enqueue({ type: "text-delta", id: "t1", delta: "世界" });
+        c.close();
+      },
+    });
+    await rs.pipeThrough(deduplicateTextDeltas()).pipeTo(writer);
+    expect(out.map((c) => (c as { delta: string }).delta)).toEqual(["你好", "世界"]);
   });
 });

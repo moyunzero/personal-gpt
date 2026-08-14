@@ -16,10 +16,15 @@ export function sanitizeUserFacingAgentText(text: string): string {
   out = out.replace(/KB_SEARCH_STATUS\s*[:：=为]?\s*HIT/gi, "");
   out = out.replace(/\bKB_SEARCH_STATUS\b/gi, "");
   out = out.replace(/\bNO_RELEVANT_HIT\b/gi, "未找到足够依据");
-  // 清理空括号 / 多余空白
+  // 清理空括号；空白折叠避开 fenced code，避免破坏 Markdown 结构
   out = out.replace(/[（(]\s*[）)]/g, "");
-  out = out.replace(/[ \t]{2,}/g, " ");
-  out = out.replace(/\n{3,}/g, "\n\n");
+  const parts = out.split(/(```[\s\S]*?```)/g);
+  out = parts
+    .map((part, i) => {
+      if (i % 2 === 1) return part;
+      return part.replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n");
+    })
+    .join("");
   return out;
 }
 

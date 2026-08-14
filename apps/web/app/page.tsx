@@ -45,7 +45,7 @@ export default function Home() {
     [mode],
   );
 
-  const { messages, sendMessage, status, error, clearError } = useChat({
+  const { messages, sendMessage, regenerate, status, error, clearError } = useChat({
     id: `home-${mode}`,
     transport,
   });
@@ -77,7 +77,7 @@ export default function Home() {
     const text = lastUserTextFromMessages(messages);
     if (!text.trim()) return;
     clearError();
-    await sendMessage({ text });
+    await regenerate();
   };
 
   const handleSwitchToChat = () => {

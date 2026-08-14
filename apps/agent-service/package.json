@@ -29,6 +29,7 @@
     "langsmith": "0.7.15",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "undici": "^6.21.0",
     "zod": "4.4.3"
   },
   "devDependencies": {

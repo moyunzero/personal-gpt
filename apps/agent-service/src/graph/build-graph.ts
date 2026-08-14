@@ -159,8 +159,22 @@ export function shouldUseSequentialPipeline(required: SpecialistName[]): boolean
   return required.length >= 2;
 }
 
+/** 多专科流水线保证以 editor 收束 */
+export function ensureTerminalEditor(pipeline: SpecialistName[]): SpecialistName[] {
+  if (pipeline.length === 0) return pipeline;
+  const ordered = [...pipeline];
+  if (ordered.length >= 2 && ordered[ordered.length - 1] !== "editor") {
+    if (!ordered.includes("editor")) ordered.push("editor");
+    else {
+      const without = ordered.filter((n) => n !== "editor");
+      ordered.splice(0, ordered.length, ...without, "editor");
+    }
+  }
+  return ordered;
+}
+
 /**
- * 确定性 Sequential 子图：START → specialist₁ → … → END。
+ * 确定性 Sequential 子图：START → specialist₁ → … → editor → END。
  * 不依赖 Supervisor LLM handoff，从根上消灭「强制续跑」主路径。
  */
 export function createSequentialPipelineWorkflow(
@@ -170,17 +184,18 @@ export function createSequentialPipelineWorkflow(
   if (pipeline.length === 0) {
     throw new Error("sequential pipeline requires at least one specialist");
   }
+  const ordered = ensureTerminalEditor(pipeline);
   const agents = createSpecialistAgents(model);
   // 动态节点名：用宽松 builder，避免 StateGraph 字面量联合类型卡住
   let g: any = new StateGraph(MessagesAnnotation);
-  for (const name of pipeline) {
+  for (const name of ordered) {
     g = g.addNode(name, agents[name].graph);
   }
-  g = g.addEdge(START, pipeline[0]);
-  for (let i = 0; i < pipeline.length - 1; i++) {
-    g = g.addEdge(pipeline[i], pipeline[i + 1]);
+  g = g.addEdge(START, ordered[0]);
+  for (let i = 0; i < ordered.length - 1; i++) {
+    g = g.addEdge(ordered[i], ordered[i + 1]);
   }
-  g = g.addEdge(pipeline[pipeline.length - 1], END);
+  g = g.addEdge(ordered[ordered.length - 1], END);
   return g;
 }
 

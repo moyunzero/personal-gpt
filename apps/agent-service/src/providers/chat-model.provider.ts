@@ -19,11 +19,14 @@ export type CreateChatModelOptions = {
 
 export type AgentProvider = "cerebras" | "groq" | "openai";
 
-/** 解析 provider：AGENT_PROVIDER 优先；否则 cerebras → groq → openai */
+/** 解析 provider：AGENT_PROVIDER 优先；非法非空值直接抛错；否则 cerebras → groq → openai */
 export function resolveAgentProvider(): AgentProvider | null {
   const forced = process.env.AGENT_PROVIDER?.trim().toLowerCase();
-  if (forced === "cerebras" || forced === "groq" || forced === "openai") {
-    return forced;
+  if (forced) {
+    if (forced === "cerebras" || forced === "groq" || forced === "openai") {
+      return forced;
+    }
+    throw new Error(`Invalid AGENT_PROVIDER="${forced}". Expected cerebras | groq | openai`);
   }
   if (process.env.CEREBRAS_API_KEY?.trim()) return "cerebras";
   if (process.env.GROQ_API_KEY?.trim()) return "groq";
