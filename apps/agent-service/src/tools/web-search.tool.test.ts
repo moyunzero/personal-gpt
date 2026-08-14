@@ -90,9 +90,8 @@ describe("web_search tool", () => {
   });
 
   it("parses web sources and formats markdown references", async () => {
-    const { parseWebSearchSources, formatWebReferencesMarkdown } = await import(
-      "./web-search.tool"
-    );
+    const { parseWebSearchSources, formatWebReferencesMarkdown } =
+      await import("./web-search.tool");
     const text = `引用: 1
 标题: LangGraph Docs
 URL: https://langchain-ai.github.io/langgraph/

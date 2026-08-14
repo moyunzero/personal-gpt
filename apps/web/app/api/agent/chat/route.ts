@@ -37,10 +37,7 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json(
-      { error: `agent-service 不可达：${message}` },
-      { status: 502 },
-    );
+    return NextResponse.json({ error: `agent-service 不可达：${message}` }, { status: 502 });
   }
 
   const outHeaders = new Headers();

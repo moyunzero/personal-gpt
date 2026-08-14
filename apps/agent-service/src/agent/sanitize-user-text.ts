@@ -12,10 +12,7 @@ export function sanitizeUserFacingAgentText(text: string): string {
     /[（(]\s*KB_SEARCH_STATUS[^）)]*NO_RELEVANT_HIT[^）)]*[）)]/gi,
     "（知识库未找到足够依据）",
   );
-  out = out.replace(
-    /KB_SEARCH_STATUS\s*[:：=为]?\s*NO_RELEVANT_HIT/gi,
-    "知识库未找到足够依据",
-  );
+  out = out.replace(/KB_SEARCH_STATUS\s*[:：=为]?\s*NO_RELEVANT_HIT/gi, "知识库未找到足够依据");
   out = out.replace(/KB_SEARCH_STATUS\s*[:：=为]?\s*HIT/gi, "");
   out = out.replace(/\bKB_SEARCH_STATUS\b/gi, "");
   out = out.replace(/\bNO_RELEVANT_HIT\b/gi, "未找到足够依据");

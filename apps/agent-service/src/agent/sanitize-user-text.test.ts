@@ -3,10 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  containsKbTechMarkers,
-  sanitizeUserFacingAgentText,
-} from "./sanitize-user-text";
+import { containsKbTechMarkers, sanitizeUserFacingAgentText } from "./sanitize-user-text";
 
 describe("sanitizeUserFacingAgentText", () => {
   it("rewrites parenthetical KB_SEARCH_STATUS NO_RELEVANT_HIT", () => {

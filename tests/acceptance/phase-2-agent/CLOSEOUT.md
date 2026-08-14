@@ -10,18 +10,18 @@
 
 在不宣称生产就绪的前提下，落地 Code Review 中「本阶段可做」项：
 
-| 项 | 说明 |
-| --- | --- |
-| `web_search` 配额 | 按 `thread_id` 隔离；建图不再全局 `reset` |
-| OpenAI 默认模型 | `DEFAULT_OPENAI_MODEL`（不再误用 Groq 模型名） |
-| Checkpointer | MemorySaver / Sqlite **进程单例** |
-| Body 校验 | Zod 校验 `messages` 数组元素 |
-| 临时护栏 | 可选 `AGENT_INTERNAL_TOKEN`；浏览器经 `/api/agent/chat` BFF 注入 |
-| Prompt | `kb-citation-rules` 单一 fragment；Supervisor 仅 Skills 名录 |
-| 预检索 | 仅知识库相关意图 / 清单含 retriever 时执行 |
-| 图工厂 | `buildAgentGraph` / `buildSupervisorGraph` 共用专科构建 |
+| 项                    | 说明                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------ |
+| `web_search` 配额     | 按 `thread_id` 隔离；建图不再全局 `reset`                                            |
+| OpenAI 默认模型       | `DEFAULT_OPENAI_MODEL`（不再误用 Groq 模型名）                                       |
+| Checkpointer          | MemorySaver / Sqlite **进程单例**                                                    |
+| Body 校验             | Zod 校验 `messages` 数组元素                                                         |
+| 临时护栏              | 可选 `AGENT_INTERNAL_TOKEN`；浏览器经 `/api/agent/chat` BFF 注入                     |
+| Prompt                | `kb-citation-rules` 单一 fragment；Supervisor 仅 Skills 名录                         |
+| 预检索                | 仅知识库相关意图 / 清单含 retriever 时执行                                           |
+| 图工厂                | `buildAgentGraph` / `buildSupervisorGraph` 共用专科构建                              |
 | **Sequential 流水线** | 多步清单 ≥2 → 确定性边（对齐 LangGraph / CrewAI sequential）；主路径不再依赖强制续跑 |
-| 轨迹去重 / 引用兜底 | tool 事件指纹去重；web URL 解析 + 终稿参考来源兜底 |
+| 轨迹去重 / 引用兜底   | tool 事件指纹去重；web URL 解析 + 终稿参考来源兜底                                   |
 
 **仍延期**（写入 `docs/enterprise-roadmap.md`「v2.x → 后续版本」）：正式鉴权、Prompt registry、工具结构化错误码、Postgres checkpointer、Docker、God Service 拆分等。
 
@@ -37,7 +37,7 @@
 | Skills         | `kb-retrieval` / `web-research` / `report-writer` + `ENABLED_SKILLS`                                     |
 | Checkpointer   | 默认 MemorySaver（进程单例）；可选 `AGENT_CHECKPOINTER=sqlite`                                           |
 | LangSmith      | `LANGSMITH_TRACING=true` + key → project `personal-gpt-agent`（fail-open）                               |
-| 检索诚实       | `AGENT_KB_MIN_SIMILARITY`；无命中不编造 DOC-*；citation fragment 统一                                   |
+| 检索诚实       | `AGENT_KB_MIN_SIMILARITY`；无命中不编造 DOC-*；citation fragment 统一                                    |
 | 强制续跑       | 仅开放 Supervisor 兜底；多步清单走 Sequential 边                                                         |
 | 执行轨迹       | SSE `data-agent-trace`；气泡时间线 + MD/JSON 下载；`AGENT_TRACE_PERSIST=true` 落盘 `.data/agent-traces/` |
 
