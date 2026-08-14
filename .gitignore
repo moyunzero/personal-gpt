@@ -15,17 +15,6 @@ packages/*/node_modules
 # testing
 /coverage
 
-# 单元测试 / 回归测试源码与产物（不入库、不推 GitHub）
-**/*.test.ts
-**/*.test.tsx
-**/*.test.js
-**/*.test.mjs
-**/*.spec.ts
-**/*.spec.tsx
-tests/regression/
-tests/agent-service/
-tests/setup-env.ts
-
 # acceptance / 本地人工与 live smoke 产物（不入库、不推 GitHub）
 tests/acceptance/**/*.png
 tests/acceptance/**/*.log
