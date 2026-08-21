@@ -75,6 +75,19 @@ export const SharedEnvSchema = z
     /** 本地 Docker Compose Redis（BullMQ）连接串 */
     REDIS_URL: z.string().url().optional(),
 
+    /** 短期记忆保留最近 N 轮（D-17）；默认 10 */
+    SHORT_MEMORY_N: z.coerce.number().int().min(1).max(100).default(10),
+
+    /** Redis 短期记忆键前缀（D-18）；最终键 = prefix:workspaceId:userKey */
+    MEMORY_KEY_PREFIX: z.string().min(1).default("pgpt:short_memory"),
+
+    /** Mem0 长期记忆（D-16）；未设 key 时 search/add 降级为空 */
+    MEM0_API_KEY: z.string().min(1).optional(),
+    MEM0_ENABLED: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((v) => v !== "false"),
+
     /**
      * 向量检索总超时（毫秒），从「调 embedding API」到「Astra 查完返回」算一段。
      */

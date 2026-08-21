@@ -27,3 +27,12 @@ export {
 } from "./rag/corrective";
 export { esBm25Search, ensureEsIndexes, indexChunks, deleteByDocumentId } from "./rag/es-bm25";
 export { rerankDedicated } from "./rag/rerank";
+export {
+  ShortTermRedisMemory,
+  getShortTermRedisMemory,
+  resetShortTermRedisMemoryForTests,
+  type MemoryTurn,
+  type RedisLike,
+  type ShortTermPayload,
+  type ShortTermRedisMemoryOptions,
+} from "./memory/short-term-redis";
