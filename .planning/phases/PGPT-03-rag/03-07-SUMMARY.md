@@ -119,7 +119,7 @@ Each task was committed atomically:
 2. **Task 2: Wire Agent graph_search tool** - `cdcb5bb` (feat)
 3. **Task 3: Green 06-graph-path + Milestone checklist** - `d8008bc` (test)
 
-**Plan metadata:**  (docs: complete plan)
+**Plan metadata:** `250e50d` (docs: complete plan)
 
 ## Files Created/Modified
 
