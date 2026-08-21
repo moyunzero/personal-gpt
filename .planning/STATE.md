@@ -4,18 +4,18 @@ milestone: v2.0
 milestone_name: 企业级知识库平台
 current_phase: 03
 current_phase_name: rag-memory-eval
-current_plan: 8
+current_plan: 9
 status: executing
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-08-21T16:18:44.502Z"
+stopped_at: Completed 03-06-PLAN.md
+last_updated: "2026-08-21T16:29:30.000Z"
 last_activity: 2026-08-21
-last_activity_desc: Completed 03-04 Wave2a (Redis short-term + Mem0)
+last_activity_desc: Completed 03-06 Wave3 (Milvus VectorStore + factory)
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 23
-  completed_plans: 20
-  percent: 87
+  completed_plans: 21
+  percent: 91
 ---
 
 # Project State
@@ -25,24 +25,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** 用户能上传企业文档、基于自有知识库获得可溯源的准确回答  
-**Current focus:** Phase 3 — executing; next incomplete plan `03-06`
+**Current focus:** Phase 3 — executing; next incomplete plan `03-07`
 
 ## Current Position
 
 Phase: PGPT-03 (rag-memory-eval) — **EXECUTING**  
-Plan: 8 of 10
-Current Plan: 8
+Plan: 9 of 10
+Current Plan: 9
 Total Plans in Phase: 10  
 Status: Ready to execute
-Last activity: 2026-08-21 — Completed 03-05 Wave2b (PostgresSaver + thread_id)
+Last activity: 2026-08-21 — Completed 03-06 Wave3 (Milvus VectorStore + factory)
 
-Progress: Phase 1–2 plans 12/12 complete; Phase 3 8/10 (through 03-05)
+Progress: Phase 1–2 plans 12/12 complete; Phase 3 9/10 (through 03-06)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 20（Phase 1: 7 · Phase 2: 5 · Phase 3: 8）
+- Total plans completed: 21（Phase 1: 7 · Phase 2: 5 · Phase 3: 9）
 - Phase 2 closeout evidence: `tests/acceptance/phase-2-agent/CLOSEOUT.md`
 
 **By Phase:**
@@ -51,7 +51,7 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 8/10 (through 03-05)
 | --- | --- | --- |
 | 1 (PGPT-01-rag) | 7/7 | Complete 2026-07-02 |
 | 2 (PGPT-02-langgraph-agent) | 5/5 | MVP Complete 2026-08-14 |
-| 3 | 8/10 | In progress |
+| 3 | 9/10 | In progress |
 | 4 | 0/3 | Not started |
 | 5 | 0/1 | Not started |
 
@@ -69,7 +69,7 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 8/10 (through 03-05)
 | Phase 03 P03b | 4min | 2 tasks | 6 files |
 | Phase 03 P04 | 6min | 3 tasks | 16 files |
 | Phase 03 P05 | 11min | 3 tasks | 12 files |
-| Phase 03 P05 | 11min | 3 tasks | 12 files |
+| Phase 03 P06 | 6min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -106,10 +106,12 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 8/10 (through 03-05)
 - [Phase 03]: session-memory in shared for Chat+Agent; opaque localStorage userKey (D-18)
 - [Phase 03]: 03-05: AGENT_CHECKPOINTER default postgres; setup() once at Nest bootstrap (overrides Phase 2 D-08 MemorySaver)
 - [Phase 03]: 03-05: Per-mode localStorage thread_id keys pgpt.thread.chat / pgpt.thread.agent (D-23)
+- [Phase 03]: VECTOR_BACKEND defaults to astra; Milvus opt-in via env (03-06)
+- [Phase 03]: No dual vector write on Astra default; MILVUS_DUAL_WRITE optional (03-06)
 
 ### Pending Todos
 
-- Continue `/gsd-execute-phase 3` — next incomplete plan after 03-04 (03-05+)
+- Continue `/gsd-execute-phase 3` — next incomplete plan `03-07` (Neo4j Graph RAG)
 - 执行中遵守书面降级协议 D-06（7 自然日 + 用户确认）
 - Run `migrate-corpus-split --execute` in credentialed env when ready to cut over
 
@@ -120,11 +122,11 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 8/10 (through 03-05)
 
 ## Session Continuity
 
-**Last session:** 2026-08-21T16:18:44.397Z
+**Last session:** 2026-08-21T16:29:30.000Z
 **Resume file:** None
 
-**Stopped at:** Completed 03-05-PLAN.md
+**Stopped at:** Completed 03-06-PLAN.md
 
-**Resume next:** execute next incomplete Phase 3 plan (`03-05`+)
+**Resume next:** execute next incomplete Phase 3 plan (`03-07`)
 
-Last session note: 2026-08-21 completed 03-04 Wave2a — Redis short-term + Mem0 long-term; 03-memory-recall green
+Last session note: 2026-08-21 completed 03-06 Wave3 — Milvus VectorStore + VECTOR_BACKEND factory; 05-workspace-isolation green
