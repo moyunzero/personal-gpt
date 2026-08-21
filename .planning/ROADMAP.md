@@ -147,7 +147,7 @@ Plans:
 6. Postgres checkpointer 单实例同 `thread_id` 可恢复；Chat/Agent 共用 `packages/shared` hybrid 入口
 7. 黄金集 ≥20（nightly）+ `tests/regression/phase-3/` 全绿
 
-**Plans**: 10/10 plans executed
+**Plans**: 10/10 plans complete
 
 Plans:
 
@@ -224,7 +224,7 @@ Plans:
 | --- | --- | --- | --- | --- |
 | 1. RAG + KB 管理 | v2.0 | 7/7 | Complete | 2026-07-02 |
 | 2. LangGraph 多 Agent | v2.0 | 5/5 | MVP Complete（非生产） | 2026-08-14 |
-| 3. 记忆 + 高级 RAG | v2.0 / v3.0 | 10/10 | Complete | 2026-08-22 |
+| 3. 记忆 + 高级 RAG | v2.0 / v3.0 | 10/10 | Complete   | 2026-08-22 |
 | 4. 生产就绪 | v2.0 / v4.0 | 0/3 | Not started | — |
 | 5. 企业特性 | v2.0 / v5.0 | 0/1 | Not started | — |
 

@@ -4,18 +4,18 @@ milestone: v2.0
 milestone_name: 企业级知识库平台
 current_phase: 03
 current_phase_name: rag-memory-eval
-current_plan: 9
+current_plan: 10
 status: executing
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-08-21T16:29:30.000Z"
+stopped_at: Completed 03-07-PLAN.md
+last_updated: "2026-08-21T16:57:42.465Z"
 last_activity: 2026-08-21
-last_activity_desc: Completed 03-06 Wave3 (Milvus VectorStore + factory)
+last_activity_desc: Completed 03-07 Wave4 (Neo4j Graph RAG + milestone closeout)
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 23
-  completed_plans: 21
-  percent: 91
+  completed_plans: 22
+  percent: 96
 ---
 
 # Project State
@@ -25,18 +25,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** 用户能上传企业文档、基于自有知识库获得可溯源的准确回答  
-**Current focus:** Phase 3 — executing; next incomplete plan `03-07`
+**Current focus:** Phase 3 — plans 10/10 complete; awaiting verifier / milestone close
 
 ## Current Position
 
-Phase: PGPT-03 (rag-memory-eval) — **EXECUTING**  
-Plan: 9 of 10
-Current Plan: 9
+Phase: PGPT-03 (rag-memory-eval) — **PLANS COMPLETE** (awaiting verifier)  
+Plan: 10 of 10
+Current Plan: 10
 Total Plans in Phase: 10  
-Status: Ready to execute
-Last activity: 2026-08-21 — Completed 03-06 Wave3 (Milvus VectorStore + factory)
+Status: 03-07 complete; Phase 3 ready for verification
+Last activity: 2026-08-21 — Completed 03-07 Wave4 (Neo4j Graph RAG + milestone checklist)
 
-Progress: Phase 1–2 plans 12/12 complete; Phase 3 9/10 (through 03-06)
+Progress: Phase 1–2 plans 12/12 complete; Phase 3 10/10 (through 03-07)
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 9/10 (through 03-06)
 | Phase 03 P04 | 6min | 3 tasks | 16 files |
 | Phase 03 P05 | 11min | 3 tasks | 12 files |
 | Phase 03 P06 | 6min | 3 tasks | 11 files |
+| Phase 03 P07 | 10min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,8 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 9/10 (through 03-06)
 - [Phase 03]: 03-05: Per-mode localStorage thread_id keys pgpt.thread.chat / pgpt.thread.agent (D-23)
 - [Phase 03]: VECTOR_BACKEND defaults to astra; Milvus opt-in via env (03-06)
 - [Phase 03]: No dual vector write on Astra default; MILVUS_DUAL_WRITE optional (03-06)
+- [Phase 03]: Graph RAG via neo4j-driver@6.2.0 + Cypher allowlist; tool-only (no Graph sub-agent)
+- [Phase 03]: Milestone D-02 full-union includes Neo4j Graph; Phase 4 auth not claimed
 
 ### Pending Todos
 
@@ -122,10 +125,10 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 9/10 (through 03-06)
 
 ## Session Continuity
 
-**Last session:** 2026-08-21T16:29:30.000Z
+**Last session:** 2026-08-21T16:57:42.456Z
 **Resume file:** None
 
-**Stopped at:** Completed 03-06-PLAN.md
+**Stopped at:** Completed 03-07-PLAN.md
 
 **Resume next:** execute next incomplete Phase 3 plan (`03-07`)
 
