@@ -55,3 +55,12 @@ export {
   type MilvusClientLike,
   type MilvusVectorStoreOptions,
 } from "./vector-store.milvus";
+
+export {
+  createVectorStoreFromEnv,
+  resolveVectorBackend,
+  shouldWriteAstra,
+  shouldWriteMilvus,
+  type CreateVectorStoreFromEnvOptions,
+  type VectorBackend,
+} from "./vector-store.factory";

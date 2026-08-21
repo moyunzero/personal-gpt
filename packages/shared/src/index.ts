@@ -11,6 +11,16 @@ export * from "./schemas/env";
 export * from "./utils/ingest";
 export * from "./stores/vector-store";
 export { createAstraVectorStore, createVectorStore } from "./stores/vector-store.astra";
+export {
+  createMilvusVectorStore,
+  resolveMilvusCollectionName,
+} from "./stores/vector-store.milvus";
+export {
+  createVectorStoreFromEnv,
+  resolveVectorBackend,
+  shouldWriteAstra,
+  shouldWriteMilvus,
+} from "./stores/vector-store.factory";
 export { resolveCorpusTargets, type Corpus, type CorpusTargets } from "./rag/corpus";
 export { reciprocalRankFusion } from "./rag/rrf";
 export {

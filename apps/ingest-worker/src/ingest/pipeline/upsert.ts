@@ -1,20 +1,31 @@
-import { createAstraVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 import type { Corpus } from "@personal-gpt/shared";
 import type { ChunkRecord } from "@personal-gpt/shared/stores/vector-store";
+import {
+  shouldWriteAstra,
+  shouldWriteMilvus,
+} from "@personal-gpt/shared/stores/vector-store";
+import { createAstraVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
+import { createMilvusVectorStore } from "@personal-gpt/shared/stores/vector-store.milvus";
 
 import { upsertChunksToEs } from "./es-upsert";
 
 /**
- * Dual-write: Astra corpus collection then ES index (D-09).
+ * Dual-write: primary vector backend then ES index (D-09).
+ * VECTOR_BACKEND=astra (default) | milvus; optional MILVUS_DUAL_WRITE when Astra primary.
  * ES errors throw so BullMQ marks the job failed and retries (D-10).
- * User uploads default corpus=user; seed scripts pass corpus=seed.
  */
 export async function upsertChunks(
   chunks: ChunkRecord[],
   corpus: Corpus = "user",
 ): Promise<void> {
   if (chunks.length === 0) return;
-  const store = createAstraVectorStore({ corpus });
-  await store.upsert(chunks);
+
+  if (shouldWriteAstra()) {
+    await createAstraVectorStore({ corpus }).upsert(chunks);
+  }
+  if (shouldWriteMilvus()) {
+    await createMilvusVectorStore({ corpus }).upsert(chunks);
+  }
+
   await upsertChunksToEs(chunks, corpus);
 }

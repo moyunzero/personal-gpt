@@ -1,8 +1,7 @@
 import { embedText } from "../ai/embeddings";
 import type { RetrievedChunk, VectorStore } from "../stores/vector-store";
-import { createAstraVectorStore } from "../stores/vector-store.astra";
+import { createVectorStoreFromEnv } from "../stores/vector-store.factory";
 import type { Corpus } from "./corpus";
-import { resolveCorpusTargets } from "./corpus";
 import { esBm25Search } from "./es-bm25";
 import { maybeCorrective } from "./corrective";
 import { reciprocalRankFusion } from "./rrf";
@@ -30,10 +29,9 @@ export type HybridSearchDeps = {
 const DEFAULT_LIMIT = 5;
 const CANDIDATE_LIMIT = 10;
 
-/** Astra VectorStore bound to corpus collection (D-24); does not break createVectorStore(). */
+/** VectorStore bound to corpus via VECTOR_BACKEND factory (D-24 / STORE-01). */
 export function getVectorStoreForCorpus(corpus: Corpus): VectorStore {
-  const { astraCollection } = resolveCorpusTargets(corpus);
-  return createAstraVectorStore({ collectionName: astraCollection });
+  return createVectorStoreFromEnv({ corpus });
 }
 
 function isRerankerEnabled(): boolean {
