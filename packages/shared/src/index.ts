@@ -1,5 +1,5 @@
 export * from "./ai/groq-models";
-export * from "./ai/groq-chat";
+export * from "./ai/chat-provider";
 export * from "./ai/embedding-models";
 export * from "./ai/embeddings";
 export * from "./ai/rag-helper";

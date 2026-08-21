@@ -19,9 +19,8 @@ describe("outbound proxy logging contract", () => {
     process.env.HTTPS_PROXY = "http://user:pass@127.0.0.1:7890";
 
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    const { applyOutboundProxyFromEnv, logOutboundProxyStatus } = await import(
-      "../observability/outbound-proxy"
-    );
+    const { applyOutboundProxyFromEnv, logOutboundProxyStatus } =
+      await import("../observability/outbound-proxy");
     const returned = applyOutboundProxyFromEnv();
     expect(returned).toContain("user:pass");
 

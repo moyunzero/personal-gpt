@@ -53,6 +53,10 @@
       "types": "./src/ai/groq-chat.ts",
       "default": "./dist/ai/groq-chat.js"
     },
+    "./ai/chat-provider": {
+      "types": "./src/ai/chat-provider.ts",
+      "default": "./dist/ai/chat-provider.js"
+    },
     "./ai/embedding-models": {
       "types": "./src/ai/embedding-models.ts",
       "default": "./dist/ai/embedding-models.js"

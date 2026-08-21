@@ -7,10 +7,7 @@ import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module";
 import { ensureAgentLangSmithEnv } from "./observability/langsmith";
-import {
-  applyOutboundProxyFromEnv,
-  logOutboundProxyStatus,
-} from "./observability/outbound-proxy";
+import { applyOutboundProxyFromEnv, logOutboundProxyStatus } from "./observability/outbound-proxy";
 import { parseCorsOrigins } from "./observability/cors-origins";
 
 /** 兼容 nest dist/ 与源码路径，加载仓库根 .env（与 ingest-worker 一致） */

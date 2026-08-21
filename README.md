@@ -80,17 +80,17 @@ flowchart TB
 
 ## 技术栈
 
-| 层级           | 选型                                                                        |
-| -------------- | --------------------------------------------------------------------------- |
-| Web            | Next.js 16.2 · React 19 · Tailwind CSS 4                                    |
-| AI             | Vercel AI SDK 6 · `@ai-sdk/openai-compatible`（Groq OpenAI 兼容端点）       |
-| 聊天模型       | Groq：`qwen/qwen3-32b` → `llama-3.3-70b-versatile` → `llama-3.1-8b-instant` |
-| Embedding      | NVIDIA NIM `nvidia/llama-nemotron-embed-1b-v2`（2048 维）                   |
-| 向量库         | DataStax Astra DB Data API                                                  |
-| 元数据 / 队列  | PostgreSQL 16 + TypeORM 0.3 · Redis 7 + BullMQ 5                            |
-| Worker / Agent | NestJS 11（ingest-worker :3001 · agent-service :3002）                      |
-| 质量           | TypeScript · Zod · Vitest · ESLint · Prettier                               |
-| 切块           | `@langchain/textsplitters`（ingest-worker + 部分 seed 脚本）                |
+| 层级           | 选型                                                                    |
+| -------------- | ----------------------------------------------------------------------- |
+| Web            | Next.js 16.2 · React 19 · Tailwind CSS 4                                |
+| AI             | Vercel AI SDK 6 · `@ai-sdk/openai-compatible`（Groq OpenAI 兼容端点）   |
+| 聊天模型       | Groq：`qwen/qwen3.6-27b` → `openai/gpt-oss-120b` → `openai/gpt-oss-20b` |
+| Embedding      | NVIDIA NIM `nvidia/llama-nemotron-embed-1b-v2`（2048 维）               |
+| 向量库         | DataStax Astra DB Data API                                              |
+| 元数据 / 队列  | PostgreSQL 16 + TypeORM 0.3 · Redis 7 + BullMQ 5                        |
+| Worker / Agent | NestJS 11（ingest-worker :3001 · agent-service :3002）                  |
+| 质量           | TypeScript · Zod · Vitest · ESLint · Prettier                           |
+| 切块           | `@langchain/textsplitters`（ingest-worker + 部分 seed 脚本）            |
 
 > 备忘：[docs/google-ai-provider.md](./docs/google-ai-provider.md) 描述过 Gemini 方案；**当前主栈仍是 Groq + NIM**，勿按该文配置生产。
 
@@ -230,7 +230,7 @@ personal-gpt/
 
 1. **意图快路径**：寒暄、算式
 2. **embedding 预检**：Top-1 ≥ `ROUTE_RETRIEVE_SIMILARITY`（默认 0.68）→ retrieve；&lt; `ROUTE_DIRECT_SIMILARITY`（默认 0.42）→ direct
-3. **LLM 路由器**：灰色地带由 Groq `llama-3.1-8b-instant` 二分类（可用 `ENABLE_LLM_QUERY_ROUTER=false` 关闭）
+3. **LLM 路由器**：灰色地带由 Groq `openai/gpt-oss-20b` 二分类（可用 `ENABLE_LLM_QUERY_ROUTER=false` 关闭）
 
 **可选增强**（默认全关，见 `rag-options.ts`）：
 

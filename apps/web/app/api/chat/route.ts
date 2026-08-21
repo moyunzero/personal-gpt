@@ -8,6 +8,7 @@ import { buildSystemPrompt } from "@/lib/chat/prompt";
 import { decideQueryRoute } from "@/lib/chat/query-router";
 import { getRelevantContext } from "@/lib/chat/retrieve";
 import { createChatStream } from "@/lib/chat/stream";
+import "@/lib/env";
 import { logger } from "@/lib/logger";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 

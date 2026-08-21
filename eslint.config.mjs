@@ -23,6 +23,11 @@ export default defineConfig([
     "**/coverage/**",
     "**/.vercel/**",
     "**/.codegraph/**",
+    // 与 .gitignore 对齐：本地 acceptance 脚本不入库，也不应挡 pre-push / CI
+    "tests/acceptance/**/run.mjs",
+    "tests/acceptance/**/run-*.mjs",
+    "tests/acceptance/**/smoke-*.mjs",
+    "tests/acceptance/**/run*.py",
   ]),
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
