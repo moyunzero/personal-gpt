@@ -107,7 +107,7 @@ Each task was committed atomically:
 2. **Task 2: Persist graph state fields + SSE projection** - `808ddb6` (feat)
 3. **Task 3: Frontend thread_id + green 04 regression** - `5a33c90` (feat)
 
-**Plan metadata:** _(pending docs commit)_
+**Plan metadata:** `a48f83d` (docs: complete plan)
 
 ## Files Created/Modified
 

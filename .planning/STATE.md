@@ -6,8 +6,8 @@ current_phase: 03
 current_phase_name: rag-memory-eval
 current_plan: 8
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-08-21T16:17:45.342Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-08-21T16:18:44.502Z"
 last_activity: 2026-08-21
 last_activity_desc: Completed 03-04 Wave2a (Redis short-term + Mem0)
 progress:
@@ -15,7 +15,7 @@ progress:
   completed_phases: 2
   total_plans: 23
   completed_plans: 20
-  percent: 40
+  percent: 87
 ---
 
 # Project State
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** 用户能上传企业文档、基于自有知识库获得可溯源的准确回答  
-**Current focus:** Phase 3 — executing; next `03-05` (Wave 2b / multi-store or next incomplete plan)
+**Current focus:** Phase 3 — executing; next incomplete plan `03-06`
 
 ## Current Position
 
@@ -34,15 +34,15 @@ Plan: 8 of 10
 Current Plan: 8
 Total Plans in Phase: 10  
 Status: Ready to execute
-Last activity: 2026-08-21 — Completed 03-04 Wave2a (Redis short-term + Mem0)
+Last activity: 2026-08-21 — Completed 03-05 Wave2b (PostgresSaver + thread_id)
 
-Progress: Phase 1–2 plans 12/12 complete; Phase 3 7/10 (through 03-04)
+Progress: Phase 1–2 plans 12/12 complete; Phase 3 8/10 (through 03-05)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 19（Phase 1: 7 · Phase 2: 5 · Phase 3: 7）
+- Total plans completed: 20（Phase 1: 7 · Phase 2: 5 · Phase 3: 8）
 - Phase 2 closeout evidence: `tests/acceptance/phase-2-agent/CLOSEOUT.md`
 
 **By Phase:**
@@ -51,7 +51,7 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 7/10 (through 03-04)
 | --- | --- | --- |
 | 1 (PGPT-01-rag) | 7/7 | Complete 2026-07-02 |
 | 2 (PGPT-02-langgraph-agent) | 5/5 | MVP Complete 2026-08-14 |
-| 3 | 7/10 | In progress |
+| 3 | 8/10 | In progress |
 | 4 | 0/3 | Not started |
 | 5 | 0/1 | Not started |
 
@@ -68,6 +68,8 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 7/10 (through 03-04)
 | Phase 03 P03 | 32min | 2 tasks | 16 files |
 | Phase 03 P03b | 4min | 2 tasks | 6 files |
 | Phase 03 P04 | 6min | 3 tasks | 16 files |
+| Phase 03 P05 | 11min | 3 tasks | 12 files |
+| Phase 03 P05 | 11min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -102,6 +104,8 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 7/10 (through 03-04)
 - [Phase 03]: 03-03b: GOLDEN-01 = golden.json≥20 + Vitest CI smoke; nightly LangSmith separate; not EVAL-01/RAGAS
 - [Phase 03]: Short-term Redis FakeRedis unit tests; Mem0 prefs-only via addStableFacts (D-19)
 - [Phase 03]: session-memory in shared for Chat+Agent; opaque localStorage userKey (D-18)
+- [Phase 03]: 03-05: AGENT_CHECKPOINTER default postgres; setup() once at Nest bootstrap (overrides Phase 2 D-08 MemorySaver)
+- [Phase 03]: 03-05: Per-mode localStorage thread_id keys pgpt.thread.chat / pgpt.thread.agent (D-23)
 
 ### Pending Todos
 
@@ -116,10 +120,10 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 7/10 (through 03-04)
 
 ## Session Continuity
 
-**Last session:** 2026-08-21T16:17:45.333Z
+**Last session:** 2026-08-21T16:18:44.397Z
 **Resume file:** None
 
-**Stopped at:** Completed 03-04-PLAN.md
+**Stopped at:** Completed 03-05-PLAN.md
 
 **Resume next:** execute next incomplete Phase 3 plan (`03-05`+)
 
