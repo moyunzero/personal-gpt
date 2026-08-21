@@ -1,0 +1,156 @@
+[
+  {
+    "id": "g01",
+    "query": "奥德赛计划书给了什么建议",
+    "corpus": "user",
+    "expectCitationSource": "奥德赛计划书_2026-06-30.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g02",
+    "query": "我的奥德赛计划书三条路径",
+    "corpus": "user",
+    "expectCitationSource": "奥德赛计划书_2026-06-30.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g03",
+    "query": "奥德赛计划书_2026-06-30",
+    "corpus": "user",
+    "expectCitationSource": "奥德赛计划书_2026-06-30.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g04",
+    "query": "项目里程碑有哪些",
+    "corpus": "user",
+    "expectCitationSource": "project-roadmap.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g05",
+    "query": "API 鉴权怎么做",
+    "corpus": "user",
+    "expectCitationSource": "api-auth-guide.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g06",
+    "query": "部署清单检查项",
+    "corpus": "user",
+    "expectCitationSource": "deploy-checklist.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g07",
+    "query": "向量库 workspace 隔离规则",
+    "corpus": "user",
+    "expectCitationSource": "workspace-isolation.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g08",
+    "query": "ingest 失败如何重试",
+    "corpus": "user",
+    "expectCitationSource": "ingest-retry.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g09",
+    "query": "混合检索 RRF 是什么",
+    "corpus": "user",
+    "expectCitationSource": "hybrid-rrf-notes.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g10",
+    "query": "Corrective 改写最多几次",
+    "corpus": "user",
+    "expectCitationSource": "corrective-limits.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g11",
+    "query": "默认 corpus 是什么",
+    "corpus": "user",
+    "expectCitationSource": "corpus-defaults.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g12",
+    "query": "如何显式查询 seed 库",
+    "corpus": "user",
+    "expectCitationSource": "corpus-toggle.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g13",
+    "query": "Mem0 写入哪些事实",
+    "corpus": "user",
+    "expectCitationSource": "mem0-write-policy.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g14",
+    "query": "Redis 短期记忆存什么",
+    "corpus": "user",
+    "expectCitationSource": "redis-short-term.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g15",
+    "query": "Postgres checkpointer 默认吗",
+    "corpus": "user",
+    "expectCitationSource": "checkpointer-postgres.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g16",
+    "query": "ES 写入失败会怎样",
+    "corpus": "user",
+    "expectCitationSource": "es-fail-closed.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g17",
+    "query": "ES 查询不可用时怎么办",
+    "corpus": "user",
+    "expectCitationSource": "es-fail-open.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g18",
+    "query": "Rerank 默认开吗",
+    "corpus": "user",
+    "expectCitationSource": "rerank-default.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g19",
+    "query": "HyDE 默认开吗",
+    "corpus": "user",
+    "expectCitationSource": "hyde-default-off.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g20",
+    "query": "专有名词标题如何召回",
+    "corpus": "user",
+    "expectCitationSource": "proper-noun-bm25.md",
+    "forbidSources": ["psychology-qa"]
+  },
+  {
+    "id": "g21",
+    "query": "seed 心理学问答有什么用",
+    "corpus": "seed",
+    "expectCitationSource": "psychology-qa",
+    "forbidSources": []
+  },
+  {
+    "id": "g22",
+    "query": "prompt suggestion 从哪来",
+    "corpus": "seed",
+    "expectCitationSource": "prompt-suggestion",
+    "forbidSources": []
+  }
+]
