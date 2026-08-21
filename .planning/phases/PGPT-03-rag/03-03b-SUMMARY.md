@@ -109,7 +109,7 @@ Each task was committed atomically:
 1. **Task 1: Green 01/02 regression + ISSUE-001 Closed** - `eb0b80b` (test) + `2724cf2` (docs force-add; `docs/` gitignored)
 2. **Task 2: GOLDEN-01 golden set + CI smoke** - `8e4be7f` (feat)
 
-**Plan metadata:** (pending docs commit)
+**Plan metadata:** `dc8dff4` (docs: complete plan)
 
 ## Files Created/Modified
 
