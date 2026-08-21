@@ -1,5 +1,7 @@
 import { DataAPIClient } from "@datastax/astra-db-ts";
 
+import type { Corpus } from "../rag/corpus";
+import { resolveCorpusTargets } from "../rag/corpus";
 import type { ChunkRecord, RetrievedChunk, VectorSearchParams, VectorStore } from "./vector-store";
 
 export interface AstraCollectionHandle {
@@ -26,11 +28,28 @@ export function assertChunkWorkspaceId(chunk: ChunkRecord): void {
   }
 }
 
-interface AstraVectorStoreOptions {
+export interface AstraVectorStoreOptions {
   collection?: AstraCollectionHandle;
+  /** Explicit collection; wins over corpus / env resolution */
   collectionName?: string;
+  /**
+   * Physical corpus target (D-24). Default "user".
+   * resolveCorpusTargets prefers ASTRA_DB_COLLECTION_USER/SEED when set;
+   * falls back to ASTRA_DB_COLLECTION (legacy mixed) until migrate-corpus-split (D-26).
+   */
+  corpus?: Corpus;
   endpoint?: string;
   token?: string;
+}
+
+/** Resolve Astra collection name: explicit > corpus targets > legacy env. */
+export function resolveAstraCollectionName(
+  options: Pick<AstraVectorStoreOptions, "collectionName" | "corpus"> = {},
+): string {
+  if (options.collectionName?.trim()) {
+    return options.collectionName.trim();
+  }
+  return resolveCorpusTargets(options.corpus ?? "user").astraCollection;
 }
 
 function mapAstraDoc(doc: Record<string, unknown>): RetrievedChunk {
@@ -50,7 +69,7 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
   let collection = options.collection;
 
   if (!collection) {
-    const collectionName = options.collectionName ?? process.env.ASTRA_DB_COLLECTION;
+    const collectionName = resolveAstraCollectionName(options);
     const endpoint = options.endpoint ?? process.env.ASTRA_DB_API_ENDPOINT;
     const token = options.token ?? process.env.ASTRA_DB_APPLICATION_TOKEN;
 
@@ -156,7 +175,13 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
   };
 }
 
-/** 进程内默认 VectorStore 工厂（Astra 实现） */
-export function createVectorStore(): VectorStore {
-  return createAstraVectorStore({});
+/**
+ * 进程内默认 VectorStore 工厂（Astra 实现）。
+ * Default corpus=user (D-27); pass corpus:"seed" for seed collection.
+ * Chat retrieve call sites unchanged until plan 03-03.
+ */
+export function createVectorStore(
+  options: Pick<AstraVectorStoreOptions, "corpus" | "collectionName"> = {},
+): VectorStore {
+  return createAstraVectorStore(options);
 }

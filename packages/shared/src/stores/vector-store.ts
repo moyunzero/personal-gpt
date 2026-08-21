@@ -42,4 +42,9 @@ export interface VectorStore {
   search(params: VectorSearchParams): Promise<RetrievedChunk[]>;
 }
 
-export { createAstraVectorStore, createVectorStore } from "./vector-store.astra";
+export {
+  createAstraVectorStore,
+  createVectorStore,
+  resolveAstraCollectionName,
+  type AstraVectorStoreOptions,
+} from "./vector-store.astra";
