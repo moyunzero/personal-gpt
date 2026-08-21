@@ -34,6 +34,9 @@ describe("inferRequiredSpecialists", () => {
       "先查知识库，不要使用联网搜索，最后写 Markdown 报告",
       "先查知识库，不要用网络搜索，最后写 Markdown 报告",
       "先查知识库，禁止访问互联网，最后写 Markdown 报告",
+      "先查知识库，不要进行网络搜索，最后写 Markdown 报告",
+      "先查知识库，请勿访问外网，最后写 Markdown 报告",
+      "仅使用知识库并写一份 Markdown 报告",
     ];
     for (const q of variants) {
       const need = inferRequiredSpecialists(q);
@@ -41,6 +44,30 @@ describe("inferRequiredSpecialists", () => {
       expect(need).toContain("editor");
       expect(need).toContain("retriever");
     }
+  });
+
+  it("preserves web research when no refusal is present", () => {
+    expect(inferRequiredSpecialists("先查知识库，再联网补充优缺点，最后写 Markdown 报告")).toEqual([
+      "retriever",
+      "researcher",
+      "editor",
+    ]);
+  });
+
+  it("orders specialists by intent position (web before kb then report)", () => {
+    const q = "先联网调研竞品，再查知识库补充内部材料，最后写成 Markdown 报告";
+    expect(inferRequiredSpecialists(q)).toEqual(["researcher", "retriever", "editor"]);
+  });
+
+  it("matches English keywords case-insensitively", () => {
+    expect(inferRequiredSpecialists("use the KB then write a MARKDOWN report")).toEqual([
+      "retriever",
+      "editor",
+    ]);
+    expect(inferRequiredSpecialists("use CALCULATOR then write MARKDOWN")).toEqual([
+      "analyst",
+      "editor",
+    ]);
   });
 });
 

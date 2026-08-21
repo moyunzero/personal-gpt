@@ -15,7 +15,8 @@ import { bearerMatchesInternalToken } from "./internal-token";
 
 /**
  * AGENT-04：POST /agent/chat → LangGraph UIMessage SSE。
- * 可选 AGENT_INTERNAL_TOKEN：设置后需 Authorization: Bearer <token>（v2.x 临时护栏，正式身份见 v4）。
+ * 非生产：AGENT_INTERNAL_TOKEN 可选（设置后才校验）。
+ * 生产：必须配置非空令牌，缺失或无效一律 401（fail-closed）。
  */
 @Controller("agent")
 export class AgentController {
@@ -28,7 +29,12 @@ export class AgentController {
     @Res({ passthrough: false }) res: Response,
   ): Promise<void> {
     const expected = process.env.AGENT_INTERNAL_TOKEN?.trim();
-    if (expected && !bearerMatchesInternalToken(authorization, expected)) {
+    const isProd = process.env.NODE_ENV === "production";
+    if (isProd) {
+      if (!expected || !bearerMatchesInternalToken(authorization, expected)) {
+        throw new UnauthorizedException("Unauthorized: missing or invalid AGENT_INTERNAL_TOKEN");
+      }
+    } else if (expected && !bearerMatchesInternalToken(authorization, expected)) {
       throw new UnauthorizedException("Unauthorized: missing or invalid AGENT_INTERNAL_TOKEN");
     }
 
@@ -40,6 +46,11 @@ export class AgentController {
       }
       if (err instanceof ModelConfigError) {
         throw new ServiceUnavailableException(err.message);
+      }
+      // SSE 已写出后勿再交给 Nest 异常过滤器（会二次写头 / 破坏流）
+      if (res.headersSent) {
+        console.error("[agent] streamChat failed after headers sent", err);
+        return;
       }
       throw err;
     }

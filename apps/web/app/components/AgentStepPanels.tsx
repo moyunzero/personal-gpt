@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { UIMessage } from "ai";
 
 export type AgentStepStatus = "pending" | "active" | "completed" | "error";
@@ -68,6 +68,7 @@ function statusLabel(status: AgentStepStatus): string {
 }
 
 function StepCard({ step }: { step: AgentStep }) {
+  const uid = useId();
   const [expanded, setExpanded] = useState(step.status === "active");
   const [prevStatus, setPrevStatus] = useState(step.status);
   // status → active 时自动展开；其它状态变化保留用户手动折叠/展开
@@ -77,7 +78,7 @@ function StepCard({ step }: { step: AgentStep }) {
       setExpanded(true);
     }
   }
-  const bodyId = `${step.id}-body`;
+  const bodyId = `${uid}-${step.id}-body`;
 
   return (
     <article className={`agent-step-card${expanded ? " agent-step-card-open" : ""}`}>

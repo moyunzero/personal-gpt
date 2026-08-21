@@ -8,6 +8,7 @@ import { tool } from "langchain";
 import { z } from "zod";
 
 import { resolveKbMinSimilarity, retrieveKb, type RetrieveKbParams } from "../rag/retrieve";
+import { extractKbSearchQuery } from "./extract-kb-query";
 import { getKbSearchContextForThread } from "./kb-search-context";
 
 export type KbSearchInput = {
@@ -17,7 +18,7 @@ export type KbSearchInput = {
   workspaceId?: string;
   minSimilarity?: number;
   /**
-   * 用户原话回退：LLM 改写 query 导致相似度跌破门槛时，再用原问题检索一次。
+   * 用户原话回退：LLM 改写 query 导致相似度跌破门槛时，再用原问题 / 压缩词检索。
    */
   userText?: string;
 };
@@ -44,11 +45,13 @@ export function formatKbNoHitMessage(
   ].join("\n");
 }
 
+type HitVia = "primary" | "userText" | "condensed";
+
 function formatKbHitMessage(
   workspaceId: string,
   minSimilarity: number,
   chunks: Awaited<ReturnType<typeof retrieveKb>>["chunks"],
-  viaUserTextFallback: boolean,
+  via: HitVia,
 ): string {
   const lines = chunks.map((c, i) => {
     const snippet = c.text.length > SNIPPET_MAX ? `${c.text.slice(0, SNIPPET_MAX)}…` : c.text;
@@ -64,9 +67,12 @@ function formatKbHitMessage(
     ].join("\n");
   });
 
-  const fallbackNote = viaUserTextFallback
-    ? "（已用用户原话回退检索命中；优先采信下列 citation）"
-    : "";
+  const fallbackNote =
+    via === "userText"
+      ? "（已用用户原话回退检索命中；优先采信下列 citation）"
+      : via === "condensed"
+        ? "（已用压缩检索词回退命中；优先采信下列 citation）"
+        : "";
 
   return [
     `KB_SEARCH_STATUS: HIT`,
@@ -86,30 +92,50 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
   };
 
   try {
-    const primary = await retrieveKb({ ...base, query: input.query });
-    if (primary.chunks.length > 0) {
-      return formatKbHitMessage(primary.workspaceId, minSimilarity, primary.chunks, false);
-    }
+    const tried = new Set<string>();
+    let topSimilarity: number | undefined;
+    let workspaceId = "";
+
+    const tryQuery = async (
+      query: string,
+      via: HitVia,
+    ): Promise<string | undefined> => {
+      const q = query.trim();
+      if (!q || tried.has(q)) return undefined;
+      tried.add(q);
+      const result = await retrieveKb({ ...base, query: q });
+      workspaceId = result.workspaceId;
+      if (typeof result.topSimilarity === "number") {
+        topSimilarity = Math.max(topSimilarity ?? 0, result.topSimilarity);
+      }
+      if (result.chunks.length > 0) {
+        return formatKbHitMessage(result.workspaceId, minSimilarity, result.chunks, via);
+      }
+      return undefined;
+    };
+
+    const primaryHit = await tryQuery(input.query, "primary");
+    if (primaryHit) return primaryHit;
 
     const userText = input.userText?.trim();
-    const q = input.query.trim();
-    if (userText && userText !== q) {
-      const fallback = await retrieveKb({ ...base, query: userText });
-      if (fallback.chunks.length > 0) {
-        return formatKbHitMessage(fallback.workspaceId, minSimilarity, fallback.chunks, true);
-      }
-      const top = Math.max(primary.topSimilarity ?? 0, fallback.topSimilarity ?? 0);
-      return formatKbNoHitMessage(
-        fallback.workspaceId,
-        minSimilarity,
-        Number.isFinite(top) && top > 0 ? top : primary.topSimilarity,
-      );
+    if (userText) {
+      const userHit = await tryQuery(userText, "userText");
+      if (userHit) return userHit;
     }
 
-    return formatKbNoHitMessage(primary.workspaceId, minSimilarity, primary.topSimilarity);
+    const seed = userText || input.query;
+    const condensed = extractKbSearchQuery(seed);
+    const condensedHit = await tryQuery(condensed, "condensed");
+    if (condensedHit) return condensedHit;
+
+    return formatKbNoHitMessage(
+      workspaceId || "unknown",
+      minSimilarity,
+      topSimilarity,
+    );
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return `知识库检索失败（降级）：${msg}。请告知用户稍后重试，勿编造文档内容。`;
+    console.error("[kb_search] retrieve failed", err);
+    return "知识库检索失败（降级）：请稍后重试，勿编造文档内容。";
   }
 }
 

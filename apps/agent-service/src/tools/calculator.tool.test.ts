@@ -31,4 +31,11 @@ describe("calculator tool", () => {
     });
     expect(proc).toMatch(/拒绝|非法|不安全|不支持/i);
   });
+
+  it("rejects non-finite arithmetic results", async () => {
+    const { evaluateSafeArithmetic, invokeCalculator } = await import("./calculator.tool");
+    // 除零在解析阶段拒绝；有限性校验兜底其它溢出路径
+    expect(() => evaluateSafeArithmetic("1/0")).toThrow(/除零|非有限|非法/);
+    expect(await invokeCalculator({ expression: "1/0" })).toMatch(/拒绝|非法|不安全/);
+  });
 });

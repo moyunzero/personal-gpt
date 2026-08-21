@@ -248,6 +248,34 @@ describe("Agent SSE stream (AGENT-04)", () => {
     expect(pipeFinished).toBe(true);
   });
 
+  it("short route emits greeting text without LangGraph stream", async () => {
+    toBaseMessagesMock.mockResolvedValue([{ content: "你好" }]);
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "你好" }] }],
+        thread_id: "t-short-text",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __writes?: unknown[];
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    expect(buildAgentGraphMock).not.toHaveBeenCalled();
+    expect(buildSupervisorGraphMock).not.toHaveBeenCalled();
+    expect(toUIMessageStreamMock).not.toHaveBeenCalled();
+    const writes = streamArg?.__writes ?? [];
+    const text = writes
+      .filter((w) => (w as { type?: string }).type === "text-delta")
+      .map((w) => (w as { delta?: string }).delta ?? "")
+      .join("");
+    expect(text).toMatch(/你好|助手|知识库/);
+  });
+
   it("passes AbortSignal and run_id into graph.stream config", async () => {
     const { AgentService } = await import("./agent.service");
     const service = new AgentService();
@@ -336,5 +364,75 @@ describe("Agent SSE stream (AGENT-04)", () => {
     });
     await rs.pipeThrough(deduplicateTextDeltas()).pipeTo(writer);
     expect(out.map((c) => (c as { delta: string }).delta)).toEqual(["你好", "世界"]);
+  });
+
+  it("suppressIntermediateText drops non-report held text on first unlock", async () => {
+    const { suppressIntermediateText } = await import("./agent.service");
+    let unlocked = false;
+    const out: unknown[] = [];
+    const input = new TransformStream();
+    const done = input.readable
+      .pipeThrough(
+        suppressIntermediateText({
+          hideUntilEditor: true,
+          textUnlocked: () => unlocked,
+        }),
+      )
+      .pipeTo(
+        new WritableStream({
+          write(chunk) {
+            out.push(chunk);
+          },
+        }),
+      );
+    const w = input.writable.getWriter();
+    await w.write({ type: "text-start", id: "miss" });
+    await w.write({ type: "text-delta", id: "miss", delta: "知识库未找到足够相关依据。" });
+    await w.write({ type: "text-end", id: "miss" });
+    unlocked = true;
+    await w.write({ type: "text-start", id: "report" });
+    await w.write({ type: "text-delta", id: "report", delta: "# 韶音手册\n\n正文" });
+    await w.write({ type: "text-end", id: "report" });
+    await w.close();
+    await done;
+    const deltas = out
+      .filter((c) => (c as { type?: string }).type === "text-delta")
+      .map((c) => (c as { delta: string }).delta);
+    expect(deltas.join("")).toBe("# 韶音手册\n\n正文");
+    expect(deltas.join("")).not.toMatch(/知识库未找到/);
+  });
+
+  it("suppressIntermediateText keeps report-like held text on unlock", async () => {
+    const { suppressIntermediateText } = await import("./agent.service");
+    let unlocked = false;
+    const out: unknown[] = [];
+    const report = "# 标题\n\n" + "段落内容。".repeat(80);
+    const input = new TransformStream();
+    const done = input.readable
+      .pipeThrough(
+        suppressIntermediateText({
+          hideUntilEditor: true,
+          textUnlocked: () => unlocked,
+        }),
+      )
+      .pipeTo(
+        new WritableStream({
+          write(chunk) {
+            out.push(chunk);
+          },
+        }),
+      );
+    const w = input.writable.getWriter();
+    await w.write({ type: "text-start", id: "r1" });
+    await w.write({ type: "text-delta", id: "r1", delta: report });
+    await w.write({ type: "text-end", id: "r1" });
+    unlocked = true;
+    await w.write({ type: "tool-input-start", toolName: "noop" });
+    await w.close();
+    await done;
+    const deltas = out
+      .filter((c) => (c as { type?: string }).type === "text-delta")
+      .map((c) => (c as { delta: string }).delta);
+    expect(deltas.join("")).toBe(report);
   });
 });

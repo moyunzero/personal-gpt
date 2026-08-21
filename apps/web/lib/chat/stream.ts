@@ -35,7 +35,8 @@ export function createChatStream({
       let lastError: Error | null = null;
 
       const models = resolveChatModels();
-      for (const modelName of models) {
+      for (let i = 0; i < models.length; i++) {
+        const modelName = models[i]!;
         try {
           const result = streamText({
             model: chatModel(modelName),
@@ -93,7 +94,7 @@ export function createChatStream({
         } catch (error) {
           log.warn("model failed, falling back", { modelName, err: error });
           lastError = error instanceof Error ? error : new Error(String(error));
-          if (modelName !== models[models.length - 1]) {
+          if (i < models.length - 1) {
             continue;
           }
         }

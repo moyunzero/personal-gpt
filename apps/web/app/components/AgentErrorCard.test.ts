@@ -23,4 +23,12 @@ describe("classifyAgentError", () => {
     expect(c.code).toBe("401");
     expect(c.code).not.toBe("403");
   });
+
+  it("maps cancelled or timed-out BFF errors before generic 5xx", () => {
+    const a = classifyAgentError("agent-service 请求已取消或超时 (requestId: abc)");
+    expect(a.code).toBe("TIMEOUT");
+    expect(a.advice).toMatch(/120/);
+    expect(a.retryLabel).toMatch(/重试/);
+    expect(a.raw).toMatch(/取消或超时/);
+  });
 });

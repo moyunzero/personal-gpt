@@ -238,12 +238,18 @@ export function createAgentTraceCollector(input: {
         const stamp = (endedAt ?? nowIso()).replace(/[:.]/g, "-");
         const safeThread = sanitizeTracePathSegment(input.threadId);
         const base = resolve(dir, `${safeThread}-${stamp}`);
-        const doc = toDocument();
-        writeFileSync(`${base}.json`, `${JSON.stringify(doc, null, 2)}\n`);
-        writeFileSync(`${base}.md`, toMarkdown());
         persisted = true;
+        const doc = toDocument();
+        try {
+          writeFileSync(`${base}.json`, `${JSON.stringify(doc, null, 2)}\n`);
+          writeFileSync(`${base}.md`, toMarkdown());
+        } catch (err) {
+          persisted = false;
+          throw err;
+        }
         return base;
       } catch {
+        persisted = false;
         return null;
       }
     },

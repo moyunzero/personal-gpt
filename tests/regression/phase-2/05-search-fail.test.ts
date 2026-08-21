@@ -2,7 +2,7 @@
  * Phase 2 regression #5 — 搜索失败可见降级（D-14 / D-16）。
  * web_search / Bocha 失败时返回可读错误语义，不 throw 中断编排；禁止 live 网络。
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)", () => {
   const prevKey = process.env.BOCHA_API_KEY;
@@ -22,6 +22,11 @@ describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)
     } else {
       process.env.BOCHA_API_KEY = prevKey;
     }
+    fetchSpy.mockReset();
+  });
+
+  afterAll(() => {
+    fetchSpy.mockRestore();
   });
 
   it("placeholder harness (no live LLM)", () => {

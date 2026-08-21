@@ -15,10 +15,32 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 function isTraceDocument(data: unknown): data is AgentTraceDocument {
   if (!isRecord(data)) return false;
   if (typeof data.threadId !== "string" || typeof data.startedAt !== "string") return false;
-  if (!isRecord(data.intent) || !Array.isArray(data.events)) return false;
+  if (typeof data.userText !== "string") return false;
+  if (!isRecord(data.intent) || !Array.isArray(data.events) || !Array.isArray(data.plan)) {
+    return false;
+  }
+  if (!Array.isArray(data.citations)) return false;
   const route = data.intent.route;
   if (route !== "short" && route !== "supervisor") return false;
   if (!Array.isArray(data.intent.requiredSpecialists)) return false;
+  for (const item of data.plan) {
+    if (!isRecord(item)) return false;
+    if (typeof item.id !== "string" || typeof item.label !== "string") return false;
+  }
+  for (const c of data.citations) {
+    if (!isRecord(c)) return false;
+    if (typeof c.documentId !== "string" || typeof c.title !== "string") return false;
+  }
+  for (const ev of data.events) {
+    if (!isRecord(ev)) return false;
+    if (
+      typeof ev.ts !== "string" ||
+      typeof ev.kind !== "string" ||
+      typeof ev.summary !== "string"
+    ) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -159,7 +181,9 @@ export default function AgentTracePanel({ message }: { message: UIMessage }) {
   if (!doc || doc.events.length === 0) return null;
 
   const stamp = (doc.endedAt ?? doc.startedAt).replace(/[:.]/g, "-");
-  const base = `agent-trace-${doc.threadId}-${stamp}`;
+  const safeThread =
+    doc.threadId.replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "") || "thread";
+  const base = `agent-trace-${safeThread}-${stamp}`;
 
   return (
     <section className="agent-block agent-trace-panel" aria-label="执行轨迹">

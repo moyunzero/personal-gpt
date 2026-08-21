@@ -37,8 +37,12 @@ const CASUAL_CHITCHAT = [
 
 const TRAILING_PUNCTUATION = /^[\s!！?？。,，~～]+|[\s!！?？。,，~～]+$/g;
 
-/** trim 后短于此长度视为过短（单字 / 空白） */
+/** trim 后短于此长度视为过短（单字 / 空白）；按 Unicode 码点计，避免 emoji 误判 */
 const MIN_MEANINGFUL_LENGTH = 2;
+
+function codePointLength(value: string): number {
+  return Array.from(value).length;
+}
 
 function normalize(text: string): string {
   return text.trim().replace(TRAILING_PUNCTUATION, "").toLowerCase();
@@ -49,7 +53,7 @@ function normalize(text: string): string {
  */
 export function isAgentChitchat(text: string): boolean {
   const trimmed = text.trim();
-  if (trimmed.length < MIN_MEANINGFUL_LENGTH) {
+  if (codePointLength(trimmed) < MIN_MEANINGFUL_LENGTH) {
     return true;
   }
 
@@ -76,7 +80,7 @@ export function buildShortReplyMessages(text: string): BaseMessage[] {
   const core = normalize(text);
   let content: string;
 
-  if (!core || core.length < MIN_MEANINGFUL_LENGTH) {
+  if (!core || codePointLength(core) < MIN_MEANINGFUL_LENGTH) {
     content = "你好！有什么我可以帮你的吗？可以直接问知识库或调研类问题。";
   } else if (GREETING_PHRASES.has(core)) {
     content = "你好！我是企业知识库助手。有什么问题可以帮你？";

@@ -113,9 +113,9 @@ export const SharedEnvSchema = z
 
     /**
      * 前端 Agent 模式遗留直连基址（仅 NEXT_PUBLIC_* 可暴露给 client）。
-     * v2.x 起浏览器默认走 `/api/agent/chat` BFF。
+     * v2.x 起浏览器默认走 `/api/agent/chat` BFF；未配置时保持 undefined。
      */
-    NEXT_PUBLIC_AGENT_SERVICE_URL: z.string().url().optional().default("http://localhost:3002"),
+    NEXT_PUBLIC_AGENT_SERVICE_URL: z.string().url().optional(),
 
     /** v0.1 无 workspaceId 的 Astra chunk 回退检索；默认关闭 */
     ASTRA_LEGACY_FALLBACK: z

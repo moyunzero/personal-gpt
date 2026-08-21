@@ -3,7 +3,10 @@
  * 注入 AGENT_INTERNAL_TOKEN（若配置），避免把密钥暴露到 NEXT_PUBLIC_*。
  */
 
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+
+import { logger } from "@/lib/logger";
 
 import {
   AGENT_UPSTREAM_TIMEOUT_MS,
@@ -14,6 +17,9 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Agent chat body 上限（约 1MB），防过大缓冲 */
+export const MAX_AGENT_BFF_BODY_BYTES = 1_048_576;
+
 function agentUpstreamUrl(): string {
   const base = (
     process.env.AGENT_SERVICE_URL ||
@@ -23,7 +29,99 @@ function agentUpstreamUrl(): string {
   return `${base}/agent/chat`;
 }
 
+/**
+ * 把上游 body 泵到下游，直到读完 / 超时 / 客户端取消。
+ * 客户端 abort → close；上游超时 → error（便于前端识别截断）。
+ */
+export function pipeUpstreamBody(
+  upstreamBody: ReadableStream<Uint8Array>,
+  opts: {
+    clientSignal: AbortSignal;
+    timeout: { signal: AbortSignal; clear: () => void };
+  },
+): ReadableStream<Uint8Array> {
+  const reader = upstreamBody.getReader();
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    opts.timeout.clear();
+  };
+
+  const cancelReader = () => {
+    void reader.cancel().catch(() => {});
+  };
+
+  const onAbort = () => {
+    cancelReader();
+    cleanup();
+  };
+
+  if (opts.clientSignal.aborted || opts.timeout.signal.aborted) {
+    cancelReader();
+    cleanup();
+  } else {
+    opts.clientSignal.addEventListener("abort", onAbort, { once: true });
+    opts.timeout.signal.addEventListener("abort", onAbort, { once: true });
+  }
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        if (opts.timeout.signal.aborted) {
+          cancelReader();
+          cleanup();
+          controller.error(new Error("agent-service 请求已取消或超时"));
+          return;
+        }
+        if (opts.clientSignal.aborted) {
+          cancelReader();
+          cleanup();
+          controller.close();
+          return;
+        }
+        const { done, value } = await reader.read();
+        if (opts.timeout.signal.aborted) {
+          cancelReader();
+          cleanup();
+          controller.error(new Error("agent-service 请求已取消或超时"));
+          return;
+        }
+        if (opts.clientSignal.aborted) {
+          cancelReader();
+          cleanup();
+          controller.close();
+          return;
+        }
+        if (done) {
+          cleanup();
+          controller.close();
+          return;
+        }
+        if (value) controller.enqueue(value);
+      } catch (err) {
+        cleanup();
+        cancelReader();
+        if (opts.timeout.signal.aborted) {
+          controller.error(new Error("agent-service 请求已取消或超时"));
+          return;
+        }
+        if (opts.clientSignal.aborted) {
+          controller.close();
+          return;
+        }
+        controller.error(err);
+      }
+    },
+    cancel() {
+      cancelReader();
+      cleanup();
+    },
+  });
+}
+
 export async function POST(req: Request) {
+  const requestId = randomUUID();
   const upstream = agentUpstreamUrl();
   const headers = new Headers();
   const contentType = req.headers.get("content-type");
@@ -37,12 +135,32 @@ export async function POST(req: Request) {
   const timeout = createUpstreamTimeoutSignal(AGENT_UPSTREAM_TIMEOUT_MS);
   const signal = combineAbortSignals(req.signal, timeout.signal);
 
+  const contentLength = req.headers.get("content-length");
+  if (contentLength) {
+    const n = Number(contentLength);
+    if (Number.isFinite(n) && n > MAX_AGENT_BFF_BODY_BYTES) {
+      timeout.clear();
+      return NextResponse.json(
+        { error: `请求体过大（上限 ${MAX_AGENT_BFF_BODY_BYTES} 字节）` },
+        { status: 413 },
+      );
+    }
+  }
+
   let upstreamRes: Response;
   try {
+    const bodyBuf = await req.arrayBuffer();
+    if (bodyBuf.byteLength > MAX_AGENT_BFF_BODY_BYTES) {
+      timeout.clear();
+      return NextResponse.json(
+        { error: `请求体过大（上限 ${MAX_AGENT_BFF_BODY_BYTES} 字节）` },
+        { status: 413 },
+      );
+    }
     upstreamRes = await fetch(upstream, {
       method: "POST",
       headers,
-      body: await req.arrayBuffer(),
+      body: bodyBuf,
       signal,
     });
   } catch (err) {
@@ -52,25 +170,46 @@ export async function POST(req: Request) {
       (err instanceof Error && err.name === "AbortError") ||
       req.signal.aborted ||
       timeout.signal.aborted;
+    logger.error("agent BFF upstream fetch failed", {
+      requestId,
+      aborted,
+      err: message,
+    });
+    // 固定中文关键词供 classifyAgentError；不回传上游细节
     return NextResponse.json(
       {
         error: aborted
-          ? `agent-service 请求已取消或超时：${message}`
-          : `agent-service 不可达：${message}`,
+          ? `agent-service 请求已取消或超时 (requestId: ${requestId})`
+          : `agent-service 不可达 (requestId: ${requestId})`,
       },
       { status: aborted ? 504 : 502 },
     );
   }
-  timeout.clear();
 
   const outHeaders = new Headers();
-  const pass = ["content-type", "x-vercel-ai-ui-message-stream", "cache-control"];
-  for (const key of pass) {
+  for (const key of ["content-type", "x-vercel-ai-ui-message-stream"] as const) {
     const v = upstreamRes.headers.get(key);
     if (v) outHeaders.set(key, v);
   }
+  outHeaders.set("cache-control", "no-cache, no-transform");
+  outHeaders.set("connection", "keep-alive");
+  outHeaders.set("x-accel-buffering", "no");
+  outHeaders.set("x-request-id", requestId);
 
-  return new NextResponse(upstreamRes.body, {
+  if (!upstreamRes.body) {
+    timeout.clear();
+    return new NextResponse(null, {
+      status: upstreamRes.status,
+      headers: outHeaders,
+    });
+  }
+
+  const body = pipeUpstreamBody(upstreamRes.body, {
+    clientSignal: req.signal,
+    timeout,
+  });
+
+  return new NextResponse(body, {
     status: upstreamRes.status,
     headers: outHeaders,
   });

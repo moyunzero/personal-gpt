@@ -124,6 +124,7 @@ describe("createAgentTraceCollector", () => {
     expect(base).toBeTruthy();
     const json = JSON.parse(readFileSync(`${base}.json`, "utf8"));
     expect(json.threadId).toBe("persist-1");
+    expect(json.meta?.persisted).toBe(true);
     expect(json.events.length).toBeGreaterThan(0);
     const md = readFileSync(`${base}.md`, "utf8");
     expect(md).toContain("Agent 执行轨迹");

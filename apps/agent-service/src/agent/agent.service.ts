@@ -14,13 +14,13 @@ import type { Citation } from "@personal-gpt/shared";
 import { z } from "zod";
 
 import {
-  buildAgentGraph,
   buildSupervisorGraph,
   getAgentRunConfig,
   lastUserText,
   resolveAgentRoute,
   shouldUseSequentialPipeline,
 } from "../graph/build-graph";
+import { buildShortReplyMessages } from "../graph/short-circuit";
 import { resolveKbMinSimilarity, resolveWorkspaceId } from "../rag/retrieve";
 import {
   buildForceContinueNudge,
@@ -41,6 +41,7 @@ import {
   clearKbSearchContextForThread,
   setKbSearchContextForThread,
 } from "../tools/kb-search-context";
+import { extractKbSearchQuery } from "../tools/extract-kb-query";
 import { invokeKbSearch } from "../tools/kb-search.tool";
 import {
   clearWebSearchCallCount,
@@ -160,8 +161,8 @@ export function attachResponseAbortSignal(res: Response): AbortSignal {
 
 /**
  * 合并流可能重复 enqueue 同一 text-delta 事件。
- * - 有 seq：按 id 单调序号去重，保留合法连续相同正文
- * - 无 seq：回退为连续相同 id+delta 去重（合并流伪影启发式）
+ * - 有 seq：按 id 单调序号去重；同 seq 丢弃，seq 前进则保留（含合法重复正文）
+ * - 无 seq：连续相同 id+delta 视为合并伪影丢弃；不相邻的相同正文仍保留
  */
 export function deduplicateTextDeltas(): TransformStream<any, any> {
   const lastSeqById = new Map<string, number>();
@@ -722,10 +723,23 @@ function dropHandoffNoiseText(): TransformStream<any, any> {
       if (!collecting && (t === "text-end" || t === "text-delta")) {
         return;
       }
+      // 段未闭合就遇到非 text：按 text-end 同款消毒后关闭，后续配对 text-end 会被忽略
       if (collecting) {
-        for (const c of buf) controller.enqueue(c);
-        buf = [];
         collecting = false;
+        if (!isHandoffNoiseText(text)) {
+          const cleaned = sanitizeUserFacingAgentText(text);
+          if (cleaned.trim()) {
+            const start = buf[0] as { type?: string; id?: string };
+            controller.enqueue(start);
+            controller.enqueue({
+              type: "text-delta",
+              id: start?.id,
+              delta: cleaned,
+            });
+            controller.enqueue({ type: "text-end", id: start?.id });
+          }
+        }
+        buf = [];
         text = "";
       }
       controller.enqueue(chunk);
@@ -733,12 +747,23 @@ function dropHandoffNoiseText(): TransformStream<any, any> {
   });
 }
 
+/** 持有段是否像 Editor 终稿（有标题或足够长）；否则视为专科中间叙述可丢弃 */
+function isReportLikeHeldText(chunks: any[]): boolean {
+  const text = chunks
+    .filter((c) => (c as { type?: string }).type === "text-delta")
+    .map((c) => (c as { delta?: string }).delta ?? "")
+    .join("");
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  return /^#{1,6}\s/m.test(trimmed) || trimmed.length >= 400;
+}
+
 /**
  * 需要 Editor 终稿时，隐藏专科中间叙述。
- * Sequential 无 transfer_to_editor：锁定期间只保留「最后一段」完整 text，解锁后再刷出，
- * 避免中间专科泄漏，也避免 Editor 整段在锁定时被丢弃。
+ * Sequential 无 transfer_to_editor：锁定期间只保留「最后一段」完整 text；
+ * 解锁时仅刷出报告样持有段，丢弃 Retriever 等中间 miss 叙述，避免与标题粘连。
  */
-function suppressIntermediateText(opts: {
+export function suppressIntermediateText(opts: {
   hideUntilEditor: boolean;
   /** 仅解锁 UI 正文，不得记入 ranSpecialists */
   textUnlocked: () => boolean;
@@ -746,10 +771,16 @@ function suppressIntermediateText(opts: {
 }): TransformStream<any, any> {
   let pending: any[] = [];
   let lastComplete: any[] | null = null;
+  let wasUnlocked = !opts.hideUntilEditor;
 
-  const flushHeld = (controller: TransformStreamDefaultController<any>) => {
+  const flushHeld = (
+    controller: TransformStreamDefaultController<any>,
+    optsFlush: { dropNonReport: boolean },
+  ) => {
     if (lastComplete) {
-      for (const c of lastComplete) controller.enqueue(c);
+      if (!optsFlush.dropNonReport || isReportLikeHeldText(lastComplete)) {
+        for (const c of lastComplete) controller.enqueue(c);
+      }
       lastComplete = null;
     }
     for (const c of pending) controller.enqueue(c);
@@ -770,12 +801,17 @@ function suppressIntermediateText(opts: {
         opts.unlockText?.();
       }
 
-      if (!opts.hideUntilEditor || opts.textUnlocked()) {
-        flushHeld(controller);
+      const unlocked = !opts.hideUntilEditor || opts.textUnlocked();
+      if (unlocked) {
+        const firstUnlock = !wasUnlocked;
+        wasUnlocked = true;
+        // 首次解锁：丢弃非报告持有段（Retriever miss 等）；已解锁后正常刷 pending
+        flushHeld(controller, { dropNonReport: firstUnlock });
         controller.enqueue(chunk);
         return;
       }
 
+      wasUnlocked = false;
       const t = obj?.type;
       if (t === "text-start") {
         pending = [chunk];
@@ -795,15 +831,11 @@ function suppressIntermediateText(opts: {
       if (t === "text-start" || t === "text-delta" || t === "text-end") {
         return;
       }
-      // 非 text：若此时已解锁（并行 updates），先刷持有段
-      if (opts.textUnlocked()) {
-        flushHeld(controller);
-      }
       controller.enqueue(chunk);
     },
     flush(controller) {
       // gate 未开时仍发出最后完整段，避免整段终稿被丢弃
-      flushHeld(controller);
+      flushHeld(controller, { dropNonReport: false });
     },
   });
 }
@@ -873,26 +905,18 @@ export class AgentService {
 
           try {
             if (route === "short") {
-              const graph = await buildAgentGraph();
-              const lgStream = await graph.stream(
-                { messages: lcMessages },
-                {
-                  streamMode: ["messages", "values"] as const,
-                  recursionLimit: runConfig.recursionLimit,
-                  signal: abortSignal,
-                  configurable: {
-                    ...runConfig.configurable,
-                    run_id: runId,
-                    workspaceId: parsed.workspaceId,
-                    userText,
-                  },
-                },
-              );
-              await writer.merge(
-                toUIMessageStream(lgStream)
-                  .pipeThrough(stripMergedStart())
-                  .pipeThrough(dropOrphanToolOutputs()),
-              );
+              // 直接写出短路正文：外层图 AIMessage 经 toUIMessageStream 不会产生 text-delta
+              const shortMsgs = buildShortReplyMessages(userText);
+              const shortText = shortMsgs
+                .map((m) => (typeof m.content === "string" ? m.content : ""))
+                .filter(Boolean)
+                .join("\n");
+              if (shortText) {
+                const messageId = `short-${parsed.threadId}`;
+                writer.write({ type: "text-start", id: messageId });
+                writer.write({ type: "text-delta", id: messageId, delta: shortText });
+                writer.write({ type: "text-end", id: messageId });
+              }
               trace.recordSpecialist("System", "闲聊短路 · 未进入 Supervisor 多 Agent");
               emitTrace();
             } else {
@@ -938,9 +962,11 @@ export class AgentService {
               if (shouldPrefetchKb) {
                 const KB_PREFETCH_TIMEOUT_MS = 8_000;
                 let timer: ReturnType<typeof setTimeout> | undefined;
+                let onAbort: (() => void) | undefined;
                 const kbPrefetch = await Promise.race([
                   invokeKbSearch({
-                    query: userText,
+                    // 长任务句先压缩检索词；invoke 内仍会用 userText / condensed 回退
+                    query: extractKbSearchQuery(userText),
                     userText,
                     workspaceId: parsed.workspaceId,
                   }),
@@ -948,9 +974,21 @@ export class AgentService {
                     timer = setTimeout(() => resolve(undefined), KB_PREFETCH_TIMEOUT_MS);
                     timer.unref?.();
                   }),
+                  new Promise<undefined>((resolve) => {
+                    if (abortSignal?.aborted) {
+                      resolve(undefined);
+                      return;
+                    }
+                    onAbort = () => resolve(undefined);
+                    abortSignal?.addEventListener("abort", onAbort, { once: true });
+                  }),
                 ]).finally(() => {
                   if (timer) clearTimeout(timer);
+                  if (onAbort) abortSignal?.removeEventListener("abort", onAbort);
                 });
+                if (abortSignal?.aborted) {
+                  return;
+                }
                 if (kbPrefetch) {
                   trace.recordTool({
                     name: "kb_search",
@@ -975,6 +1013,10 @@ export class AgentService {
                     ...lcMessages,
                   ];
                 }
+              }
+
+              if (abortSignal?.aborted) {
+                return;
               }
 
               const drainGraphStream = async (input: { messages: unknown }): Promise<void> => {
@@ -1066,7 +1108,11 @@ export class AgentService {
               // Supervisor 开放模式才需要 HumanMessage 强制续跑；Sequential 由边保证跑完清单
               if (!sequential) {
                 let forceRound = 0;
-                while (!tracker.sawError && forceRound < MAX_FORCE_CONTINUE_ROUNDS) {
+                while (
+                  !tracker.sawError &&
+                  !abortSignal?.aborted &&
+                  forceRound < MAX_FORCE_CONTINUE_ROUNDS
+                ) {
                   const next = nextRequiredSpecialist(required, tracker.ranSpecialists);
                   const editorNeedsBody =
                     required.includes("editor") &&
@@ -1171,12 +1217,14 @@ export class AgentService {
               }
             }
           } catch (err) {
+            const correlationId = randomUUID();
             const name = err instanceof Error ? err.name : "";
             const msg = err instanceof Error ? err.message : String(err);
             const isRecursion = name === "GraphRecursionError" || /recursion/i.test(msg);
+            console.error("[agent] execute failed", { correlationId, name, err: msg });
             const errorText = isRecursion
-              ? `任务步数达到上限，已停止继续调度 · 可重试或改回 Chat（${msg}）`
-              : `${msg || "Agent 执行失败"} · 可重试或改回 Chat`;
+              ? `任务步数达到上限，已停止继续调度 · 可重试或改回 Chat（requestId: ${correlationId}）`
+              : `Agent 执行失败 · 可重试或改回 Chat（requestId: ${correlationId}）`;
 
             const messageId = `err-${parsed.threadId}`;
             writer.write({ type: "text-start", id: messageId });
@@ -1214,8 +1262,10 @@ export class AgentService {
         }
       },
       onError: (error) => {
+        const correlationId = randomUUID();
         const msg = error instanceof Error ? error.message : String(error);
-        return `${msg} · 可重试或改回 Chat`;
+        console.error("[agent] stream onError", { correlationId, err: msg });
+        return `Agent 执行失败 · 可重试或改回 Chat（requestId: ${correlationId}）`;
       },
     });
 

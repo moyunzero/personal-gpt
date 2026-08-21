@@ -30,7 +30,7 @@ export function isAgentLangSmithActive(): boolean {
   return ensureAgentLangSmithEnv();
 }
 
-/** 可选包装：无 key 时直接跑 fn */
+/** 可选包装：无 key 时直接跑 fn；setup 失败才回退 fn，保证 fn 最多执行一次 */
 export async function traceAgentRun<T>(
   name: string,
   metadata: Record<string, string | undefined>,
@@ -40,6 +40,7 @@ export async function traceAgentRun<T>(
     return fn();
   }
 
+  let wrapped: (() => Promise<T>) | undefined;
   try {
     const { traceable } = await import("langsmith/traceable");
     const clean = Object.fromEntries(
@@ -47,12 +48,13 @@ export async function traceAgentRun<T>(
         (e): e is [string, string] => typeof e[1] === "string" && e[1].length > 0,
       ),
     );
-    const wrapped = traceable(fn, { name, metadata: clean });
-    return await wrapped();
+    wrapped = traceable(fn, { name, metadata: clean }) as () => Promise<T>;
   } catch {
-    // fail-open：追踪失败不阻断主路径
+    // fail-open：仅包装失败时回退；不把 fn 执行包进 catch，避免双重执行
     return fn();
   }
+
+  return wrapped();
 }
 
 /** 测试用：重置单例 */

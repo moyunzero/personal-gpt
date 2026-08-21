@@ -53,6 +53,8 @@ export default function Home() {
   const noMessages = messages.length === 0;
   const isLoading = status === "submitted" || status === "streaming";
   const showErrorCard = Boolean(error) && !isLoading;
+  const showAgentErrorCard = showErrorCard && mode === "agent";
+  const showChatError = showErrorCard && mode === "chat";
 
   useEffect(() => {
     if (streamRef.current && !noMessages) {
@@ -107,8 +109,7 @@ export default function Home() {
                   message={message}
                   agentMode={mode === "agent"}
                   streamFailed={
-                    showErrorCard &&
-                    mode === "agent" &&
+                    showAgentErrorCard &&
                     index === messages.length - 1 &&
                     message.role === "assistant"
                   }
@@ -118,7 +119,7 @@ export default function Home() {
                 />
               ))}
               {isLoading && <LoadingBubble />}
-              {showErrorCard ? (
+              {showAgentErrorCard ? (
                 <div className="message message-assistant">
                   <span className="assistant-avatar" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="currentColor">
@@ -132,6 +133,28 @@ export default function Home() {
                       onSwitchToChat={handleSwitchToChat}
                       retryDisabled={isLoading}
                     />
+                  </div>
+                </div>
+              ) : null}
+              {showChatError ? (
+                <div className="message message-assistant">
+                  <span className="assistant-avatar" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2 L13 11 L22 12 L13 13 L12 22 L11 13 L2 12 L11 11 Z" />
+                    </svg>
+                  </span>
+                  <div className="message-body">
+                    <p className="chat-error-text">
+                      {error instanceof Error ? error.message : String(error ?? "请求失败")}
+                    </p>
+                    <button
+                      type="button"
+                      className="chat-error-retry"
+                      disabled={isLoading}
+                      onClick={() => void handleRetry()}
+                    >
+                      重试
+                    </button>
                   </div>
                 </div>
               ) : null}

@@ -7,11 +7,21 @@ export type KbSearchContext = {
   workspaceId?: string;
 };
 
+/** 防漏清时无界增长；Map 保持插入序，超限淘汰最旧条目 */
+export const MAX_KB_SEARCH_THREAD_CONTEXTS = 256;
+
 const byThread = new Map<string, KbSearchContext>();
 
 export function setKbSearchContextForThread(threadId: string, ctx: KbSearchContext): void {
   if (!threadId?.trim()) return;
-  byThread.set(threadId.trim(), ctx);
+  const key = threadId.trim();
+  if (byThread.has(key)) {
+    byThread.delete(key);
+  } else if (byThread.size >= MAX_KB_SEARCH_THREAD_CONTEXTS) {
+    const oldest = byThread.keys().next().value;
+    if (oldest !== undefined) byThread.delete(oldest);
+  }
+  byThread.set(key, ctx);
 }
 
 export function clearKbSearchContextForThread(threadId: string): void {
@@ -22,4 +32,13 @@ export function clearKbSearchContextForThread(threadId: string): void {
 export function getKbSearchContextForThread(threadId?: string): KbSearchContext {
   if (!threadId?.trim()) return {};
   return byThread.get(threadId.trim()) ?? {};
+}
+
+/** 测试用 */
+export function clearAllKbSearchContextsForTests(): void {
+  byThread.clear();
+}
+
+export function kbSearchContextSizeForTests(): number {
+  return byThread.size;
 }

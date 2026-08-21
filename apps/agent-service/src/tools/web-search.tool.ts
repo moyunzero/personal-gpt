@@ -131,11 +131,9 @@ export async function invokeWebSearch(input: WebSearchInput): Promise<string> {
 
   const count = input.count ?? 8;
   const controller = new AbortController();
-  const timeoutMs = Number(process.env.BOCHA_TIMEOUT_MS ?? 12_000);
-  const timer = setTimeout(
-    () => controller.abort(),
-    Number.isFinite(timeoutMs) ? timeoutMs : 12_000,
-  );
+  const rawTimeout = Number(process.env.BOCHA_TIMEOUT_MS ?? 12_000);
+  const timeoutMs = Number.isFinite(rawTimeout) && rawTimeout > 0 ? rawTimeout : 12_000;
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   timer.unref?.();
   try {
     const response = await fetch(BOCHA_API_URL, {

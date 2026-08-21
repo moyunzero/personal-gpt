@@ -20,10 +20,13 @@ describe("bearerMatchesInternalToken", () => {
 
 describe("AgentController token gate", () => {
   const prev = process.env.AGENT_INTERNAL_TOKEN;
+  const prevNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
     if (prev === undefined) delete process.env.AGENT_INTERNAL_TOKEN;
     else process.env.AGENT_INTERNAL_TOKEN = prev;
+    if (prevNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = prevNodeEnv;
   });
 
   it("throws UnauthorizedException when token mismatches", async () => {
@@ -43,5 +46,16 @@ describe("AgentController token gate", () => {
     const res = {} as never;
     await controller.chat({ messages: [] }, "Bearer expected-secret", res);
     expect(streamChat).toHaveBeenCalledOnce();
+  });
+
+  it("fail-closed in production when AGENT_INTERNAL_TOKEN is missing", async () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.AGENT_INTERNAL_TOKEN;
+    const streamChat = vi.fn();
+    const controller = new AgentController({ streamChat } as never);
+    await expect(
+      controller.chat({ messages: [] }, "Bearer anything", {} as never),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(streamChat).not.toHaveBeenCalled();
   });
 });

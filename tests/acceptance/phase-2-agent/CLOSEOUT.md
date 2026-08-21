@@ -37,7 +37,7 @@
 | Skills         | `kb-retrieval` / `web-research` / `report-writer` + `ENABLED_SKILLS`                                     |
 | Checkpointer   | 默认 MemorySaver（进程单例）；可选 `AGENT_CHECKPOINTER=sqlite`                                           |
 | LangSmith      | `LANGSMITH_TRACING=true` + key → project `personal-gpt-agent`（fail-open）                               |
-| 检索诚实       | `AGENT_KB_MIN_SIMILARITY`；无命中不编造 DOC-*；citation fragment 统一                                    |
+| 检索诚实       | `AGENT_KB_MIN_SIMILARITY`（默认 0.60）+ 长任务句查询压缩；无命中不编造 DOC-*；citation fragment 统一 |
 | 强制续跑       | 仅开放 Supervisor 兜底；多步清单走 Sequential 边                                                         |
 | 执行轨迹       | SSE `data-agent-trace`；气泡时间线 + MD/JSON 下载；`AGENT_TRACE_PERSIST=true` 落盘 `.data/agent-traces/` |
 

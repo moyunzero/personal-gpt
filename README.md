@@ -387,16 +387,18 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 **演示**：[https://personal-emotion-gpt.vercel.app](https://personal-emotion-gpt.vercel.app) · [GitHub](https://github.com/moyunzero/personal-gpt)
 
-### v2.0 — LangGraph 多 Agent ✅ MVP 关账（非生产就绪）
+### v2.0 — LangGraph 多 Agent ⚠️ MVP 关账（非生产就绪）
 
 | 模块           | 状态                                                     |
 | -------------- | -------------------------------------------------------- |
-| Agent 多 Agent | ✅ LangGraph Supervisor + SSE + 步骤面板（v2.0 **MVP**） |
+| Agent 多 Agent | ⚠️ LangGraph Supervisor + SSE + 步骤面板（v2.0 **MVP**） |
 
 Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天仍走 `/api/chat`。  
 证据：人工截图 + `yarn acceptance:phase-2-smoke`（KB 命中 live citation）→ `tests/acceptance/phase-2-agent/`。
 
-**v2.x（2026-08-14）**：配额按 thread 隔离、模型默认值修复、checkpointer 单例、body Zod、可选内部令牌 + `/api/agent/chat` BFF。后续债务见 `docs/enterprise-roadmap.md`「v2.x → 后续版本」。
+**验收口径**：主链路可演示、可回归；报告头粘连 / 闲聊短路无正文 / 流式翻倍等 blocker 已在 v2.x 收口清除（见 `tests/acceptance/phase-2-agent/CR-FIX-ACCEPTANCE-2026-08-14.md`）。仍 **≠ 生产就绪**（无鉴权多租户、无 agent Docker）。
+
+**v2.x（2026-08-14 → 2026-08-21）**：配额按 thread 隔离、模型默认值修复、checkpointer 单例、body Zod、可选内部令牌 + `/api/agent/chat` BFF；流式去重与消毒；Agent KB 查询压缩 + 默认相似度门槛 0.60。后续债务见 `docs/enterprise-roadmap.md`「v2.x → 后续版本」与 **v3 混合检索**。
 
 **v2 收口**：不再扩办事型工具；详细对标与后续规划见 `docs/enterprise-roadmap.md`。
 

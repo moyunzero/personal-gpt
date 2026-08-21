@@ -432,7 +432,8 @@ main {
   line-height: 1.45;
   color: var(--color-body);
   white-space: pre-wrap;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 /* ============================================================
@@ -709,7 +710,8 @@ main {
   line-height: 1.55;
   color: var(--color-muted);
   white-space: pre-wrap;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 /* ============================================================
@@ -1212,7 +1214,8 @@ main {
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: anywhere;
   color: var(--color-body);
   max-height: 200px;
   overflow: auto;

@@ -29,34 +29,51 @@ export const SUPERVISOR_PROMPT = `你是多智能体调度员（Supervisor），
 
 根据用户目标选择一人或多人顺序协作；多步任务须跑完所需专科后再用中文综合（或交 editor 出终稿）。`;
 
+const KB_RE = /知识库|企业.?库|内部.?文档|kb\b|引用/i;
+const WEB_RE = /联网|搜索|web|网页|优缺点|外部.?资料|调研/i;
+const REPORT_RE = /报告|markdown|简报|编辑|定稿|整理成|写成/i;
+const ANALYST_RE = /数值对比|定量分析|用计算器|算一下|calculator/i;
+const REFUSES_WEB_RE =
+  /不要使用联网搜索|不要用网络搜索|禁止访问互联网|不要联网|无需联网|不用联网|禁止联网|别联网|不要进行网络搜索|请勿访问外网|仅使用知识库/i;
+
+/** 默认并列 tie-break：retriever → researcher → analyst → editor */
+const DEFAULT_ORDER: Record<SpecialistName, number> = {
+  retriever: 0,
+  researcher: 1,
+  analyst: 2,
+  editor: 3,
+};
+
 /**
  * 从用户原文推断本轮应跑完的专科序列（启发式，用于强制 checklist）。
- * 无多步线索时返回空数组（不强制）。
+ * 无多步线索时返回空数组（不强制）。顺序按意图关键词首次出现位置；并列用默认序。
  */
 export function inferRequiredSpecialists(userText: string): SpecialistName[] {
   const t = (userText ?? "").trim();
   if (!t) return [];
 
-  const wantsKb = /知识库|企业.?库|内部.?文档|kb\b|引用/.test(t);
-  // 统一拒词：用户明确拒绝外网检索时不选 researcher
-  const refusesWeb =
-    /不要使用联网搜索|不要用网络搜索|禁止访问互联网|不要联网|无需联网|不用联网|禁止联网|别联网/.test(
-      t,
-    );
-  const wantsWeb = /联网|搜索|web|网页|优缺点|外部.?资料|调研/.test(t) && !refusesWeb;
-  const wantsReport = /报告|markdown|简报|编辑|定稿|整理成|写成/.test(t);
+  const wantsKb = KB_RE.test(t);
+  const refusesWeb = REFUSES_WEB_RE.test(t);
+  const wantsWeb = WEB_RE.test(t) && !refusesWeb;
+  const wantsReport = REPORT_RE.test(t);
   // 「带对比表」交给 editor 排版，不强制 analyst；数值/计算器才走 analyst
-  const wantsAnalyst = /数值对比|定量分析|用计算器|算一下|calculator/.test(t);
+  const wantsAnalyst = ANALYST_RE.test(t);
 
-  const need: SpecialistName[] = [];
-  if (wantsKb) need.push("retriever");
-  if (wantsWeb) need.push("researcher");
-  if (wantsAnalyst) need.push("analyst");
-  if (wantsReport) need.push("editor");
+  const need: { name: SpecialistName; idx: number }[] = [];
+  if (wantsKb) need.push({ name: "retriever", idx: t.search(KB_RE) });
+  if (wantsWeb) need.push({ name: "researcher", idx: t.search(WEB_RE) });
+  if (wantsAnalyst) need.push({ name: "analyst", idx: t.search(ANALYST_RE) });
+  if (wantsReport) need.push({ name: "editor", idx: t.search(REPORT_RE) });
 
   // 多步强制：≥2 专科，或「库/网 + 报告」组合（即使启发式只命中两项语义）
   const comboReport = wantsReport && (wantsKb || wantsWeb);
-  return need.length >= 2 || comboReport ? need : [];
+  if (!(need.length >= 2 || comboReport)) return [];
+
+  need.sort((a, b) => {
+    if (a.idx !== b.idx) return a.idx - b.idx;
+    return DEFAULT_ORDER[a.name] - DEFAULT_ORDER[b.name];
+  });
+  return need.map((n) => n.name);
 }
 
 function formatRequiredChecklist(agents: SpecialistName[]): string {

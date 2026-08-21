@@ -16,24 +16,31 @@ import {
 
 export const DEFAULT_KB_TOP_K = 5;
 
-/** 与 web ROUTE_RETRIEVE_SIMILARITY 对齐；低于此值视为无有效命中 */
-export const DEFAULT_KB_MIN_SIMILARITY = 0.68;
+/**
+ * Agent 有效命中门槛（略高于 Chat Path A 的 0.55，降低幻觉面）。
+ * 长任务句请配合 extractKbSearchQuery；可用 AGENT_KB_MIN_SIMILARITY 覆盖。
+ */
+export const DEFAULT_KB_MIN_SIMILARITY = 0.6;
+
+function isValidSimilarity(n: number): boolean {
+  return Number.isFinite(n) && n >= 0 && n <= 1;
+}
 
 export function resolveKbMinSimilarity(override?: number): number {
-  if (typeof override === "number" && Number.isFinite(override) && override >= 0) {
+  if (typeof override === "number" && isValidSimilarity(override)) {
     return override;
   }
   const raw = process.env.AGENT_KB_MIN_SIMILARITY;
   if (!raw) return DEFAULT_KB_MIN_SIMILARITY;
   const n = Number.parseFloat(raw);
-  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_KB_MIN_SIMILARITY;
+  return isValidSimilarity(n) ? n : DEFAULT_KB_MIN_SIMILARITY;
 }
 
 export type RetrieveKbParams = {
   query: string;
   workspaceId?: string;
   topK?: number;
-  /** 最低相似度；缺省 AGENT_KB_MIN_SIMILARITY / 0.68 */
+  /** 最低相似度；缺省 AGENT_KB_MIN_SIMILARITY / 0.60 */
   minSimilarity?: number;
   /** 测试注入；缺省 createVectorStore() */
   store?: VectorStore;
@@ -86,7 +93,10 @@ export async function retrieveKb(params: RetrieveKbParams): Promise<KbRetrieveRe
     vector,
     limit: topK,
   });
-  const topSimilarity = raw[0]?.similarity;
+  const topSimilarity =
+    raw.length === 0
+      ? undefined
+      : raw.reduce((max, c) => (c.similarity > max ? c.similarity : max), raw[0]!.similarity);
   const chunks = raw.filter((c) => c.similarity >= minSimilarity);
 
   return { workspaceId, chunks, topSimilarity };

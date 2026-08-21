@@ -54,8 +54,21 @@ export function classifyAgentError(rawInput: unknown): ClassifiedAgentError {
     };
   }
 
+  if (/取消或超时|timed?\s*out|aborted|AbortError|upstream timeout/i.test(text)) {
+    return {
+      code: "TIMEOUT",
+      title: "请求超时或已取消",
+      advice:
+        "上游 Agent 在约 120 秒内未完成，或连接被取消。可缩短任务后重试；复杂报告可拆成两步。",
+      retryLabel: "重试本任务",
+      raw: text,
+    };
+  }
+
   if (
-    /failed to fetch|networkerror|econnrefused|enotfound|network|连不上|fetch failed/i.test(lower)
+    /failed to fetch|networkerror|econnrefused|enotfound|network|连不上|fetch failed|不可达/i.test(
+      lower,
+    )
   ) {
     return {
       code: "NETWORK",

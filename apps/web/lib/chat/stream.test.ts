@@ -5,7 +5,7 @@ import type { Citation } from "@personal-gpt/shared/types/kb";
 const streamTextMock = vi.fn();
 
 vi.mock("@personal-gpt/shared/ai/chat-provider", () => ({
-  chatModel: (modelName: string) => modelName,
+  chatModel: (modelName: string) => ({ id: modelName, __mock: true as const }),
   resolveChatModels: () => ["mock-model"],
 }));
 
@@ -157,7 +157,7 @@ describe("createChatStream citations", () => {
       }),
     );
     expect(streamTextMock).toHaveBeenCalled();
-    const arg = streamTextMock.mock.calls[0]?.[0] as { model: string };
-    expect(arg.model).toBe("mock-model");
+    const arg = streamTextMock.mock.calls[0]?.[0] as { model: { id: string; __mock: true } };
+    expect(arg.model).toEqual({ id: "mock-model", __mock: true });
   });
 });

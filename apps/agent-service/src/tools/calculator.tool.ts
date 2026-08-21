@@ -134,7 +134,11 @@ export function evaluateSafeArithmetic(expression: string): number {
   if (maxDepth > MAX_DEPTH) {
     throw new Error("括号嵌套过深");
   }
-  return parseExpression(tokenize(trimmed));
+  const value = parseExpression(tokenize(trimmed));
+  if (!Number.isFinite(value)) {
+    throw new Error("计算结果非有限数");
+  }
+  return value;
 }
 
 export async function invokeCalculator(input: { expression: string }): Promise<string> {

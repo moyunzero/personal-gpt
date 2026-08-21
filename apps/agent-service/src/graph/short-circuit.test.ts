@@ -29,6 +29,11 @@ describe("isAgentChitchat (D-03/D-17)", () => {
     );
     expect(isAgentChitchat("对比三家供应商的报价方案，输出结构化分析报告")).toBe(false);
   });
+
+  it("treats single-code-point emoji as short chitchat", () => {
+    expect(Array.from("👋").length).toBe(1);
+    expect(isAgentChitchat("👋")).toBe(true);
+  });
 });
 
 describe("buildShortReplyMessages", () => {
