@@ -1,11 +1,19 @@
 /**
- * buildAgentGraph 单测：compile、闲聊短路、recursionLimit（无 live LLM）。
+ * buildAgentGraph 单测：compile、闲聊短路、recursionLimit、checkpointer（无 live LLM）。
  */
 import { HumanMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
-import { afterEach, describe, expect, it } from "vitest";
+import { MemorySaver } from "@langchain/langgraph";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildAgentGraph, getAgentRunConfig, resolveAgentRoute } from "./build-graph";
+import {
+  buildAgentGraph,
+  ensureCheckpointerSetup,
+  getAgentRunConfig,
+  resetCheckpointerSingletonsForTests,
+  resolveAgentRoute,
+  resolveCheckpointer,
+} from "./build-graph";
 
 function mockChatModel() {
   return new ChatOpenAI({
@@ -50,9 +58,68 @@ describe("getAgentRunConfig", () => {
   });
 });
 
+describe("resolveCheckpointer", () => {
+  const prevMode = process.env.AGENT_CHECKPOINTER;
+  const prevUrl = process.env.DATABASE_URL;
+
+  afterEach(() => {
+    resetCheckpointerSingletonsForTests();
+    if (prevMode === undefined) delete process.env.AGENT_CHECKPOINTER;
+    else process.env.AGENT_CHECKPOINTER = prevMode;
+    if (prevUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = prevUrl;
+  });
+
+  it("defaults to memory when DATABASE_URL missing (D-21 degrade)", async () => {
+    delete process.env.AGENT_CHECKPOINTER;
+    delete process.env.DATABASE_URL;
+    const saver = await resolveCheckpointer();
+    expect(saver).toBeInstanceOf(MemorySaver);
+  });
+
+  it("uses MemorySaver when AGENT_CHECKPOINTER=memory", async () => {
+    process.env.AGENT_CHECKPOINTER = "memory";
+    const saver = await resolveCheckpointer();
+    expect(saver).toBeInstanceOf(MemorySaver);
+  });
+
+  it("honors options.checkpointer override", async () => {
+    const injected = new MemorySaver();
+    const saver = await resolveCheckpointer(injected);
+    expect(saver).toBe(injected);
+  });
+
+  it("ensureCheckpointerSetup is no-op without DATABASE_URL", async () => {
+    delete process.env.AGENT_CHECKPOINTER;
+    delete process.env.DATABASE_URL;
+    await expect(ensureCheckpointerSetup()).resolves.toBeUndefined();
+  });
+
+  it("ensureCheckpointerSetup calls setup() once when postgres saver is ready", async () => {
+    const { plantPostgresSaverForTests } = await import("./build-graph");
+    process.env.AGENT_CHECKPOINTER = "postgres";
+    process.env.DATABASE_URL = "postgresql://u:p@127.0.0.1:5432/testdb";
+    resetCheckpointerSingletonsForTests();
+
+    const setup = vi.fn(async () => undefined);
+    plantPostgresSaverForTests({ setup } as never);
+
+    await ensureCheckpointerSetup();
+    await ensureCheckpointerSetup();
+    expect(setup).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("buildAgentGraph", () => {
-  it("compiles with a mock ChatModel (createSupervisor + MemorySaver)", async () => {
-    const graph = await buildAgentGraph({ model: mockChatModel() });
+  afterEach(() => {
+    resetCheckpointerSingletonsForTests();
+  });
+
+  it("compiles with a mock ChatModel (createSupervisor + checkpointer)", async () => {
+    const graph = await buildAgentGraph({
+      model: mockChatModel(),
+      checkpointer: new MemorySaver(),
+    });
     expect(graph).toBeTruthy();
     expect(typeof graph.invoke).toBe("function");
     expect(typeof graph.stream).toBe("function");
@@ -68,6 +135,7 @@ describe("buildAgentGraph", () => {
     process.env.AGENT_CHECKPOINTER = "sqlite";
     process.env.AGENT_CHECKPOINTER_SQLITE_PATH = join(dir, "t.sqlite");
     try {
+      resetCheckpointerSingletonsForTests();
       const graph = await buildAgentGraph({ model: mockChatModel() });
       expect(graph).toBeTruthy();
       expect(typeof graph.stream).toBe("function");
@@ -76,11 +144,15 @@ describe("buildAgentGraph", () => {
       else process.env.AGENT_CHECKPOINTER = prevMode;
       if (prevPath === undefined) delete process.env.AGENT_CHECKPOINTER_SQLITE_PATH;
       else process.env.AGENT_CHECKPOINTER_SQLITE_PATH = prevPath;
+      resetCheckpointerSingletonsForTests();
     }
   });
 
   it("short-circuits chitchat without entering supervisor workers", async () => {
-    const graph = await buildAgentGraph({ model: mockChatModel() });
+    const graph = await buildAgentGraph({
+      model: mockChatModel(),
+      checkpointer: new MemorySaver(),
+    });
     const run = getAgentRunConfig("chitchat-thread");
     const result = await graph.invoke({ messages: [new HumanMessage("你好")] }, run);
     const texts = (result.messages ?? []).map((m) =>

@@ -10,7 +10,7 @@
 import type { BaseMessage } from "@langchain/core/messages";
 import type { LanguageModelLike } from "@langchain/core/language_models/base";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
-import { END, MemorySaver, MessagesAnnotation, START, StateGraph } from "@langchain/langgraph";
+import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { createSupervisor } from "@langchain/langgraph-supervisor";
 
 import { createAnalystAgent } from "../agents/analyst.agent";
@@ -52,10 +52,21 @@ export type AgentRunConfig = {
 
 const DEFAULT_RECURSION_LIMIT = 40;
 
-/** 进程级 MemorySaver，保证同进程 thread_id 跨请求可续聊 */
+/** 进程级 MemorySaver（AGENT_CHECKPOINTER=memory 或无 DATABASE_URL 降级） */
 let memorySaverSingleton: MemorySaver | null = null;
 /** 进程级 SqliteSaver（若启用） */
 let sqliteSaverSingleton: BaseCheckpointSaver | null = null;
+/** 进程级 PostgresSaver（D-20/D-21 默认） */
+let postgresSaverSingleton: BaseCheckpointSaver | null = null;
+/** PostgresSaver.setup() 是否已在 bootstrap 完成（Pitfall 5） */
+let postgresSetupDone = false;
+let postgresSetupPromise: Promise<void> | null = null;
+
+type PostgresSaverInstance = BaseCheckpointSaver & { setup: () => Promise<void> };
+
+function checkpointerMode(): string {
+  return (process.env.AGENT_CHECKPOINTER ?? "postgres").toLowerCase();
+}
 
 /** 从 messages 取最近一条用户文本（用于路由） */
 export function lastUserText(messages: BaseMessage[] | undefined): string {
@@ -96,11 +107,39 @@ export function getAgentRunConfig(threadId: string): AgentRunConfig {
   };
 }
 
-async function resolveCheckpointer(override?: BaseCheckpointSaver): Promise<BaseCheckpointSaver> {
+function getMemorySaver(): MemorySaver {
+  if (!memorySaverSingleton) {
+    memorySaverSingleton = new MemorySaver();
+  }
+  return memorySaverSingleton;
+}
+
+async function createPostgresSaver(): Promise<PostgresSaverInstance> {
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) {
+    throw new Error("DATABASE_URL required when AGENT_CHECKPOINTER=postgres");
+  }
+  const { PostgresSaver } = await import("@langchain/langgraph-checkpoint-postgres");
+  const saver = PostgresSaver.fromConnString(url, {
+    schema: process.env.AGENT_CHECKPOINT_SCHEMA?.trim() || "public",
+  });
+  return saver as unknown as PostgresSaverInstance;
+}
+
+/**
+ * 解析 checkpointer：默认 postgres（D-21）；memory|sqlite 显式可选。
+ * 无 DATABASE_URL 且未显式设 postgres 时降级 MemorySaver（测试/本地无 PG）。
+ */
+export async function resolveCheckpointer(
+  override?: BaseCheckpointSaver,
+): Promise<BaseCheckpointSaver> {
   if (override) {
     return override;
   }
-  const mode = (process.env.AGENT_CHECKPOINTER ?? "memory").toLowerCase();
+  const mode = checkpointerMode();
+  if (mode === "memory") {
+    return getMemorySaver();
+  }
   if (mode === "sqlite") {
     if (sqliteSaverSingleton) {
       return sqliteSaverSingleton;
@@ -116,10 +155,70 @@ async function resolveCheckpointer(override?: BaseCheckpointSaver): Promise<Base
     sqliteSaverSingleton = SqliteSaver.fromConnString(dbPath) as unknown as BaseCheckpointSaver;
     return sqliteSaverSingleton;
   }
-  if (!memorySaverSingleton) {
-    memorySaverSingleton = new MemorySaver();
+  // postgres（默认）或未知值按 postgres 处理
+  if (postgresSaverSingleton) {
+    return postgresSaverSingleton;
   }
-  return memorySaverSingleton;
+  const url = process.env.DATABASE_URL?.trim();
+  const explicitPostgres = (process.env.AGENT_CHECKPOINTER ?? "").toLowerCase() === "postgres";
+  if (!url) {
+    if (explicitPostgres) {
+      throw new Error("DATABASE_URL required when AGENT_CHECKPOINTER=postgres");
+    }
+    // D-21：默认 postgres 但无 PG → 降级 memory（单测 / 无库环境）
+    return getMemorySaver();
+  }
+  postgresSaverSingleton = await createPostgresSaver();
+  return postgresSaverSingleton;
+}
+
+/**
+ * Nest bootstrap 调用一次：PostgresSaver.setup()（Pitfall 5）。
+ * memory/sqlite 或无 DATABASE_URL 时 no-op。
+ */
+export async function ensureCheckpointerSetup(): Promise<void> {
+  const mode = checkpointerMode();
+  if (mode === "memory" || mode === "sqlite") {
+    return;
+  }
+  if (!process.env.DATABASE_URL?.trim()) {
+    return;
+  }
+  if (postgresSetupDone) {
+    return;
+  }
+  if (postgresSetupPromise) {
+    await postgresSetupPromise;
+    return;
+  }
+  postgresSetupPromise = (async () => {
+    const saver = (await resolveCheckpointer()) as PostgresSaverInstance;
+    if (typeof saver.setup === "function") {
+      await saver.setup();
+    }
+    postgresSetupDone = true;
+  })();
+  try {
+    await postgresSetupPromise;
+  } finally {
+    postgresSetupPromise = null;
+  }
+}
+
+/** 测试用：重置进程级 checkpointer 单例 */
+export function resetCheckpointerSingletonsForTests(): void {
+  memorySaverSingleton = null;
+  sqliteSaverSingleton = null;
+  postgresSaverSingleton = null;
+  postgresSetupDone = false;
+  postgresSetupPromise = null;
+}
+
+/** 测试用：注入假 PostgresSaver（含 setup）以断言 bootstrap 契约 */
+export function plantPostgresSaverForTests(saver: BaseCheckpointSaver & { setup: () => Promise<void> }): void {
+  postgresSaverSingleton = saver;
+  postgresSetupDone = false;
+  postgresSetupPromise = null;
 }
 
 function routerNode(state: AgentStateType) {
@@ -188,8 +287,8 @@ export function createSequentialPipelineWorkflow(
   }
   const ordered = ensureTerminalEditor(pipeline);
   const agents = createSpecialistAgents(model);
-  // 动态节点名：用宽松 builder，避免 StateGraph 字面量联合类型卡住
-  let g: any = new StateGraph(MessagesAnnotation);
+  // 动态节点名：用宽松 builder；AgentState 含 todos/citations（D-22）
+  let g: any = new StateGraph(AgentState);
   for (const name of ordered) {
     g = g.addNode(name, agents[name].graph);
   }
@@ -223,11 +322,13 @@ function createSupervisorWorkflow(
     ],
     llm: model,
     prompt,
+    // D-22：与外层一致，checkpoint 含 messages + todos + citations
+    stateSchema: AgentState,
   });
 }
 
 /**
- * 编译外层短路图 + 内层 Supervisor。默认进程单例 MemorySaver。
+ * 编译外层短路图 + 内层 Supervisor。默认 PostgresSaver（D-21）；可注入 override。
  */
 export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
   const model = options.model ?? createChatModel();

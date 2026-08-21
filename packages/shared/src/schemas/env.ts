@@ -123,9 +123,12 @@ export const SharedEnvSchema = z
     AGENT_RECURSION_LIMIT: z.coerce.number().int().min(1).max(200).default(40),
 
     /**
-     * Checkpointer 后端（D-08）。Phase 2 默认 memory；sqlite 需另装 checkpoint 包。
+     * Checkpointer 后端（D-20/D-21）。默认 postgres；memory|sqlite 仅测试或无 PG。
      */
-    AGENT_CHECKPOINTER: z.enum(["memory", "sqlite"]).default("memory"),
+    AGENT_CHECKPOINTER: z.enum(["memory", "sqlite", "postgres"]).default("postgres"),
+
+    /** PostgresSaver schema（可选；默认 public） */
+    AGENT_CHECKPOINT_SCHEMA: z.string().min(1).optional(),
 
     /**
      * 启用的 Skills 列表（D-12/D-13）。逗号分隔，默认三件套。

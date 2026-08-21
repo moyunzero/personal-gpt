@@ -922,6 +922,13 @@
     p-queue "^6.6.2"
     zod "^3.25.76 || ^4"
 
+"@langchain/langgraph-checkpoint-postgres@1.0.5":
+  version "1.0.5"
+  resolved "https://registry.npmmirror.com/@langchain/langgraph-checkpoint-postgres/-/langgraph-checkpoint-postgres-1.0.5.tgz#1889a6fd0b2b3044ace2fee131d039ab35be1305"
+  integrity sha512-kCpp9pOidYDexhOvpWN4Z6G4npr4+OH8Qe/2oo38NLbRa+AzMcuZDiEI8y9bh4v5fcMy/dhlJClCSQzl86ddUw==
+  dependencies:
+    pg "^8.12.0"
+
 "@langchain/langgraph-checkpoint-sqlite@1.0.3":
   version "1.0.3"
   resolved "https://registry.npmmirror.com/@langchain/langgraph-checkpoint-sqlite/-/langgraph-checkpoint-sqlite-1.0.3.tgz#2ba6e36a57451d7dc8fe9baba50142dbd5650ae8"
@@ -6470,6 +6477,11 @@ pg-protocol@^1.15.0:
   resolved "https://registry.npmmirror.com/pg-protocol/-/pg-protocol-1.15.0.tgz#758f6c0679cc0bbf4938603b7597703f333180c0"
   integrity sha512-cq9sECI5s0+uPUXjbz8ioyPJni6RzsRib0US67i5IoTZKw8fNeYlVE7u8F4dG7vEJJtc5wdD1K189lCCUwqWTQ==
 
+pg-protocol@^1.16.0:
+  version "1.16.0"
+  resolved "https://registry.npmmirror.com/pg-protocol/-/pg-protocol-1.16.0.tgz#cffb008826561ee9770a8a15dc21f269d731b305"
+  integrity sha512-sILXutLVjCLjcDuOmvhX5e2Z4cS5qG/6Bu3VkpFwdf/633ElGLpEh9bgmuI5I4sqKqkifQiGyiCcx1HdtrK7tg==
+
 pg-types@2.2.0:
   version "2.2.0"
   resolved "https://registry.npmmirror.com/pg-types/-/pg-types-2.2.0.tgz#2d0250d636454f7cfa3b6ae0382fdfa8063254a3"
@@ -6489,6 +6501,19 @@ pg@8.22.0:
     pg-connection-string "^2.14.0"
     pg-pool "^3.14.0"
     pg-protocol "^1.15.0"
+    pg-types "2.2.0"
+    pgpass "1.0.5"
+  optionalDependencies:
+    pg-cloudflare "^1.4.0"
+
+pg@^8.12.0:
+  version "8.23.0"
+  resolved "https://registry.npmmirror.com/pg/-/pg-8.23.0.tgz#5c2026d32bd0cb4fbd9196bac1ecf5ae66607180"
+  integrity sha512-Ip2EQCngowJLGOfCwkFhPXU7/ljlhn6Rxlmy4XYfL2Y+vyRM59+8uR2xqRWKdYmbXmxCFOAmKxBuSUCdF34qLg==
+  dependencies:
+    pg-connection-string "^2.14.0"
+    pg-pool "^3.14.0"
+    pg-protocol "^1.16.0"
     pg-types "2.2.0"
     pgpass "1.0.5"
   optionalDependencies:

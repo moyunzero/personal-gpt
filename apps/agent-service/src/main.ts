@@ -6,6 +6,7 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module";
+import { ensureCheckpointerSetup } from "./graph/build-graph";
 import { ensureAgentLangSmithEnv } from "./observability/langsmith";
 import { applyOutboundProxyFromEnv, logOutboundProxyStatus } from "./observability/outbound-proxy";
 import { parseCorsOrigins } from "./observability/cors-origins";
@@ -45,6 +46,9 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule);
+
+  // D-20/D-21：PostgresSaver.setup() 一次（Pitfall 5），禁止 per-request
+  await ensureCheckpointerSetup();
 
   const origins = parseCorsOrigins(process.env.CORS_ORIGIN);
 
