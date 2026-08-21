@@ -113,7 +113,7 @@ Each task was committed atomically:
 3. **Task 2: Mem0 long-term client** - `8849898` (feat)
 4. **Task 3: Chat/Agent inject + regression** - `3f9cf95` (feat)
 
-**Plan metadata:** (see docs commit below)
+**Plan metadata:** `661b054` (docs: complete plan)
 
 ## Files Created/Modified
 
