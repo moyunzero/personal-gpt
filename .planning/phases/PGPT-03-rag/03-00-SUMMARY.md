@@ -92,7 +92,7 @@ status: complete
 
 1. **Task 1: Dual-write enterprise-roadmap / ROADMAP / REQUIREMENTS (D-04, D-06)** - `6140b29` (docs)
 
-**Plan metadata:** (included in docs(03-00) complete commit)
+**Plan metadata:** `8c7f76a` (docs: complete plan)
 
 ## Files Created/Modified
 
@@ -130,6 +130,7 @@ None - documentation-only plan.
 - FOUND: `.planning/ROADMAP.md` (D-06, GOLDEN-01 Requirements line)
 - FOUND: `.planning/REQUIREMENTS.md` (GOLDEN-01, CP-01, CORPUS-01; EVAL-01 = RAGAS)
 - FOUND: commit `6140b29`
+- FOUND: commit `8c7f76a`
 
 ---
 *Phase: 03-rag*
