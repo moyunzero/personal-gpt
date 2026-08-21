@@ -130,7 +130,7 @@
 | MEM-02 | Phase 3 | Complete |
 | STORE-01 | Phase 3 | Complete |
 | RAG-05 | Phase 3 | Complete |
-| RAG-06 | Phase 3 | Pending (hybrid green 03-03b; Graph → 03-07) |
+| RAG-06 | Phase 3 | Complete (hybrid + Graph RAG via 03-03b/03-07) |
 | GOLDEN-01 | Phase 3 | Complete |
 | CP-01 | Phase 3 | Complete |
 | CORPUS-01 | Phase 3 | Complete |
