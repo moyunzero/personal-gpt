@@ -5,16 +5,16 @@ milestone_name: 企业级知识库平台
 current_phase: 03
 current_phase_name: rag-memory-eval
 status: executing
-stopped_at: Completed 03-00b-PLAN.md (Nyquist stubs)
-last_updated: "2026-08-21T14:52:29.007Z"
+stopped_at: Completed 03-01-PLAN.md (ES + hybrid RRF)
+last_updated: "2026-08-21T15:00:00Z"
 last_activity: 2026-08-21
-last_activity_desc: Completed 03-00b Nyquist stubs; next 03-01
+last_activity_desc: Completed 03-01 Wave1a ES + hybrid RRF; next 03-02
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 23
-  completed_plans: 14
-  percent: 61
+  completed_plans: 15
+  percent: 65
 ---
 
 # Project State
@@ -24,22 +24,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** 用户能上传企业文档、基于自有知识库获得可溯源的准确回答  
-**Current focus:** Phase 3 — executing; next `03-01` hybrid/RRF
+**Current focus:** Phase 3 — executing; next `03-02` ingest dual-write
 
 ## Current Position
 
 Phase: PGPT-03 (rag-memory-eval) — **EXECUTING**  
-Plans: 2/10（03-00 + 03-00b complete；next 03-01）  
+Plans: 3/10（03-00 + 03-00b + 03-01 complete；next 03-02）  
 Status: Executing Phase 3  
-Last activity: 2026-08-21 — Completed 03-00b Wave 0b Nyquist stubs
+Last activity: 2026-08-21 — Completed 03-01 Wave1a ES Compose + shared hybrid/RRF/BM25
 
-Progress: Phase 1–2 plans 12/12 complete; Phase 3 2/10 (03-00, 03-00b)
+Progress: Phase 1–2 plans 12/12 complete; Phase 3 3/10 (03-00, 03-00b, 03-01)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 14（Phase 1: 7 · Phase 2: 5 · Phase 3: 2）
+- Total plans completed: 15（Phase 1: 7 · Phase 2: 5 · Phase 3: 3）
 - Phase 2 closeout evidence: `tests/acceptance/phase-2-agent/CLOSEOUT.md`
 
 **By Phase:**
@@ -48,11 +48,17 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 2/10 (03-00, 03-00b)
 | --- | --- | --- |
 | 1 (PGPT-01-rag) | 7/7 | Complete 2026-07-02 |
 | 2 (PGPT-02-langgraph-agent) | 5/5 | MVP Complete 2026-08-14 |
-| 3 | 2/10 | In progress |
+| 3 | 3/10 | In progress |
 | 4 | 0/3 | Not started |
 | 5 | 0/1 | Not started |
-| Phase 03 P00 | 2min | 1 tasks | 3 files |
-| Phase 03 P00b | 8min | 2 tasks | 12 files |
+
+**Plan durations (Phase 3):**
+
+| Plan | Duration | Tasks | Files |
+| --- | --- | --- | --- |
+| 03-00 | 2min | 1 | 3 |
+| 03-00b | 8min | 2 | 12 |
+| 03-01 | 4min | 3 | 14 |
 
 ## Accumulated Context
 
@@ -74,10 +80,13 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 2/10 (03-00, 03-00b)
 - [Phase 03]: Phase 3 cites GOLDEN-01 (not Phase-3 EVAL-01); EVAL-01 remains Phase 5 RAGAS
 - [Phase 03]: Wave 0b: rag-options.test ENABLE_RERANKER flip deferred to Wave 1 / plan 03-03
 - [Phase 03]: migrate-corpus-split refuses --execute until plan 03-02 (T-03-00-01)
+- [Phase 03]: ES BM25 + Astra vector + app-layer RRF; Compose ES only in Wave1 (D-08/D-14)
+- [Phase 03]: hybridSearch default corpus=user; ES query fail-open vector-only (D-13); Corrective deferred to 03-03
+- [Phase 03]: STORE-01/RAG-06 not marked complete yet — 03-01 is ES+hybrid skeleton only
 
 ### Pending Todos
 
-- Continue `/gsd-execute-phase 3` — next `03-01` hybrid/RRF
+- Continue `/gsd-execute-phase 3` — next `03-02` ingest dual-write
 - 执行中遵守书面降级协议 D-06（7 自然日 + 用户确认）
 
 ### Blockers/Concerns
@@ -87,11 +96,11 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 2/10 (03-00, 03-00b)
 
 ## Session Continuity
 
-**Last session:** 2026-08-21T14:52:28.997Z
+**Last session:** 2026-08-21T14:59:41.057Z
 **Resume file:** None
 
-**Stopped at:** Completed 03-00b-PLAN.md (Nyquist stubs)
+**Stopped at:** Completed 03-01-PLAN.md (ES + hybrid RRF)
 
-**Resume next:** execute `03-01-PLAN.md`
+**Resume next:** execute `03-02-PLAN.md`
 
-Last session note: 2026-08-21 completed 03-00b Nyquist stubs (regression skeletons + migrate dry-run)
+Last session note: 2026-08-21 completed 03-01 Wave1a (Compose ES + shared RRF/hybrid/BM25/corpus)
