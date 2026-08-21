@@ -4,6 +4,7 @@ import { createAstraVectorStore } from "../stores/vector-store.astra";
 import type { Corpus } from "./corpus";
 import { resolveCorpusTargets } from "./corpus";
 import { esBm25Search } from "./es-bm25";
+import { maybeCorrective } from "./corrective";
 import { reciprocalRankFusion } from "./rrf";
 import { rerankDedicated } from "./rerank";
 
@@ -20,6 +21,9 @@ export type HybridSearchDeps = {
   getStore?: (corpus: Corpus) => VectorStore;
   esSearch?: typeof esBm25Search;
   rerank?: typeof rerankDedicated;
+  rewriteQuery?: (query: string) => Promise<string>;
+  /** Internal: second pass after Corrective — skip another rewrite (D-33). */
+  skipCorrective?: boolean;
   logWarn?: (message: string, meta?: Record<string, unknown>) => void;
 };
 
@@ -36,18 +40,10 @@ function isRerankerEnabled(): boolean {
   return process.env.ENABLE_RERANKER !== "false";
 }
 
-/**
- * Shared hybrid entry (D-12): embed → parallel vector ∥ BM25 → RRF → optional rerank.
- * ES errors fail-open to vector-only (D-13). Corrective is plan 03-03 — not here.
- */
-export async function hybridSearch(
+async function hybridSearchOnce(
   params: HybridSearchParams,
-  deps: HybridSearchDeps = {},
+  deps: HybridSearchDeps,
 ): Promise<RetrievedChunk[]> {
-  if (!params.workspaceId?.trim()) {
-    throw new Error("hybridSearch requires workspaceId");
-  }
-
   const corpus = params.corpus ?? "user";
   const limit = params.limit ?? DEFAULT_LIMIT;
   const embed = deps.embed ?? embedText;
@@ -87,4 +83,29 @@ export async function hybridSearch(
   }
 
   return fused.slice(0, limit);
+}
+
+/**
+ * Shared hybrid entry (D-12): embed → parallel vector ∥ BM25 → RRF → optional rerank → Corrective.
+ * ES errors fail-open to vector-only (D-13). Corrective max 1 rewrite (D-32–D-34).
+ */
+export async function hybridSearch(
+  params: HybridSearchParams,
+  deps: HybridSearchDeps = {},
+): Promise<RetrievedChunk[]> {
+  if (!params.workspaceId?.trim()) {
+    throw new Error("hybridSearch requires workspaceId");
+  }
+
+  const fused = await hybridSearchOnce(params, deps);
+
+  if (deps.skipCorrective) {
+    return fused;
+  }
+
+  return maybeCorrective(params, fused, {
+    rewrite: deps.rewriteQuery,
+    reSearch: (query) =>
+      hybridSearch({ ...params, query }, { ...deps, skipCorrective: true }),
+  });
 }

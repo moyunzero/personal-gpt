@@ -19,5 +19,11 @@ export {
   type HybridSearchParams,
   type HybridSearchDeps,
 } from "./rag/hybrid-search";
+export {
+  maybeCorrective,
+  needsCorrectiveRewrite,
+  correctiveMinScore,
+  type MaybeCorrectiveDeps,
+} from "./rag/corrective";
 export { esBm25Search, ensureEsIndexes, indexChunks, deleteByDocumentId } from "./rag/es-bm25";
 export { rerankDedicated } from "./rag/rerank";

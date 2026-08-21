@@ -27,6 +27,7 @@ function mockStore(hits: RetrievedChunk[]): VectorStore {
 describe("hybridSearch", () => {
   it("fail-opens to vector-only when ES throws (D-13)", async () => {
     process.env.ENABLE_RERANKER = "false";
+    process.env.CORRECTIVE_MIN_SCORE = "0";
 
     const logWarn = vi.fn();
     const result = await hybridSearch(
@@ -42,6 +43,7 @@ describe("hybridSearch", () => {
         esSearch: async () => {
           throw new Error("ES connection refused");
         },
+        rewriteQuery: async (q) => q,
         logWarn,
       },
     );
@@ -67,5 +69,64 @@ describe("hybridSearch", () => {
         },
       ),
     ).rejects.toThrow(/workspaceId/);
+  });
+
+  it("invokes Corrective rewrite once when top1 is below threshold (D-33)", async () => {
+    process.env.ENABLE_RERANKER = "false";
+    process.env.CORRECTIVE_MIN_SCORE = "0.35";
+
+    const rewriteQuery = vi.fn(async () => "rewritten query");
+    const embed = vi.fn(async (q: string) => (q.includes("rewritten") ? [0.9] : [0.1]));
+    const store = mockStore([
+      {
+        text: "weak hit",
+        similarity: 0.1,
+        documentId: "doc-weak",
+        chunkIndex: 0,
+        title: "weak",
+      },
+    ]);
+    // Second search (after rewrite) returns stronger hit via same store — RRF score still low,
+    // but skipCorrective prevents another rewrite.
+    const search = store.search as ReturnType<typeof vi.fn>;
+    search
+      .mockResolvedValueOnce([
+        {
+          text: "weak hit",
+          similarity: 0.1,
+          documentId: "doc-weak",
+          chunkIndex: 0,
+          title: "weak",
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          text: "strong hit",
+          similarity: 0.95,
+          documentId: "doc-strong",
+          chunkIndex: 0,
+          title: "strong",
+        },
+      ]);
+
+    const result = await hybridSearch(
+      {
+        query: "vague",
+        workspaceId: "ws-1",
+        corpus: "user",
+        limit: 5,
+      },
+      {
+        embed,
+        getStore: () => store,
+        esSearch: async () => [],
+        rewriteQuery,
+      },
+    );
+
+    expect(rewriteQuery).toHaveBeenCalledTimes(1);
+    expect(rewriteQuery).toHaveBeenCalledWith("vague");
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(result[0]?.documentId).toBe("doc-strong");
   });
 });
