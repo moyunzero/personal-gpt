@@ -5,16 +5,16 @@ milestone_name: 企业级知识库平台
 current_phase: 03
 current_phase_name: rag-memory-eval
 status: executing
-stopped_at: Completed 03-00-PLAN.md (Wave 0a dual-write)
-last_updated: "2026-08-21T14:40:37.117Z"
+stopped_at: Completed 03-00b-PLAN.md (Nyquist stubs)
+last_updated: "2026-08-21T14:52:29.007Z"
 last_activity: 2026-08-21
-last_activity_desc: Completed 03-00 dual-write D-04/D-06; next 03-00b
+last_activity_desc: Completed 03-00b Nyquist stubs; next 03-01
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 23
-  completed_plans: 13
-  percent: 57
+  completed_plans: 14
+  percent: 61
 ---
 
 # Project State
@@ -24,22 +24,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** 用户能上传企业文档、基于自有知识库获得可溯源的准确回答  
-**Current focus:** Phase 3 — executing; next `03-00b` Nyquist stubs
+**Current focus:** Phase 3 — executing; next `03-01` hybrid/RRF
 
 ## Current Position
 
 Phase: PGPT-03 (rag-memory-eval) — **EXECUTING**  
-Plans: 1/10（03-00 complete；next 03-00b）  
+Plans: 2/10（03-00 + 03-00b complete；next 03-01）  
 Status: Executing Phase 3  
-Last activity: 2026-08-21 — Completed 03-00 Wave 0a dual-write (D-04/D-06)
+Last activity: 2026-08-21 — Completed 03-00b Wave 0b Nyquist stubs
 
-Progress: Phase 1–2 plans 12/12 complete; Phase 3 1/10 (03-00)
+Progress: Phase 1–2 plans 12/12 complete; Phase 3 2/10 (03-00, 03-00b)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 13（Phase 1: 7 · Phase 2: 5 · Phase 3: 1）
+- Total plans completed: 14（Phase 1: 7 · Phase 2: 5 · Phase 3: 2）
 - Phase 2 closeout evidence: `tests/acceptance/phase-2-agent/CLOSEOUT.md`
 
 **By Phase:**
@@ -48,10 +48,11 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 1/10 (03-00)
 | --- | --- | --- |
 | 1 (PGPT-01-rag) | 7/7 | Complete 2026-07-02 |
 | 2 (PGPT-02-langgraph-agent) | 5/5 | MVP Complete 2026-08-14 |
-| 3 | 1/10 | In progress |
+| 3 | 2/10 | In progress |
 | 4 | 0/3 | Not started |
 | 5 | 0/1 | Not started |
 | Phase 03 P00 | 2min | 1 tasks | 3 files |
+| Phase 03 P00b | 8min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -71,10 +72,12 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 1/10 (03-00)
 - [Phase 03]: v3.0 four Milestone-required waves (~5–8 weeks); Graph/Milvus not optional P2 (D-04 dual-write)
 - [Phase 03]: D-06: 7 natural days then developer confirm before mock-as-closeout; never silent SC drop
 - [Phase 03]: Phase 3 cites GOLDEN-01 (not Phase-3 EVAL-01); EVAL-01 remains Phase 5 RAGAS
+- [Phase 03]: Wave 0b: rag-options.test ENABLE_RERANKER flip deferred to Wave 1 / plan 03-03
+- [Phase 03]: migrate-corpus-split refuses --execute until plan 03-02 (T-03-00-01)
 
 ### Pending Todos
 
-- Continue `/gsd-execute-phase 3` — next `03-00b` Nyquist stubs
+- Continue `/gsd-execute-phase 3` — next `03-01` hybrid/RRF
 - 执行中遵守书面降级协议 D-06（7 自然日 + 用户确认）
 
 ### Blockers/Concerns
@@ -84,11 +87,11 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 1/10 (03-00)
 
 ## Session Continuity
 
-**Last session:** 2026-08-21T14:40:37.108Z
-**Resume file:** .planning/phases/PGPT-03-rag/03-00b-PLAN.md
+**Last session:** 2026-08-21T14:52:28.997Z
+**Resume file:** None
 
-**Stopped at:** Completed 03-00-PLAN.md
+**Stopped at:** Completed 03-00b-PLAN.md (Nyquist stubs)
 
-**Resume next:** execute `03-00b-PLAN.md`
+**Resume next:** execute `03-01-PLAN.md`
 
-Last session note: 2026-08-21 plan-phase 产出 8 份 PLAN.md；D-04 文档双写在 03-00 Task 1 执行时落地
+Last session note: 2026-08-21 completed 03-00b Nyquist stubs (regression skeletons + migrate dry-run)
