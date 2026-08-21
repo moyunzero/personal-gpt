@@ -62,9 +62,9 @@
 - [ ] **STORE-01**: 多存储抽象：Milvus（向量）、ElasticSearch（全文）、Neo4j（图谱）
 - [x] **RAG-05**: Agentic RAG — Agent 决定检索策略与次数
 - [ ] **RAG-06**: 混合检索（向量 + BM25）与 Graph RAG
-- [ ] **GOLDEN-01**: Phase 3 黄金集 ≥20 + CI deterministic smoke（`yarn eval:phase-3`）；非 RAGAS（RAGAS 仍为 Phase 5 EVAL-01）
+- [x] **GOLDEN-01**: Phase 3 黄金集 ≥20 + CI deterministic smoke（`yarn eval:phase-3`）；非 RAGAS（RAGAS 仍为 Phase 5 EVAL-01）
 - [ ] **CP-01**: Postgres checkpointer 单实例同 thread_id 可恢复
-- [ ] **CORPUS-01**: 物理 user/seed 分库 + 默认 corpus=user + ISSUE-001 Closed
+- [x] **CORPUS-01**: 物理 user/seed 分库 + 默认 corpus=user + ISSUE-001 Closed
 
 ### Production（生产就绪 — Phase 4）
 
@@ -130,10 +130,10 @@
 | MEM-02 | Phase 3 | Pending |
 | STORE-01 | Phase 3 | Pending |
 | RAG-05 | Phase 3 | Complete |
-| RAG-06 | Phase 3 | Pending |
-| GOLDEN-01 | Phase 3 | Pending |
+| RAG-06 | Phase 3 | Pending (hybrid green 03-03b; Graph → 03-07) |
+| GOLDEN-01 | Phase 3 | Complete |
 | CP-01 | Phase 3 | Pending |
-| CORPUS-01 | Phase 3 | Pending |
+| CORPUS-01 | Phase 3 | Complete |
 | PROD-01 | Phase 4 | Pending |
 | PROD-02 | Phase 4 | Pending |
 | PROD-03 | Phase 4 | Pending |
