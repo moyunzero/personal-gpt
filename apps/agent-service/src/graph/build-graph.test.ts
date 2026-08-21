@@ -171,3 +171,56 @@ describe("buildAgentGraph", () => {
     expect(resolveAgentRoute("对比三家供应商报价并输出结构化分析报告")).toBe("supervisor");
   });
 });
+
+describe("AgentState checkpoint channels (D-22)", () => {
+  it("resumes messages + todos + citations for same thread_id after rebuild", async () => {
+    const { END, START, StateGraph } = await import("@langchain/langgraph");
+    const { AgentState } = await import("./state");
+    const checkpointer = new MemorySaver();
+    const threadId = "d22-resume-thread";
+
+    const buildTiny = () =>
+      new StateGraph(AgentState)
+        .addNode("seed", (state) => ({
+          messages: state.messages,
+          todos: state.todos,
+          citations: state.citations,
+          workspaceId: state.workspaceId,
+        }))
+        .addEdge(START, "seed")
+        .addEdge("seed", END)
+        .compile({ checkpointer });
+
+    const graph1 = buildTiny();
+    await graph1.invoke(
+      {
+        messages: [new HumanMessage("记住这笔报销")],
+        todos: [{ id: "t1", label: "查政策", status: "completed" as const }],
+        citations: [
+          {
+            documentId: "doc-1",
+            title: "差旅政策",
+            similarity: 0.91,
+            source: "kb" as const,
+          },
+        ],
+        workspaceId: "ws-d22",
+      },
+      getAgentRunConfig(threadId),
+    );
+
+    // Simulate process restart: new compiled graph, same checkpointer + thread_id
+    const graph2 = buildTiny();
+    const snapped = await graph2.getState(getAgentRunConfig(threadId));
+    const values = snapped.values as {
+      messages?: { content?: unknown }[];
+      todos?: { id: string }[];
+      citations?: { documentId: string }[];
+      workspaceId?: string;
+    };
+    expect(values.todos?.some((t) => t.id === "t1")).toBe(true);
+    expect(values.citations?.some((c) => c.documentId === "doc-1")).toBe(true);
+    expect(values.workspaceId).toBe("ws-d22");
+    expect(values.messages?.length).toBeGreaterThan(0);
+  });
+});

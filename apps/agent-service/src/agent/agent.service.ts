@@ -1214,6 +1214,25 @@ export class AgentService {
                   })),
                 );
                 const citations = [...citationBag.values()];
+                // D-22：checkpoint 为真相源；SSE data-* 仅投影
+                try {
+                  await supervisorGraph.updateState(
+                    {
+                      configurable: {
+                        ...runConfig.configurable,
+                        run_id: runId,
+                        workspaceId: parsed.workspaceId,
+                      },
+                    },
+                    {
+                      todos: tracker.todos.map((t) => ({ ...t })),
+                      citations: citations.map((c) => ({ ...c })),
+                      workspaceId: parsed.workspaceId,
+                    },
+                  );
+                } catch (persistErr) {
+                  console.warn("[agent] checkpoint todos/citations persist failed", persistErr);
+                }
                 if (citations.length > 0) {
                   writer.write({
                     type: "data-citations",
