@@ -20,14 +20,14 @@ describe("agent tool caps (D-07 / D-15)", () => {
   });
 
   it("documents per-agent tool allow-lists", () => {
-    expect([...AGENT_TOOL_CAPS.retriever]).toEqual(["kb_search"]);
+    expect([...AGENT_TOOL_CAPS.retriever]).toEqual(["kb_search", "graph_search"]);
     expect([...AGENT_TOOL_CAPS.researcher]).toEqual(["web_search"]);
     expect([...AGENT_TOOL_CAPS.analyst]).toEqual(["calculator"]);
     expect([...AGENT_TOOL_CAPS.editor]).toEqual([]);
     expect([...AGENT_TOOL_CAPS.supervisor]).toEqual([]);
   });
 
-  it("binds Retriever → kb_search only and Researcher → web_search only", async () => {
+  it("binds Retriever → kb_search+graph_search and Researcher → web_search only", async () => {
     const { ChatOpenAI } = await import("@langchain/openai");
     const model = new ChatOpenAI({
       model: "mock-model",
@@ -55,7 +55,7 @@ describe("agent tool caps (D-07 / D-15)", () => {
     const eNames = namesOf(editor as { tools?: Array<{ name?: string }> });
 
     if (rNames.length || sNames.length || aNames.length || eNames.length) {
-      expect(rNames).toEqual(["kb_search"]);
+      expect(rNames).toEqual(["kb_search", "graph_search"]);
       expect(sNames).toEqual(["web_search"]);
       expect(aNames).toEqual(["calculator"]);
       expect(eNames).toEqual([]);
@@ -71,6 +71,7 @@ describe("agent tool caps (D-07 / D-15)", () => {
     const buildSrc = await fs.readFile(path.join(dir, "../graph/build-graph.ts"), "utf8");
 
     expect(retrieverSrc).toMatch(/kbSearchTool|kb_search/);
+    expect(retrieverSrc).toMatch(/graphSearchTool|graph_search/);
     expect(retrieverSrc).not.toMatch(/webSearchTool/);
     expect(researcherSrc).toMatch(/webSearchTool|web_search/);
     expect(researcherSrc).not.toMatch(/kbSearchTool/);

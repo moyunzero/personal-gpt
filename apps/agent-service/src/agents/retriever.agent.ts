@@ -6,6 +6,7 @@ import type { LanguageModelLike } from "@langchain/core/language_models/base";
 import { createAgent } from "langchain";
 
 import { KB_CITATION_RULES, TOOL_RESULT_SAFETY } from "../prompts/fragments/kb-citation-rules";
+import { graphSearchTool } from "../tools/graph-search.tool";
 import { kbSearchTool } from "../tools/kb-search.tool";
 import { AGENT_TOOL_CAPS } from "./caps";
 
@@ -20,11 +21,11 @@ export function createRetrieverAgent(model: LanguageModelLike, options: AgentSki
     name: "retriever",
     description: "企业内部知识库检索与引用；回答需可溯源。",
     model,
-    tools: [kbSearchTool],
+    tools: [kbSearchTool, graphSearchTool],
     systemPrompt: `你是 Retriever。职责边界：仅处理知识库（KB）检索与引用。
 
 规则：
-- 必须先调用 kb_search；禁止编造文档内容。
+- 文档问答必须先调用 kb_search；实体关系问题调用 graph_search；禁止编造文档或图谱内容。
 - ${TOOL_RESULT_SAFETY}
 - **无命中硬约束**：若工具或【知识库预检索】返回含 \`KB_SEARCH_STATUS: NO_RELEVANT_HIT\`：
   - 对上游只回一句中文：「知识库未找到足够相关依据。」并另起一行保留标记 \`KB_SEARCH_STATUS: NO_RELEVANT_HIT\`（供 Editor 识别）。
