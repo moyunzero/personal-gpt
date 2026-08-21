@@ -10,6 +10,7 @@ import CorpusToggle, { type CorpusChoice } from "./components/CorpusToggle";
 import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
+import { getOrCreateUserKey } from "@/lib/chat/user-key";
 
 function lastUserTextFromMessages(messages: { role?: string; parts?: unknown[] }[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -36,7 +37,12 @@ export default function Home() {
   const [mode, setMode] = useState<ChatMode>("chat");
   const [corpus, setCorpus] = useState<CorpusChoice>("user");
   const [input, setInput] = useState("");
+  const [userKey, setUserKey] = useState("");
   const streamRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setUserKey(getOrCreateUserKey());
+  }, []);
 
   const transport = useMemo(
     () =>
@@ -44,9 +50,10 @@ export default function Home() {
         // Agent 走 BFF，便于注入 AGENT_INTERNAL_TOKEN，避免浏览器直连暴露密钥
         api: mode === "agent" ? "/api/agent/chat" : "/api/chat",
         // D-28: explicit corpus; default user (never silent seed)
-        body: { corpus },
+        // D-18: opaque userKey for memory scope
+        body: { corpus, ...(userKey ? { userKey } : {}) },
       }),
-    [mode, corpus],
+    [mode, corpus, userKey],
   );
 
   const { messages, sendMessage, regenerate, status, error, clearError } = useChat({

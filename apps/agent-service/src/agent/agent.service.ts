@@ -11,6 +11,7 @@ import type { Response } from "express";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import type { Citation } from "@personal-gpt/shared";
+import { loadMemoryContextBlock, persistTurnMemory } from "@personal-gpt/shared";
 import { z } from "zod";
 
 import {
@@ -261,12 +262,14 @@ export type AgentChatBody = {
   messages?: unknown;
   thread_id?: unknown;
   workspaceId?: unknown;
+  userKey?: unknown;
 };
 
 export type ParsedAgentChat = {
   messages: UIMessage[];
   threadId: string;
   workspaceId: string;
+  userKey: string;
 };
 
 const AgentUiMessageSchema = z
@@ -279,6 +282,7 @@ const AgentChatBodySchema = z.object({
   messages: z.array(AgentUiMessageSchema),
   thread_id: z.string().optional().nullable(),
   workspaceId: z.string().optional().nullable(),
+  userKey: z.string().optional().nullable(),
 });
 
 const SAFE_THREAD_ID = /^[A-Za-z0-9_.:-]{1,128}$/;
@@ -290,7 +294,7 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
     throw new InvalidAgentBodyError("Invalid body: messages must be an array of message objects");
   }
 
-  const { messages, thread_id, workspaceId } = result.data;
+  const { messages, thread_id, workspaceId, userKey } = result.data;
   const trimmedThread = typeof thread_id === "string" ? thread_id.trim() : "";
   if (trimmedThread && !SAFE_THREAD_ID.test(trimmedThread)) {
     throw new InvalidAgentBodyError(
@@ -300,11 +304,14 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
   const threadRaw = trimmedThread || randomUUID();
   const workspaceRaw =
     typeof workspaceId === "string" && workspaceId.trim() ? workspaceId.trim() : "default";
+  const userKeyRaw =
+    typeof userKey === "string" && userKey.trim() ? userKey.trim().slice(0, 128) : "anonymous";
 
   return {
     messages: messages as unknown as UIMessage[],
     threadId: threadRaw,
     workspaceId: resolveWorkspaceId(workspaceRaw),
+    userKey: userKeyRaw,
   };
 }
 
@@ -858,6 +865,10 @@ export class AgentService {
     const abortSignal = attachResponseAbortSignal(res);
     // 请求级 runId：避免同 thread 并发互相覆盖 KB/web 配额状态
     const runId = randomUUID();
+    const memoryBlock = await loadMemoryContextBlock(
+      { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
+      userText,
+    );
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
@@ -866,6 +877,7 @@ export class AgentService {
           workspaceId: parsed.workspaceId,
         });
         resetWebSearchCallCount(runId);
+        let assistantForMemory = "";
         try {
           const requiredEarly = inferRequiredSpecialists(userText);
           const trace = createAgentTraceCollector({
@@ -907,15 +919,19 @@ export class AgentService {
             if (route === "short") {
               // 直接写出短路正文：外层图 AIMessage 经 toUIMessageStream 不会产生 text-delta
               const shortMsgs = buildShortReplyMessages(userText);
-              const shortText = shortMsgs
+              let shortText = shortMsgs
                 .map((m) => (typeof m.content === "string" ? m.content : ""))
                 .filter(Boolean)
                 .join("\n");
+              if (memoryBlock && /喜欢|偏好|记住|习惯/.test(userText) && memoryBlock.includes("【长期记忆】")) {
+                shortText = `${shortText}\n\n（根据你的长期偏好）\n${memoryBlock}`;
+              }
               if (shortText) {
                 const messageId = `short-${parsed.threadId}`;
                 writer.write({ type: "text-start", id: messageId });
                 writer.write({ type: "text-delta", id: messageId, delta: shortText });
                 writer.write({ type: "text-end", id: messageId });
+                assistantForMemory = shortText;
               }
               trace.recordSpecialist("System", "闲聊短路 · 未进入 Supervisor 多 Agent");
               emitTrace();
@@ -924,6 +940,7 @@ export class AgentService {
               const hideUntilEditor = required.includes("editor");
               const supervisorGraph = await buildSupervisorGraph({
                 userText,
+                memoryContextBlock: memoryBlock || undefined,
               });
               const tracker = createProgressTracker(todos, steps, () => {
                 emitTracker(tracker, writer, parsed.threadId);
@@ -959,6 +976,18 @@ export class AgentService {
               let seededMessages: Array<SystemMessage | (typeof lcMessages)[number]> = [
                 ...lcMessages,
               ];
+              if (memoryBlock) {
+                seededMessages = [
+                  new SystemMessage(
+                    [
+                      "【用户记忆·可信】",
+                      "以下为短期/长期记忆，请结合回答，勿编造未出现的偏好。",
+                      memoryBlock,
+                    ].join("\n"),
+                  ),
+                  ...seededMessages,
+                ];
+              }
               if (shouldPrefetchKb) {
                 const KB_PREFETCH_TIMEOUT_MS = 8_000;
                 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -1201,6 +1230,7 @@ export class AgentService {
                   })),
                 );
                 if (finalBuf.trim()) trace.setFinalText(finalBuf);
+                assistantForMemory = finalBuf;
                 emitTrace();
               } else {
                 for (const [id, step] of tracker.stepsById) {
@@ -1254,6 +1284,16 @@ export class AgentService {
               emitTrace();
             } catch {
               /* ignore trace failures */
+            }
+          } finally {
+            try {
+              await persistTurnMemory(
+                { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
+                userText,
+                assistantForMemory,
+              );
+            } catch {
+              /* fail-open */
             }
           }
         } finally {

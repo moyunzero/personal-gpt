@@ -149,3 +149,31 @@ export function formatMem0ContextBlock(hits: Mem0SearchHit[]): string {
   if (!hits.length) return "";
   return `【长期记忆】\n${hits.map((h) => `- ${h.memory}`).join("\n")}`;
 }
+
+/**
+ * 从用户话术抽取显式偏好 / 稳定事实（D-19）。
+ * 启发式、无 LLM；仅命中明确「记住/喜欢/偏好」等句式才写入。
+ */
+export function extractStableFactsFromUserText(userText: string): string[] {
+  const text = userText.trim();
+  if (!text) return [];
+
+  const patterns: RegExp[] = [
+    /请记住[：:\s]*(.+)/,
+    /记住[：:\s]+(.+)/,
+    /我(?:喜欢|偏好|习惯)(.+)/,
+    /我希望你(.+)/,
+    /以后请(.+)/,
+    /我的(?:名字|姓名)(?:是|叫)\s*(.+)/,
+  ];
+
+  const facts: string[] = [];
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m?.[1]?.trim()) {
+      facts.push(text);
+      break;
+    }
+  }
+  return facts;
+}

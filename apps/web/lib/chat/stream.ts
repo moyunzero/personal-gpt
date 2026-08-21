@@ -12,6 +12,8 @@ export interface ChatStreamOptions {
   messages: FormattedMessage[];
   requestId: string;
   citations?: Citation[];
+  /** 流成功结束后回调（用于短期记忆 / Mem0 持久化）；失败不调用 */
+  onComplete?: (assistantText: string) => void | Promise<void>;
 }
 
 /**
@@ -25,6 +27,7 @@ export function createChatStream({
   messages,
   requestId,
   citations = [],
+  onComplete,
 }: ChatStreamOptions) {
   const log = logger.child({ scope: "chat.stream", requestId });
 
@@ -47,11 +50,13 @@ export function createChatStream({
           });
 
           const thinkFilter = new ThinkStripFilter();
+          let assistantText = "";
 
           for await (const part of result.fullStream) {
             if (part.type === "text-delta") {
               const visible = thinkFilter.feed(part.text);
               if (!visible) continue;
+              assistantText += visible;
               if (!hasStarted) {
                 writer.write({ type: "text-start", id: messageId });
                 hasStarted = true;
@@ -64,6 +69,7 @@ export function createChatStream({
             } else if (part.type === "finish") {
               const trailing = thinkFilter.flush();
               if (trailing) {
+                assistantText += trailing;
                 if (!hasStarted) {
                   writer.write({ type: "text-start", id: messageId });
                   hasStarted = true;
@@ -88,6 +94,14 @@ export function createChatStream({
               id: `citations-${messageId}`,
               data: { citations },
             });
+          }
+
+          if (onComplete) {
+            try {
+              await onComplete(assistantText);
+            } catch (err) {
+              log.warn("onComplete failed (ignored)", { err });
+            }
           }
 
           return;

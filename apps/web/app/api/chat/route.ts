@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { type VectorSearchResult } from "@/lib/chat/context";
 import { parseCorpus } from "@/lib/chat/corpus-filters";
+import { loadMemoryContextBlock, parseUserKey, persistTurnMemory } from "@/lib/chat/memory-context";
 import { formatMessages, type InputMessage } from "@/lib/chat/messages";
 import { buildSystemPrompt } from "@/lib/chat/prompt";
 import { decideQueryRoute } from "@/lib/chat/query-router";
@@ -130,10 +131,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = (await req.json()) as { messages?: unknown; corpus?: unknown };
+    const body = (await req.json()) as {
+      messages?: unknown;
+      corpus?: unknown;
+      userKey?: unknown;
+    };
     const { messages } = body;
     // D-27/D-28 / T-03-seed: default user; seed only when explicit
     const corpus = parseCorpus(body.corpus);
+    const userKey = parseUserKey(body.userKey);
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response("No messages provided", {
@@ -190,13 +196,27 @@ export async function POST(req: Request) {
     }
     // timeout / api-error 的日志在 getRelevantContext 里已经发过，避免重复。
 
-    const systemPrompt = buildSystemPrompt(contextResult);
+    const systemPromptBase = buildSystemPrompt(contextResult);
+    const memoryBlock = await loadMemoryContextBlock(
+      { workspaceId: DEFAULT_WORKSPACE_ID, userKey },
+      lastContent,
+    );
+    const systemPrompt = memoryBlock
+      ? `${systemPromptBase}\n\n${memoryBlock}`
+      : systemPromptBase;
 
     const stream = createChatStream({
       systemPrompt,
       messages: formattedMessages,
       requestId,
       citations,
+      onComplete: async (assistantText) => {
+        await persistTurnMemory(
+          { workspaceId: DEFAULT_WORKSPACE_ID, userKey },
+          lastContent,
+          assistantText,
+        );
+      },
     });
 
     // SSE 响应默认只有 text/event-stream，需要手动注入 CORS 头（空值的不写）

@@ -41,6 +41,8 @@ export type BuildAgentGraphOptions = {
   checkpointer?: BaseCheckpointSaver;
   /** 当前用户原文：注入 Supervisor 强制调度清单 */
   userText?: string;
+  /** 短期+长期记忆上下文块（MEM-01/02）；拼入 Supervisor system prompt */
+  memoryContextBlock?: string;
 };
 
 export type AgentRunConfig = {
@@ -200,9 +202,17 @@ export function createSequentialPipelineWorkflow(
 }
 
 /** 共用：专科 + Supervisor workflow（未 compile） */
-function createSupervisorWorkflow(model: LanguageModelLike, userText: string) {
+function createSupervisorWorkflow(
+  model: LanguageModelLike,
+  userText: string,
+  memoryContextBlock?: string,
+) {
   const skills = loadEnabledSkills();
   const agents = createSpecialistAgents(model);
+  const basePrompt = buildSupervisorPrompt(formatSkillsOverview(skills), userText);
+  const prompt = memoryContextBlock?.trim()
+    ? `${basePrompt}\n\n${memoryContextBlock.trim()}`
+    : basePrompt;
 
   return createSupervisor({
     agents: [
@@ -212,7 +222,7 @@ function createSupervisorWorkflow(model: LanguageModelLike, userText: string) {
       agents.editor.graph,
     ],
     llm: model,
-    prompt: buildSupervisorPrompt(formatSkillsOverview(skills), userText),
+    prompt,
   });
 }
 
@@ -223,10 +233,11 @@ export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
   const model = options.model ?? createChatModel();
   const checkpointer = await resolveCheckpointer(options.checkpointer);
   const userText = options.userText ?? "";
+  const memoryContextBlock = options.memoryContextBlock;
   const required = inferRequiredSpecialists(userText);
   const collab = shouldUseSequentialPipeline(required)
     ? createSequentialPipelineWorkflow(model, required)
-    : createSupervisorWorkflow(model, userText);
+    : createSupervisorWorkflow(model, userText, memoryContextBlock);
   const supervisorSubgraph = collab.compile({ checkpointer });
 
   return new StateGraph(AgentState)
@@ -252,11 +263,14 @@ export async function buildSupervisorGraph(options: BuildAgentGraphOptions = {})
   const model = options.model ?? createChatModel();
   const checkpointer = await resolveCheckpointer(options.checkpointer);
   const userText = options.userText ?? "";
+  const memoryContextBlock = options.memoryContextBlock;
   const required = inferRequiredSpecialists(userText);
   if (shouldUseSequentialPipeline(required)) {
     return createSequentialPipelineWorkflow(model, required).compile({ checkpointer });
   }
-  return createSupervisorWorkflow(model, userText).compile({ checkpointer });
+  return createSupervisorWorkflow(model, userText, memoryContextBlock).compile({
+    checkpointer,
+  });
 }
 
 /** @deprecated 使用 buildAgentGraph；保留别名避免旧 smoke 误导 */

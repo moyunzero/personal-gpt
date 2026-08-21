@@ -43,8 +43,15 @@ export {
   setMem0ClientForTests,
   resetMem0ClientForTests,
   formatMem0ContextBlock,
+  extractStableFactsFromUserText,
   type Mem0Message,
   type Mem0SearchHit,
   type Mem0RawClient,
   type ScopedMem0Client,
 } from "./memory/mem0-client";
+export {
+  loadMemoryContextBlock,
+  persistTurnMemory,
+  type MemoryDeps,
+  type MemoryScope,
+} from "./memory/session-memory";
