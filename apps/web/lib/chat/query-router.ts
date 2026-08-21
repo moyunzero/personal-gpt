@@ -97,11 +97,16 @@ async function routeWithEmbeddingPrecheck(
     return { kind: "skip" };
   }
 
-  const precheck = await probeKbRelevance(
-    query,
-    options.workspaceId ?? DEFAULT_WORKSPACE_ID,
-    options.requestId,
-  );
+  let precheck;
+  try {
+    precheck = await probeKbRelevance(
+      query,
+      options.workspaceId ?? DEFAULT_WORKSPACE_ID,
+      options.requestId,
+    );
+  } catch {
+    return { kind: "skip" };
+  }
 
   if (!precheck.probed) {
     return { kind: "skip" };

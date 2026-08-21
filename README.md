@@ -42,7 +42,8 @@ flowchart TB
   end
 
   subgraph Agent["agent-service :3002"]
-    Proxy["POST /agent/chat SSE 透传"]
+    AgentSSE["POST /agent/chat LangGraph SSE"]
+    Super["Supervisor + Retriever/Researcher/Analyst/Editor"]
   end
 
   PG[(PostgreSQL)]
@@ -61,7 +62,9 @@ flowchart TB
   KbAPI --> Redis --> Proc --> Pipe
   Pipe --> NIM --> Astra
   Proc --> PG
-  Proxy --> ChatAPI
+  AgentSSE --> Super
+  Super --> Astra
+  Super --> Groq
 ```
 
 ## 特性
@@ -77,17 +80,17 @@ flowchart TB
 
 ## 技术栈
 
-| 层级           | 选型                                                                        |
-| -------------- | --------------------------------------------------------------------------- |
-| Web            | Next.js 16.2 · React 19 · Tailwind CSS 4                                    |
-| AI             | Vercel AI SDK 6 · `@ai-sdk/openai-compatible`（Groq OpenAI 兼容端点）       |
-| 聊天模型       | Groq：`qwen/qwen3-32b` → `llama-3.3-70b-versatile` → `llama-3.1-8b-instant` |
-| Embedding      | NVIDIA NIM `nvidia/llama-nemotron-embed-1b-v2`（2048 维）                   |
-| 向量库         | DataStax Astra DB Data API                                                  |
-| 元数据 / 队列  | PostgreSQL 16 + TypeORM 0.3 · Redis 7 + BullMQ 5                            |
-| Worker / Agent | NestJS 11（ingest-worker :3001 · agent-service :3002）                      |
-| 质量           | TypeScript · Zod · Vitest · ESLint · Prettier                               |
-| 切块           | `@langchain/textsplitters`（ingest-worker + 部分 seed 脚本）                |
+| 层级           | 选型                                                                    |
+| -------------- | ----------------------------------------------------------------------- |
+| Web            | Next.js 16.2 · React 19 · Tailwind CSS 4                                |
+| AI             | Vercel AI SDK 6 · `@ai-sdk/openai-compatible`（Groq OpenAI 兼容端点）   |
+| 聊天模型       | Groq：`qwen/qwen3.6-27b` → `openai/gpt-oss-120b` → `openai/gpt-oss-20b` |
+| Embedding      | NVIDIA NIM `nvidia/llama-nemotron-embed-1b-v2`（2048 维）               |
+| 向量库         | DataStax Astra DB Data API                                              |
+| 元数据 / 队列  | PostgreSQL 16 + TypeORM 0.3 · Redis 7 + BullMQ 5                        |
+| Worker / Agent | NestJS 11（ingest-worker :3001 · agent-service :3002）                  |
+| 质量           | TypeScript · Zod · Vitest · ESLint · Prettier                           |
+| 切块           | `@langchain/textsplitters`（ingest-worker + 部分 seed 脚本）            |
 
 > 备忘：[docs/google-ai-provider.md](./docs/google-ai-provider.md) 描述过 Gemini 方案；**当前主栈仍是 Groq + NIM**，勿按该文配置生产。
 
@@ -179,11 +182,16 @@ yarn dev:worker   # → :3001，消费入库队列
 
 确认 `.env` 中 `DATABASE_URL` / `REDIS_URL` 与 `docker-compose.yml` 一致（见 `.env.example` 默认值）。
 
-#### 方案 C — Agent 透传骨架（可选，v2.0 前置）
+#### 方案 C — Agent 多 Agent（v2.0 MVP）
 
 ```bash
-yarn dev:agent    # AGENT_SERVICE_PORT 默认 3002，转发 WEB_URL/api/chat
+yarn dev:agent    # AGENT_SERVICE_PORT 默认 3002 → POST /agent/chat
+yarn acceptance:phase-2-smoke   # live SSE：KB 命中 + 主链路门禁（需 embedding/Astra）
 ```
+
+说明：浏览器经 Next BFF `/api/agent/chat` 转发；服务端上游基址为 `AGENT_SERVICE_URL`（默认 `http://localhost:3002`）。v2.0 为 **MVP 关账 / 可演示**，不是生产就绪（无鉴权多租户、无 agent Docker）。关账与证据见 `tests/acceptance/phase-2-agent/`。
+
+> 联网搜索断言：若要验证真实 web_search / Bocha 结果，需配置 `BOCHA_API_KEY`；未配置时相关断言视为可选跳过，embedding / Astra 等 KB 前置条件仍须满足。
 
 ## 项目结构
 
@@ -192,14 +200,14 @@ personal-gpt/
 ├── apps/
 │   ├── web/                 # Next.js — 聊天 UI、/api/chat、/kb、TypeORM、BullMQ producer
 │   ├── ingest-worker/       # NestJS — BullMQ consumer（parse→split→embed→upsert）
-│   └── agent-service/       # NestJS — POST /agent/chat SSE 透传（v2.0 LangGraph 预留）
+│   └── agent-service/       # NestJS — LangGraph 多 Agent SSE（:3002）
 ├── packages/
 │   └── shared/              # 类型、env Zod、Groq/NIM、VectorStore、队列常量
 ├── script/                  # Astra 初始化、seed、repair 等根级脚本
 ├── apps/web/script/         # migrateLegacy、KB 迁移辅助
 ├── tests/
-│   ├── regression/phase-1/  # Phase 1 回归
-│   └── acceptance/phase-1/  # Playwright 验收
+│   ├── regression/phase-1|2/ # 回归（phase-2 mock-only）
+│   └── acceptance/phase-1|2-agent/ # Playwright / live SSE smoke
 ├── docs/                    # 开发笔记与路线图（见下方文档）
 ├── assets/readme/           # README 截图（Playwright 采集）
 ├── docker-compose.yml       # PostgreSQL 16 + Redis 7
@@ -222,7 +230,7 @@ personal-gpt/
 
 1. **意图快路径**：寒暄、算式
 2. **embedding 预检**：Top-1 ≥ `ROUTE_RETRIEVE_SIMILARITY`（默认 0.68）→ retrieve；&lt; `ROUTE_DIRECT_SIMILARITY`（默认 0.42）→ direct
-3. **LLM 路由器**：灰色地带由 Groq `llama-3.1-8b-instant` 二分类（可用 `ENABLE_LLM_QUERY_ROUTER=false` 关闭）
+3. **LLM 路由器**：灰色地带由 Groq `openai/gpt-oss-20b` 二分类（可用 `ENABLE_LLM_QUERY_ROUTER=false` 关闭）
 
 **可选增强**（默认全关，见 `rag-options.ts`）：
 
@@ -308,14 +316,14 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 ### 知识库 / Worker
 
-| 变量                 | 说明                                         |
-| -------------------- | -------------------------------------------- |
-| `DATABASE_URL`       | PostgreSQL（`/kb` CRUD、ingest_jobs）        |
-| `REDIS_URL`          | BullMQ                                       |
-| `UPLOAD_MAX_BYTES`   | 上传上限，默认 `20971520`（20MB）            |
-| `INGEST_WORKER_PORT` | 默认 `3001`                                  |
-| `WEB_URL`            | agent 转发目标，默认 `http://localhost:3000` |
-| `AGENT_SERVICE_PORT` | 默认 `3002`                                  |
+| 变量                 | 说明                                                   |
+| -------------------- | ------------------------------------------------------ |
+| `DATABASE_URL`       | PostgreSQL（`/kb` CRUD、ingest_jobs）                  |
+| `REDIS_URL`          | BullMQ                                                 |
+| `UPLOAD_MAX_BYTES`   | 上传上限，默认 `20971520`（20MB）                      |
+| `INGEST_WORKER_PORT` | 默认 `3001`                                            |
+| `AGENT_SERVICE_URL`  | BFF → agent-service 基址，默认 `http://localhost:3002` |
+| `AGENT_SERVICE_PORT` | agent-service 监听端口，默认 `3002`                    |
 
 ### 可选
 
@@ -353,10 +361,10 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 **架构原则**
 
-- 保留并增强 Next.js（聊天 + 知识库工作台）
-- v2.0 起在 `agent-service` 落地 LangGraph 多 Agent
-- 异步导入：BullMQ + Redis；元数据：PostgreSQL；向量：Astra（v3.0 扩展多存储）
-- 生产工程能力集中在 v4.0
+- Chat（稳定问答）与 Agent（研究型任务）双模并存
+- 检索质量与评测优先于再堆子 Agent（v3）；身份与 ACL 优先于连接器（v4）
+- 异步导入：BullMQ + Redis；元数据：PostgreSQL；向量：Astra（v3 扩展混合检索 / 多存储）
+- 生产治理集中在 v4；连接器与 HITL 在 v5
 
 ### v0.1 — RAG 聊天原型（已完成）
 
@@ -366,39 +374,50 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 ### v1.0 — RAG 强化与知识库管理（已封板 ✅）
 
-| 模块       | 状态                                                           |
-| ---------- | -------------------------------------------------------------- |
-| 基础设施   | ✅ Monorepo + Docker Compose + BullMQ Worker                   |
-| 数据模型   | ✅ `workspaceId` 全链路（UI 仍为单 workspace）                 |
-| 文档导入   | ✅ PDF/MD/TXT/DOCX                                             |
-| 知识库 UI  | ✅ `/kb` 上传 / 列表 / 筛选 / CRUD / SSE 进度                  |
-| RAG        | ✅ 引用 + 三层路由 + 双路检索 + 可选 HyDE/Multi-Query/Reranker |
-| 工程       | ✅ CI + 回归 + Playwright 验收 8/8 + LangSmith（可选）         |
-| Agent 骨架 | ✅ `yarn dev:agent` SSE 透传                                   |
+| 模块      | 状态                                                           |
+| --------- | -------------------------------------------------------------- |
+| 基础设施  | ✅ Monorepo + Docker Compose + BullMQ Worker                   |
+| 数据模型  | ✅ `workspaceId` 全链路（UI 仍为单 workspace）                 |
+| 文档导入  | ✅ PDF/MD/TXT/DOCX                                             |
+| 知识库 UI | ✅ `/kb` 上传 / 列表 / 筛选 / CRUD / SSE 进度                  |
+| RAG       | ✅ 引用 + 三层路由 + 双路检索 + 可选 HyDE/Multi-Query/Reranker |
+| 工程      | ✅ CI + 回归 + Playwright 验收 8/8 + LangSmith（可选）         |
 
-**仍未做**：用户认证、聊天历史持久化、多 workspace UI、BM25 混合检索（见 ISSUE-001 / v3.0）。
+**仍未做**：用户认证、聊天历史持久化、多 workspace UI、BM25 混合检索、agent 生产部署（见 ISSUE-001 / v3–v4）。
 
 **演示**：[https://personal-emotion-gpt.vercel.app](https://personal-emotion-gpt.vercel.app) · [GitHub](https://github.com/moyunzero/personal-gpt)
 
-### v2.0 — LangGraph 多 Agent
+### v2.0 — LangGraph 多 Agent ⚠️ MVP 关账（非生产就绪）
 
-Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天可仍走 `/api/chat`。
+| 模块           | 状态                                                     |
+| -------------- | -------------------------------------------------------- |
+| Agent 多 Agent | ⚠️ LangGraph Supervisor + SSE + 步骤面板（v2.0 **MVP**） |
 
-### v3.0 — 记忆、多存储与高级 RAG
+Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天仍走 `/api/chat`。  
+证据：人工截图 + `yarn acceptance:phase-2-smoke`（KB 命中 live citation）→ `tests/acceptance/phase-2-agent/`。
 
-Redis / Mem0 记忆；Milvus · ES · Neo4j · MinIO；Agentic / Graph RAG；ISSUE-001 根治方向。
+**验收口径**：主链路可演示、可回归；报告头粘连 / 闲聊短路无正文 / 流式翻倍等 blocker 已在 v2.x 收口清除（见 `tests/acceptance/phase-2-agent/CR-FIX-ACCEPTANCE-2026-08-14.md`）。仍 **≠ 生产就绪**（无鉴权多租户、无 agent Docker）。
 
-### v4.0 — 工程化与生产就绪
+**v2.x（2026-08-14 → 2026-08-21）**：配额按 thread 隔离、模型默认值修复、checkpointer 单例、body Zod、可选内部令牌 + `/api/agent/chat` BFF；流式去重与消毒；Agent KB 查询压缩 + 默认相似度门槛 0.60。后续债务见 `docs/enterprise-roadmap.md`「v2.x → 后续版本」与 **v3 混合检索**。
 
-全栈 Docker Compose、鉴权与多租户、审计、Prometheus / Grafana、CI/CD。
+**v2 收口**：不再扩办事型工具；详细对标与后续规划见 `docs/enterprise-roadmap.md`。
 
-### v5.0 — 高级企业特性
+### v3.0 — 检索可信度 + 记忆 + 评测 🔜
 
-语音、定时 Agent、RAGAS、协作与成本优化等。
+对标 RAGFlow/FastGPT「答得准」：混合检索默认路径、Corrective RAG、黄金集评测、Postgres checkpointer、Redis/Mem0 记忆。  
+**不做**：登录、连接器、业务写操作。
+
+### v4.0 — 身份治理 + 可生产部署
+
+对标 MaxKB/企业交付 + Copilot 权限裁剪：Auth、RBAC、ACL 过滤检索、全栈 Docker（含 agent）、会话历史、审计。
+
+### v5.0 — 连接器 Lite / HITL / 谨慎行动
+
+对标 Glean·Dify 浅层子集：1–2 个只读连接器、人机确认、工具白名单；语音/定时为 P2。
 
 ---
 
-**当前进度**：**v1.0 已封板** → 下一步 **v2.0**。
+**当前进度**：**v1.0 已封板** · **v2.0 MVP + v2.x 加固** → 下一步 **v3.0（检索与评测）**。完整路线图：`docs/enterprise-roadmap.md`。
 
 ## 贡献
 

@@ -30,11 +30,17 @@ export async function embedQueryText(
   }
 
   log.metric("embedding.cache.miss", { cacheSize: cache.size() });
-  const vector = await embedText(text);
-  if (!vector.length) {
+  try {
+    const vector = await embedText(text);
+    if (!vector.length) {
+      return null;
+    }
+    cache.set(cacheKey, vector);
+    return vector;
+  } catch (error) {
+    log.warn("embedding 调用失败，返回 null（fail-open）", {
+      err: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
-
-  cache.set(cacheKey, vector);
-  return vector;
 }

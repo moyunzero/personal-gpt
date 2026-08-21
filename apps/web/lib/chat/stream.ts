@@ -1,5 +1,4 @@
-import { groqChatModel } from "@personal-gpt/shared/ai/groq-chat";
-import { GROQ_CHAT_MODELS } from "@personal-gpt/shared/ai/groq-models";
+import { chatModel, resolveChatModels } from "@personal-gpt/shared/ai/chat-provider";
 import type { Citation } from "@personal-gpt/shared/types/kb";
 import { streamText, createUIMessageStream } from "ai";
 
@@ -7,9 +6,6 @@ import { logger } from "@/lib/logger";
 
 import type { FormattedMessage } from "./messages";
 import { ThinkStripFilter } from "./think-strip";
-
-/** 模型 fallback：Qwen（中文）→ Llama 70B → Llama 8B（高配额） */
-const MODELS = GROQ_CHAT_MODELS;
 
 export interface ChatStreamOptions {
   systemPrompt: string;
@@ -38,10 +34,12 @@ export function createChatStream({
       let hasStarted = false;
       let lastError: Error | null = null;
 
-      for (const modelName of MODELS) {
+      const models = resolveChatModels();
+      for (let i = 0; i < models.length; i++) {
+        const modelName = models[i]!;
         try {
           const result = streamText({
-            model: groqChatModel(modelName),
+            model: chatModel(modelName),
             system: systemPrompt,
             messages,
             temperature: 0.7,
@@ -96,7 +94,7 @@ export function createChatStream({
         } catch (error) {
           log.warn("model failed, falling back", { modelName, err: error });
           lastError = error instanceof Error ? error : new Error(String(error));
-          if (modelName !== MODELS[MODELS.length - 1]) {
+          if (i < models.length - 1) {
             continue;
           }
         }

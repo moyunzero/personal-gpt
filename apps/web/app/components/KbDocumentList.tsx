@@ -26,7 +26,8 @@ export type KbDocumentItem = {
 type KbDocumentListProps = {
   items: KbDocumentItem[];
   categories?: string[];
-  onItemsChange: (items: KbDocumentItem[]) => void;
+  /** 兼容 React setState（支持函数式更新，避免删除/SSE 期间闭包过期冲掉并发上传） */
+  onItemsChange: (items: KbDocumentItem[] | ((prev: KbDocumentItem[]) => KbDocumentItem[])) => void;
 };
 
 const STATUS_LABEL: Record<KbDocumentItem["status"], string> = {
@@ -346,16 +347,16 @@ export default function KbDocumentList({
 }: KbDocumentListProps) {
   const updateItem = useCallback(
     (next: KbDocumentItem) => {
-      onItemsChange(items.map((row) => (row.id === next.id ? next : row)));
+      onItemsChange((prev) => prev.map((row) => (row.id === next.id ? next : row)));
     },
-    [items, onItemsChange],
+    [onItemsChange],
   );
 
   const removeItem = useCallback(
     (id: string) => {
-      onItemsChange(items.filter((row) => row.id !== id));
+      onItemsChange((prev) => prev.filter((row) => row.id !== id));
     },
-    [items, onItemsChange],
+    [onItemsChange],
   );
 
   if (items.length === 0) {

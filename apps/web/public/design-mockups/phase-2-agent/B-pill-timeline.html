@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>方案 B · 轻量胶囊 + 时间线步骤</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./tokens.css" />
+    <style>
+      /* B: wordmark 旁 soft pill；步骤为左侧时间线 — 更「编辑式」，少卡片感 */
+      .mode-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 6px 5px 10px;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-pill);
+        background: var(--color-canvas);
+      }
+      .mode-pill span {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--color-muted);
+      }
+      .mode-pill select {
+        appearance: none;
+        border: 0;
+        background: var(--color-surface-card);
+        color: var(--color-ink);
+        font: 500 12px/1 var(--font-body);
+        padding: 6px 28px 6px 10px;
+        border-radius: var(--radius-pill);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%236c6a64' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        cursor: pointer;
+      }
+
+      .timeline {
+        position: relative;
+        margin: 4px 0 8px;
+        padding: 4px 0 4px 18px;
+      }
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 8px;
+        bottom: 8px;
+        width: 1px;
+        background: var(--color-hairline);
+      }
+      .tl-item {
+        position: relative;
+        padding: 0 0 18px 12px;
+      }
+      .tl-item:last-child {
+        padding-bottom: 0;
+      }
+      .tl-item::before {
+        content: "";
+        position: absolute;
+        left: -16px;
+        top: 6px;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--color-surface-cream-strong);
+        border: 2px solid var(--color-muted-soft);
+      }
+      .tl-item.done::before {
+        background: var(--color-accent-teal);
+        border-color: var(--color-accent-teal);
+      }
+      .tl-item.active::before {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+      }
+      .tl-agent {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        margin-bottom: 2px;
+      }
+      .tl-title {
+        font-size: 14.5px;
+        font-weight: 500;
+        color: var(--color-ink);
+      }
+      .tl-detail {
+        margin-top: 4px;
+        font-size: 13px;
+        color: var(--color-muted);
+      }
+      .tl-detail code {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-body-strong);
+      }
+
+      .todo-inline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0 0 14px;
+      }
+      .todo-chip {
+        font-size: 12px;
+        font-weight: 500;
+        padding: 4px 10px;
+        border-radius: var(--radius-pill);
+        background: var(--color-surface-card);
+        color: var(--color-body-strong);
+      }
+      .todo-chip.done {
+        color: var(--color-muted);
+        text-decoration: line-through;
+        text-decoration-color: var(--color-hairline);
+      }
+      .todo-chip.active {
+        background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+        color: var(--color-primary-active);
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <header class="header">
+        <div class="brand"><span class="spike" aria-hidden="true"></span>Personal GPT</div>
+        <div class="header-right">
+          <div class="mode-pill" title="对话模式">
+            <span>模式</span>
+            <label class="sr-only" for="mode">模式</label>
+            <select id="mode" aria-label="对话模式">
+              <option>Chat</option>
+              <option selected>Agent</option>
+            </select>
+          </div>
+          <a class="nav-link" href="#">知识库</a>
+        </div>
+      </header>
+
+      <div class="stream">
+        <div class="stream-inner">
+          <article class="msg msg-user">
+            <div class="msg-role">你</div>
+            <div class="msg-body">根据知识库总结「workspaceId 隔离」三点要点，并标出来源。</div>
+          </article>
+
+          <article class="msg msg-assistant">
+            <div class="msg-role">助手 · Agent</div>
+            <div class="status-row">
+              <span class="badge"><span class="badge-dot"></span>Retriever 执行中</span>
+              <span class="badge">thread · local</span>
+            </div>
+
+            <div class="todo-inline" aria-label="待办">
+              <span class="todo-chip done">规划检索</span>
+              <span class="todo-chip active">知识库检索</span>
+              <span class="todo-chip">整理三点</span>
+              <span class="todo-chip">附引用</span>
+            </div>
+
+            <div class="timeline" aria-label="执行时间线">
+              <div class="tl-item done">
+                <div class="tl-agent">Supervisor</div>
+                <div class="tl-title">路由到 Retriever · 跳过 Researcher</div>
+                <div class="tl-detail">判定为 KB 总结任务，无需联网</div>
+              </div>
+              <div class="tl-item active">
+                <div class="tl-agent">Retriever</div>
+                <div class="tl-title">向量检索 · 强制 workspace 过滤</div>
+                <div class="tl-detail">
+                  filter <code>workspaceId=default</code> · Top-K 8 · 双路合并
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-agent">Editor</div>
+                <div class="tl-title">结构化三点 + 引用卡片</div>
+                <div class="tl-detail">等待检索结果</div>
+              </div>
+            </div>
+
+            <div class="msg-body">
+              <h3>三点要点（草拟）</h3>
+              <p>
+                1. 元数据与向量从 Day 1 携带 <code>workspaceId</code>，避免后期洗库。<br />2. 检索缺
+                filter 直接拒绝，不静默放行。<br />3. UI 仍单租户，但链路已为 Phase 4 认证留口。
+              </p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-inner">
+          <div class="composer-shell">
+            <textarea class="composer-input" rows="1" placeholder="继续追问…">
+把引用也列出来</textarea>
+            <button type="button" class="composer-send" aria-label="发送">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M5 12h14M13 6l6 6-6 6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+          <p class="composer-hint">时间线强调「谁在何时做了什么」· 适合观察多 Agent 路径</p>
+        </div>
+      </div>
+    </div>
+
+    <aside class="mock-label">
+      <strong>方案 B</strong>
+      轻量模式胶囊 + 竖向时间线（少边框卡片）
+      <div class="mock-nav">
+        <a href="./A-segmented-inline.html">A</a>
+        <a href="./B-pill-timeline.html">B</a>
+        <a href="./C-composer-dense.html">C</a>
+        <a href="./index.html">目录</a>
+      </div>
+    </aside>
+    <style>
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+    </style>
+  </body>
+</html>

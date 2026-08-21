@@ -4,8 +4,9 @@ import type { Citation } from "@personal-gpt/shared/types/kb";
 
 const streamTextMock = vi.fn();
 
-vi.mock("@personal-gpt/shared/ai/groq-chat", () => ({
-  groqChatModel: (modelName: string) => modelName,
+vi.mock("@personal-gpt/shared/ai/chat-provider", () => ({
+  chatModel: (modelName: string) => ({ id: modelName, __mock: true as const }),
+  resolveChatModels: () => ["mock-model"],
 }));
 
 vi.mock("ai", async (importOriginal) => {
@@ -143,5 +144,20 @@ describe("createChatStream citations", () => {
 
     expect(deltas.join("")).toBe("最终回答");
     expect(deltas.join("")).not.toContain("think");
+  });
+
+  it("uses chatModel from resolveChatModels (gateway-ready wiring)", async () => {
+    mockSuccessfulTextStream("ok");
+    await collectStreamParts(
+      createChatStream({
+        systemPrompt: "system",
+        messages: [{ role: "user", content: "hi" }],
+        requestId: "req-4",
+        citations: [],
+      }),
+    );
+    expect(streamTextMock).toHaveBeenCalled();
+    const arg = streamTextMock.mock.calls[0]?.[0] as { model: { id: string; __mock: true } };
+    expect(arg.model).toEqual({ id: "mock-model", __mock: true });
   });
 });

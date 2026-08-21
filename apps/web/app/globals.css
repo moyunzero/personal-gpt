@@ -25,6 +25,10 @@
   --color-on-primary: #ffffff;
   --color-on-dark: #faf9f5;
   --color-error: #c64545;
+  --color-accent-teal: #5db8a6;
+  /* 小字可读：agent 状态文本用更深色；浅色仅作装饰 */
+  --color-accent-teal-text: #2f6f64;
+  --color-primary-text-on-light: #8a4a34;
 
   /* ---------- 字体 token ---------- */
   /* next/font 在 layout.tsx 中注入 --font-serif / --font-sans / --font-mono */
@@ -323,6 +327,115 @@ main {
   color: var(--color-muted-soft);
 }
 
+.agent-error-card {
+  margin-top: var(--space-sm);
+  border: 1px solid color-mix(in srgb, var(--color-error) 28%, var(--color-hairline));
+  background: var(--color-canvas);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border-left: 3px solid var(--color-error);
+}
+
+.agent-error-card-head {
+  padding: 16px 16px 12px;
+}
+
+.agent-error-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--color-error);
+}
+
+.agent-error-title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 24px;
+  letter-spacing: -0.4px;
+  color: var(--color-ink);
+  line-height: 1.2;
+}
+
+.agent-error-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-body);
+}
+
+.agent-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding: 0 16px 14px;
+}
+
+.agent-error-btn {
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 9px 16px;
+  font: 500 13px/1 var(--font-body);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.agent-error-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.agent-error-btn-primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.agent-error-btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-active);
+}
+
+.agent-error-btn-ghost {
+  background: transparent;
+  color: var(--color-body-strong);
+  border: 1px solid var(--color-hairline);
+}
+
+.agent-error-btn-ghost:hover:not(:disabled) {
+  background: var(--color-surface-soft);
+}
+
+.agent-error-tech {
+  border-top: 1px solid var(--color-hairline-soft);
+  background: var(--color-surface-soft);
+}
+
+.agent-error-tech summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  user-select: none;
+}
+
+.agent-error-tech summary::-webkit-details-marker {
+  display: none;
+}
+
+.agent-error-tech pre {
+  margin: 0;
+  padding: 0 16px 14px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--color-body);
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
 /* ============================================================
  * 消息气泡（Claude 风：助手左对齐无气泡 + spike-mark；用户右气泡）
  * ============================================================ */
@@ -597,7 +710,8 @@ main {
   line-height: 1.55;
   color: var(--color-muted);
   white-space: pre-wrap;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 /* ============================================================
@@ -723,10 +837,388 @@ main {
   color: inherit;
 }
 
+.app-header-cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
 .app-header-nav {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+}
+
+/* Chat | Agent 分段（方案 A / UI-SPEC） */
+.mode-seg {
+  display: inline-flex;
+  gap: var(--space-xxs);
+  padding: 3px;
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-md);
+}
+
+.mode-seg-btn {
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  min-height: 36px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.mode-seg-btn[aria-pressed="true"] {
+  background: var(--color-surface-card);
+  color: var(--color-ink);
+}
+
+.mode-seg-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Agent 待办 / 步骤（消息内嵌，对齐 citation-card） */
+.message-role-line {
+  margin: 0 0 var(--space-xs);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted-soft);
+}
+
+.agent-block {
+  margin: 0 0 var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.agent-block-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-muted-soft);
+}
+
+.agent-todo-list {
+  list-style: none;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.agent-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--color-body-strong);
+}
+
+.agent-todo-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--color-primary);
+  background: var(--color-primary);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.agent-todo-check::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 1.8px 1.8px 0;
+  transform: rotate(45deg);
+}
+
+.agent-todo-check-pending {
+  background: transparent;
+}
+
+.agent-todo-check-pending::after {
+  display: none;
+}
+
+.agent-todo-check-active {
+  background: transparent;
+  border-color: var(--color-accent-teal);
+  box-shadow: inset 0 0 0 3px var(--color-accent-teal);
+}
+
+.agent-todo-check-active::after {
+  display: none;
+}
+
+.agent-todo-status-text {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-accent-teal-text);
+}
+
+.agent-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.agent-step-card {
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-canvas);
+  overflow: hidden;
+}
+
+.agent-step-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: var(--space-sm) 14px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--color-ink);
+  touch-action: manipulation;
+}
+
+.agent-step-header:hover {
+  background: var(--color-surface-soft);
+}
+
+.agent-step-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.agent-step-agent {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--color-primary-text-on-light);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+
+.agent-step-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.agent-step-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent-teal);
+}
+
+.agent-step-status-dot-error {
+  background: var(--color-error);
+}
+
+.agent-step-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--color-muted-soft);
+  transition: transform 0.18s ease;
+}
+
+.agent-step-chevron-open {
+  transform: rotate(180deg);
+}
+
+.agent-step-body {
+  margin: 0;
+  padding: 0 14px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-body);
+  border-top: 1px solid var(--color-hairline-soft);
+  padding-top: 12px;
+}
+
+.agent-step-body-empty {
+  color: var(--color-muted-soft);
+}
+
+.agent-trace-panel {
+  margin-top: var(--space-sm);
+}
+
+.agent-trace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.agent-trace-actions {
+  display: inline-flex;
+  gap: var(--space-xs);
+}
+
+.agent-trace-download {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  padding: 4px 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.agent-trace-download:hover {
+  background: var(--color-surface-soft);
+}
+
+.agent-trace-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.agent-trace-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface-soft);
+}
+
+.agent-trace-item-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--color-body-strong);
+  touch-action: manipulation;
+}
+
+.agent-trace-item-header:disabled {
+  cursor: default;
+}
+
+.agent-trace-item-header:not(:disabled):hover {
+  background: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+}
+
+.agent-trace-kind {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  background: var(--color-canvas);
+}
+
+.agent-trace-kind-tool {
+  color: var(--color-primary);
+}
+
+.agent-trace-kind-error {
+  color: #b42318;
+}
+
+.agent-trace-kind-final {
+  color: var(--color-accent-teal-text);
+}
+
+.agent-trace-summary {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-trace-who {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--color-muted-soft);
+  max-width: 28%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-trace-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--color-muted-soft);
+  flex-shrink: 0;
+  transition: transform 0.18s ease;
+}
+
+.agent-trace-chevron-open {
+  transform: rotate(180deg);
+}
+
+.agent-trace-detail {
+  margin: 0;
+  padding: 0 12px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  color: var(--color-body);
+  max-height: 200px;
+  overflow: auto;
 }
 
 .app-header-link {

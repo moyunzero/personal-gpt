@@ -15,6 +15,27 @@ packages/*/node_modules
 # testing
 /coverage
 
+# acceptance / 本地人工与 live smoke 产物（不入库、不推 GitHub）
+tests/acceptance/**/*.png
+tests/acceptance/**/*.log
+tests/acceptance/**/*RESULT*.json
+tests/acceptance/**/checks*.json
+tests/acceptance/**/trace-obs*
+tests/acceptance/**/SMOKE-RESULT*.json
+tests/acceptance/**/fixtures/
+tests/acceptance/**/run.mjs
+tests/acceptance/**/run-*.mjs
+tests/acceptance/**/smoke-*.mjs
+tests/acceptance/**/run-*.py
+tests/acceptance/**/run*.py
+tests/acceptance/**/*-probe.json
+tests/acceptance/**/*export.md
+tests/acceptance/**/*export.json
+# 保留验收说明文档
+!tests/acceptance/**/README.md
+!tests/acceptance/**/CLOSEOUT.md
+!tests/acceptance/**/ACCEPTANCE.md
+
 # next.js
 /.next/
 /apps/web/.next/
@@ -24,6 +45,7 @@ packages/*/node_modules
 /build
 /apps/ingest-worker/dist
 /apps/agent-service/dist
+/packages/shared/dist
 
 # misc
 .DS_Store
@@ -39,6 +61,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Cursor MCP（含 Astra 等本地凭据，勿提交）
+.cursor/mcp.json
+
 # vercel
 .vercel
 
@@ -50,6 +75,7 @@ next-env.d.ts
 
 data/
 uploads/
+.data/
 
 .planning/
 .env*.local

@@ -1,16 +1,15 @@
 import { generateText } from "ai";
 
-import { groqChatModel } from "./groq-chat";
-import { GROQ_RAG_HELPER_MODEL } from "./groq-models";
+import { chatModel, resolveRagHelperModel } from "./chat-provider";
 
-/** HyDE / Multi-Query / LLM 路由等轻量 RAG 辅助，走 Groq 8B（国内可访问） */
+/** HyDE / Multi-Query / LLM 路由等轻量 RAG 辅助（Groq 8B 或 OpenAI 兼容模型） */
 export async function generateRagHelperText(
   system: string,
   user: string,
   temperature = 0.2,
 ): Promise<string> {
   const { text } = await generateText({
-    model: groqChatModel(GROQ_RAG_HELPER_MODEL),
+    model: chatModel(resolveRagHelperModel()),
     system,
     prompt: user,
     temperature,

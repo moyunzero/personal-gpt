@@ -24,36 +24,43 @@ export async function probeKbRelevance(
 ): Promise<EmbeddingPrecheckResult> {
   const log = logger.child({ scope: "chat.embedding-precheck", requestId });
 
-  const vector = await embedQueryText(query, log);
-  if (!vector) {
-    log.warn("embedding 预检失败，跳过探测");
+  try {
+    const vector = await embedQueryText(query, log);
+    if (!vector) {
+      log.warn("embedding 预检失败，跳过探测");
+      return { topSimilarity: 0, probed: false };
+    }
+
+    const vectorStore = createVectorStore();
+    const hits = await vectorStore.search({
+      workspaceId,
+      vector,
+      limit: 1,
+      similarityThreshold: 0,
+      filter: ROUTE_CORPUS_FILTER,
+    });
+
+    const top = hits[0];
+    const topSimilarity = top?.similarity ?? 0;
+
+    log.debug("embedding 预检完成", {
+      topSimilarity,
+      title: top?.title,
+      retrieveAt: ROUTE_RETRIEVE_SIMILARITY,
+      directBelow: ROUTE_DIRECT_SIMILARITY,
+    });
+
+    return {
+      topSimilarity,
+      title: top?.title,
+      probed: true,
+    };
+  } catch (error) {
+    log.warn("embedding 预检异常，跳过探测（fail-open）", {
+      err: error instanceof Error ? error.message : String(error),
+    });
     return { topSimilarity: 0, probed: false };
   }
-
-  const vectorStore = createVectorStore();
-  const hits = await vectorStore.search({
-    workspaceId,
-    vector,
-    limit: 1,
-    similarityThreshold: 0,
-    filter: ROUTE_CORPUS_FILTER,
-  });
-
-  const top = hits[0];
-  const topSimilarity = top?.similarity ?? 0;
-
-  log.debug("embedding 预检完成", {
-    topSimilarity,
-    title: top?.title,
-    retrieveAt: ROUTE_RETRIEVE_SIMILARITY,
-    directBelow: ROUTE_DIRECT_SIMILARITY,
-  });
-
-  return {
-    topSimilarity,
-    title: top?.title,
-    probed: true,
-  };
 }
 
 export function precheckSuggestsRetrieve(result: EmbeddingPrecheckResult): boolean {

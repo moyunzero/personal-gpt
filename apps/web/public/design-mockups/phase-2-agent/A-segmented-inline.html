@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>方案 A · 分段切换 + 引用式步骤</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./tokens.css" />
+    <style>
+      /* A: category-tab 风格的 Chat | Agent 分段器 — 对齐 DESIGN.md category-tab */
+      .mode-seg {
+        display: inline-flex;
+        gap: 4px;
+        padding: 3px;
+        background: var(--color-surface-soft);
+        border-radius: var(--radius-md);
+      }
+      .mode-seg button {
+        border: 0;
+        background: transparent;
+        color: var(--color-muted);
+        font: 500 13px/1.4 var(--font-body);
+        padding: 7px 14px;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+      }
+      .mode-seg button[aria-pressed="true"] {
+        background: var(--color-surface-card);
+        color: var(--color-ink);
+      }
+
+      /* 复用 citation-cards 语言 */
+      .agent-block {
+        margin-top: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .agent-label {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: var(--color-muted-soft);
+      }
+      .todo-list {
+        list-style: none;
+        margin: 0;
+        padding: 12px 14px;
+        background: var(--color-surface-soft);
+        border: 1px solid var(--color-hairline-soft);
+        border-radius: var(--radius-lg);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .todo-list li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: var(--color-body-strong);
+      }
+      .todo-check {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 1.5px solid var(--color-primary);
+        background: var(--color-primary);
+        position: relative;
+        flex-shrink: 0;
+      }
+      .todo-check::after {
+        content: "";
+        position: absolute;
+        left: 4px;
+        top: 1px;
+        width: 5px;
+        height: 9px;
+        border: solid #fff;
+        border-width: 0 1.8px 1.8px 0;
+        transform: rotate(45deg);
+      }
+      .todo-check.pending {
+        background: transparent;
+      }
+      .todo-check.pending::after {
+        display: none;
+      }
+      .todo-check.active {
+        background: transparent;
+        border-color: var(--color-accent-teal);
+        box-shadow: inset 0 0 0 3px var(--color-accent-teal);
+      }
+      .todo-check.active::after {
+        display: none;
+      }
+
+      .step-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .step-card {
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-lg);
+        background: var(--color-canvas);
+        overflow: hidden;
+      }
+      .step-header {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        text-align: left;
+        font: inherit;
+        color: var(--color-ink);
+      }
+      .step-header:hover {
+        background: var(--color-surface-soft);
+      }
+      .step-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .step-agent {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        color: var(--color-primary);
+        background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+        padding: 2px 8px;
+        border-radius: var(--radius-pill);
+      }
+      .step-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--color-muted);
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+      .chevron {
+        width: 16px;
+        height: 16px;
+        transition: transform 0.15s ease;
+      }
+      .step-card.open .chevron {
+        transform: rotate(180deg);
+      }
+      .step-body {
+        display: none;
+        padding: 0 14px 14px;
+        color: var(--color-body);
+        font-size: 13.5px;
+        border-top: 1px solid var(--color-hairline-soft);
+      }
+      .step-card.open .step-body {
+        display: block;
+        padding-top: 12px;
+      }
+      .step-body code {
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+        background: var(--color-surface-card);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+
+      .citations {
+        margin-top: 8px;
+      }
+      .citation-card {
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-lg);
+        padding: 10px 14px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 14px;
+      }
+      .citation-sim {
+        color: var(--color-muted);
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <header class="header">
+        <div class="brand"><span class="spike" aria-hidden="true"></span>Personal GPT</div>
+        <div class="header-right">
+          <div class="mode-seg" role="group" aria-label="对话模式">
+            <button type="button" aria-pressed="false">Chat</button>
+            <button type="button" aria-pressed="true">Agent</button>
+          </div>
+          <a class="nav-link" href="#">知识库</a>
+        </div>
+      </header>
+
+      <div class="stream">
+        <div class="stream-inner">
+          <article class="msg msg-user">
+            <div class="msg-role">你</div>
+            <div class="msg-body">
+              调研 2026 年 LangGraph 与 AutoGen 的优缺点，写一份可交付的 Markdown 简报。
+            </div>
+          </article>
+
+          <article class="msg msg-assistant">
+            <div class="msg-role">助手 · Agent</div>
+            <div class="agent-block" aria-label="执行进度">
+              <p class="agent-label">待办</p>
+              <ul class="todo-list">
+                <li><span class="todo-check" aria-hidden="true"></span>拆解调研子题</li>
+                <li><span class="todo-check" aria-hidden="true"></span>检索知识库与联网资料</li>
+                <li><span class="todo-check active" aria-hidden="true"></span>综合撰写报告</li>
+                <li><span class="todo-check pending" aria-hidden="true"></span>编辑审阅定稿</li>
+              </ul>
+
+              <p class="agent-label">执行步骤</p>
+              <div class="step-list">
+                <div class="step-card">
+                  <button type="button" class="step-header">
+                    <span class="step-title"
+                      ><span class="step-agent">Supervisor</span> 已生成 4 步计划</span
+                    >
+                    <span class="step-meta"
+                      >完成
+                      <svg class="chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path
+                          d="M4 6l4 4 4-4"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+                <div class="step-card open">
+                  <button type="button" class="step-header">
+                    <span class="step-title"
+                      ><span class="step-agent">Retriever</span> kb_search · workspace default</span
+                    >
+                    <span class="step-meta"
+                      >3 条
+                      <svg class="chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path
+                          d="M4 6l4 4 4-4"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  <div class="step-body">
+                    调用 <code>kb_search</code>，Top-K=6，过滤
+                    <code>workspaceId=default</code>。命中内部笔记与课程摘要。
+                  </div>
+                </div>
+                <div class="step-card">
+                  <button type="button" class="step-header">
+                    <span class="step-title"
+                      ><span class="step-agent">Researcher</span> web_search · LangGraph</span
+                    >
+                    <span class="step-meta"
+                      >进行中
+                      <svg class="chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path
+                          d="M4 6l4 4 4-4"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="msg-body">
+              <h3>执行摘要</h3>
+              <p>
+                LangGraph 更适合<strong>有状态、可检查点</strong>的生产编排；AutoGen
+                更偏对话式多智能体原型。对你们「知识库 + 可观测」路线，Supervisor + 专科 Worker
+                与现有 Nest 服务更贴合。
+              </p>
+            </div>
+
+            <div class="citations agent-block">
+              <p class="agent-label">引用来源</p>
+              <div class="citation-card">
+                <span>内部笔记 · LangGraph Supervisor</span>
+                <span class="citation-sim">86%</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-inner">
+          <div class="composer-shell">
+            <textarea class="composer-input" rows="1" placeholder="继续追问，或补充约束…">
+继续对比 token 成本</textarea>
+            <button type="button" class="composer-send" aria-label="发送">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M5 12h14M13 6l6 6-6 6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+          <p class="composer-hint">Agent 模式 · 复杂任务走多 Agent · 闲聊会短路回复</p>
+        </div>
+      </div>
+    </div>
+
+    <aside class="mock-label">
+      <strong>方案 A</strong>
+      顶部分段切换 + 消息内折叠步骤（对齐引用卡片）
+      <div class="mock-nav">
+        <a href="./A-segmented-inline.html">A</a>
+        <a href="./B-pill-timeline.html">B</a>
+        <a href="./C-composer-dense.html">C</a>
+        <a href="./index.html">目录</a>
+      </div>
+    </aside>
+  </body>
+</html>

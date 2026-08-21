@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>方案 C · 输入区模式条 + 致密工具面板</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./tokens.css" />
+    <style>
+      /* C: 模式切换贴近 composer（像工具选择）；步骤面板更接近 agui ToolPanels + 暗色工具条 */
+      .composer-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+      .tool-mode {
+        display: inline-flex;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+      }
+      .tool-mode button {
+        border: 0;
+        background: var(--color-canvas);
+        color: var(--color-muted);
+        font: 500 13px/1 var(--font-body);
+        padding: 8px 14px;
+        cursor: pointer;
+      }
+      .tool-mode button + button {
+        border-left: 1px solid var(--color-hairline);
+      }
+      .tool-mode button[aria-pressed="true"] {
+        background: var(--color-surface-dark);
+        color: var(--color-on-dark);
+      }
+
+      .tool-panel {
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        margin: 6px 0;
+        background: var(--color-canvas);
+      }
+      .tool-panel-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        background: var(--color-surface-dark);
+        color: var(--color-on-dark);
+      }
+      .tool-panel-bar .name {
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+        letter-spacing: -0.2px;
+      }
+      .tool-panel-bar .state {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        color: var(--color-accent-teal);
+      }
+      .tool-panel-bar .state.err {
+        color: #f0a0a0;
+      }
+      .tool-panel-body {
+        padding: 12px 14px;
+        font-size: 13.5px;
+        background: var(--color-surface-soft);
+        color: var(--color-body);
+      }
+      .tool-panel-body pre {
+        margin: 8px 0 0;
+        padding: 10px 12px;
+        border-radius: var(--radius-md);
+        background: var(--color-surface-dark-elevated);
+        color: var(--color-on-dark);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 1.5;
+        overflow: auto;
+      }
+      .tool-panel.collapsed .tool-panel-body {
+        display: none;
+      }
+
+      .agent-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 4px 0 14px;
+      }
+
+      .err-note {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: var(--radius-md);
+        border: 1px solid color-mix(in srgb, var(--color-error) 35%, var(--color-hairline));
+        background: color-mix(in srgb, var(--color-error) 8%, var(--color-canvas));
+        color: var(--color-error);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <header class="header">
+        <div class="brand"><span class="spike" aria-hidden="true"></span>Personal GPT</div>
+        <div class="header-right">
+          <a class="nav-link" href="#">知识库</a>
+        </div>
+      </header>
+
+      <div class="stream">
+        <div class="stream-inner">
+          <article class="msg msg-user">
+            <div class="msg-role">你</div>
+            <div class="msg-body">
+              调研 2026 RAG 趋势并生成 Markdown 报告（可先搜外网；搜索失败也要给部分结果）。
+            </div>
+          </article>
+
+          <article class="msg msg-assistant">
+            <div class="msg-role">助手 · Agent</div>
+
+            <div class="agent-stack" aria-label="工具与步骤">
+              <div class="tool-panel">
+                <div class="tool-panel-bar">
+                  <span class="name">supervisor.write_todos</span>
+                  <span class="state">done</span>
+                </div>
+                <div class="tool-panel-body">
+                  4 项待办：计划 → 检索 → 联网 → 报告
+                  <pre>
+[
+  { "id": "1", "content": "写 research_plan", "status": "completed" },
+  { "id": "2", "content": "Retriever 查 KB", "status": "completed" },
+  { "id": "3", "content": "Researcher 联网", "status": "completed" },
+  { "id": "4", "content": "Editor 出稿", "status": "in_progress" }
+]</pre>
+                </div>
+              </div>
+
+              <div class="tool-panel">
+                <div class="tool-panel-bar">
+                  <span class="name">retriever.kb_search</span>
+                  <span class="state">done</span>
+                </div>
+                <div class="tool-panel-body">返回 4 条 citation · workspace default</div>
+              </div>
+
+              <div class="tool-panel">
+                <div class="tool-panel-bar">
+                  <span class="name">researcher.web_search</span>
+                  <span class="state err">degraded</span>
+                </div>
+                <div class="tool-panel-body">
+                  Bocha key 未配置或上游超时。已跳过联网，继续用知识库草稿。
+                  <div class="err-note">搜索失败 · 已降级 — 报告将标注「外网来源缺失」</div>
+                </div>
+              </div>
+
+              <div class="tool-panel collapsed">
+                <div class="tool-panel-bar">
+                  <span class="name">editor.report_generate</span>
+                  <span class="state">running</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="msg-body">
+              <h3>2026 RAG 趋势 · 草稿</h3>
+              <p>
+                在缺少外网补充的情况下，基于知识库可确认：混合检索、Agentic RAG
+                与可观测追踪仍是主线。完整外网交叉验证需配置
+                <code>BOCHA_API_KEY</code> 后重跑 Researcher。
+              </p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-inner">
+          <div class="composer-toolbar">
+            <div class="tool-mode" role="group" aria-label="对话模式">
+              <button type="button" aria-pressed="false">Chat</button>
+              <button type="button" aria-pressed="true">Agent</button>
+            </div>
+            <span class="badge"><span class="badge-dot"></span>recursion ≤ 40</span>
+          </div>
+          <div class="composer-shell">
+            <textarea class="composer-input" rows="1" placeholder="发送到 Agent…">
+补一张对比表</textarea>
+            <button type="button" class="composer-send" aria-label="发送">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M5 12h14M13 6l6 6-6 6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+          <p class="composer-hint">模式贴在输入区 · 深色工具条贴近 agui · 失败态可见</p>
+        </div>
+      </div>
+    </div>
+
+    <aside class="mock-label">
+      <strong>方案 C</strong>
+      Composer 旁模式条 + 致密 tool 面板（含降级）
+      <div class="mock-nav">
+        <a href="./A-segmented-inline.html">A</a>
+        <a href="./B-pill-timeline.html">B</a>
+        <a href="./C-composer-dense.html">C</a>
+        <a href="./index.html">目录</a>
+      </div>
+    </aside>
+  </body>
+</html>

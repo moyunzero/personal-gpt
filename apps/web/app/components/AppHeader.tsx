@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import ModeSegmentedControl, { type ChatMode } from "./ModeSegmentedControl";
+
 /** Anthropic 风格 spike-mark（与 chat 页一致） */
 export const SpikeMark = ({ className = "" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -10,12 +12,21 @@ export const SpikeMark = ({ className = "" }: { className?: string }) => (
 type AppHeaderProps = {
   /** 当前激活页，用于高亮导航（D-01/D-02） */
   activePage: "chat" | "kb";
+  /** Chat 页可选：模式分段（方案 A） */
+  mode?: ChatMode;
+  onModeChange?: (mode: ChatMode) => void;
+  modeDisabled?: boolean;
 };
 
 /**
- * 共享顶栏：左侧 spike-mark + wordmark，右侧「知识库」/「对话」切换（D-18）。
+ * 共享顶栏：左侧 spike-mark + wordmark，右侧 Chat|Agent + 知识库链接（D-18 / AGENT-05）。
  */
-export default function AppHeader({ activePage }: AppHeaderProps) {
+export default function AppHeader({
+  activePage,
+  mode,
+  onModeChange,
+  modeDisabled = false,
+}: AppHeaderProps) {
   return (
     <header className="chat-header">
       <div className="chat-header-inner app-header-inner">
@@ -24,17 +35,22 @@ export default function AppHeader({ activePage }: AppHeaderProps) {
           <span className="wordmark">Personal · Emotion GPT</span>
         </Link>
 
-        <nav className="app-header-nav" aria-label="主导航">
-          {activePage === "chat" ? (
-            <Link href="/kb" className="app-header-link">
-              知识库
-            </Link>
-          ) : (
-            <Link href="/" className="app-header-link">
-              对话
-            </Link>
-          )}
-        </nav>
+        <div className="app-header-cluster">
+          {activePage === "chat" && mode && onModeChange ? (
+            <ModeSegmentedControl mode={mode} onChange={onModeChange} disabled={modeDisabled} />
+          ) : null}
+          <nav className="app-header-nav" aria-label="主导航">
+            {activePage === "chat" ? (
+              <Link href="/kb" className="app-header-link">
+                知识库
+              </Link>
+            ) : (
+              <Link href="/" className="app-header-link">
+                对话
+              </Link>
+            )}
+          </nav>
+        </div>
       </div>
     </header>
   );

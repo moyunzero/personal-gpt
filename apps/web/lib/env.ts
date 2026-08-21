@@ -8,6 +8,10 @@ import { config } from "dotenv";
  */
 config({ path: path.resolve(__dirname, "../../../.env") });
 
+import { applyOutboundProxyFromEnv, logOutboundProxyStatus } from "@/lib/outbound-proxy";
+
+logOutboundProxyStatus(applyOutboundProxyFromEnv());
+
 export {
   env,
   getEnv,
