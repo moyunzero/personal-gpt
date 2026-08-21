@@ -57,8 +57,8 @@
 
 ### Memory & Advanced Storage（记忆与存储 — Phase 3）
 
-- [ ] **MEM-01**: Redis 短期会话记忆
-- [ ] **MEM-02**: 长期记忆（Mem0 或自研分层）跨会话召回
+- [x] **MEM-01**: Redis 短期会话记忆
+- [x] **MEM-02**: 长期记忆（Mem0 或自研分层）跨会话召回
 - [ ] **STORE-01**: 多存储抽象：Milvus（向量）、ElasticSearch（全文）、Neo4j（图谱）
 - [x] **RAG-05**: Agentic RAG — Agent 决定检索策略与次数
 - [ ] **RAG-06**: 混合检索（向量 + BM25）与 Graph RAG
@@ -126,8 +126,8 @@
 | AGENT-03 | Phase 2 | Complete |
 | AGENT-04 | Phase 2 | Complete |
 | AGENT-05 | Phase 2 | Complete |
-| MEM-01 | Phase 3 | Pending |
-| MEM-02 | Phase 3 | Pending |
+| MEM-01 | Phase 3 | Complete |
+| MEM-02 | Phase 3 | Complete |
 | STORE-01 | Phase 3 | Pending |
 | RAG-05 | Phase 3 | Complete |
 | RAG-06 | Phase 3 | Pending (hybrid green 03-03b; Graph → 03-07) |

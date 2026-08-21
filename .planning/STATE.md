@@ -4,18 +4,18 @@ milestone: v2.0
 milestone_name: 企业级知识库平台
 current_phase: 03
 current_phase_name: rag-memory-eval
-current_plan: 6
+current_plan: 7
 status: executing
-stopped_at: Completed 03-03b-PLAN.md
-last_updated: "2026-08-21T15:52:23.552Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-08-21T16:02:06.667Z"
 last_activity: 2026-08-21
-last_activity_desc: Completed 03-03b Wave1c gate (regression 01/02 + ISSUE-001 Closed + GOLDEN-01)
+last_activity_desc: Completed 03-04 Wave2a memory (Redis + Mem0)
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 23
-  completed_plans: 18
-  percent: 78
+  completed_plans: 19
+  percent: 40
 ---
 
 # Project State
@@ -25,24 +25,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** 用户能上传企业文档、基于自有知识库获得可溯源的准确回答  
-**Current focus:** Phase 3 — executing; next `03-04` Wave2a (Redis + Mem0)
+**Current focus:** Phase 3 — executing; next `03-05` (Wave 2b / multi-store or next incomplete plan)
 
 ## Current Position
 
 Phase: PGPT-03 (rag-memory-eval) — **EXECUTING**  
-Plan: 6 of 10
-Current Plan: 6
+Plan: 7 of 10
+Current Plan: 7
 Total Plans in Phase: 10  
 Status: Ready to execute
-Last activity: 2026-08-21 — Completed 03-03b Wave1c gate (regression / ISSUE-001 / GOLDEN)
+Last activity: 2026-08-21 — Completed 03-04 Wave2a (Redis short-term + Mem0)
 
-Progress: Phase 1–2 plans 12/12 complete; Phase 3 6/10 (through 03-03b)
+Progress: Phase 1–2 plans 12/12 complete; Phase 3 7/10 (through 03-04)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 18（Phase 1: 7 · Phase 2: 5 · Phase 3: 6）
+- Total plans completed: 19（Phase 1: 7 · Phase 2: 5 · Phase 3: 7）
 - Phase 2 closeout evidence: `tests/acceptance/phase-2-agent/CLOSEOUT.md`
 
 **By Phase:**
@@ -51,7 +51,7 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 6/10 (through 03-03b)
 | --- | --- | --- |
 | 1 (PGPT-01-rag) | 7/7 | Complete 2026-07-02 |
 | 2 (PGPT-02-langgraph-agent) | 5/5 | MVP Complete 2026-08-14 |
-| 3 | 6/10 | In progress |
+| 3 | 7/10 | In progress |
 | 4 | 0/3 | Not started |
 | 5 | 0/1 | Not started |
 
@@ -67,6 +67,7 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 6/10 (through 03-03b)
 | Phase 03 P02 | 7min | 3 tasks | 12 files |
 | Phase 03 P03 | 32min | 2 tasks | 16 files |
 | Phase 03 P03b | 4min | 2 tasks | 6 files |
+| Phase 03 P04 | 6min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -99,10 +100,12 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 6/10 (through 03-03b)
 - [Phase 03]: corpus API+UI default user; explicit seed only (D-27/D-28)
 - [Phase 03]: 03-03b: ISSUE-001 Closed after green regression 01/02 + migrate documented (D-31)
 - [Phase 03]: 03-03b: GOLDEN-01 = golden.json≥20 + Vitest CI smoke; nightly LangSmith separate; not EVAL-01/RAGAS
+- [Phase 03]: Short-term Redis FakeRedis unit tests; Mem0 prefs-only via addStableFacts (D-19)
+- [Phase 03]: session-memory in shared for Chat+Agent; opaque localStorage userKey (D-18)
 
 ### Pending Todos
 
-- Continue `/gsd-execute-phase 3` — next `03-04` Wave2a (Redis short-term + Mem0)
+- Continue `/gsd-execute-phase 3` — next incomplete plan after 03-04 (03-05+)
 - 执行中遵守书面降级协议 D-06（7 自然日 + 用户确认）
 - Run `migrate-corpus-split --execute` in credentialed env when ready to cut over
 
@@ -113,11 +116,11 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 6/10 (through 03-03b)
 
 ## Session Continuity
 
-**Last session:** 2026-08-21T15:52:23.548Z
+**Last session:** 2026-08-21T16:02:06.661Z
 **Resume file:** None
 
-**Stopped at:** Completed 03-03b-PLAN.md
+**Stopped at:** Completed 03-04-PLAN.md
 
-**Resume next:** execute `03-04-PLAN.md`
+**Resume next:** execute next incomplete Phase 3 plan (`03-05`+)
 
-Last session note: 2026-08-21 completed 03-03b Wave1c gate (regression 01/02 green, ISSUE-001 Closed, GOLDEN-01 smoke)
+Last session note: 2026-08-21 completed 03-04 Wave2a — Redis short-term + Mem0 long-term; 03-memory-recall green
