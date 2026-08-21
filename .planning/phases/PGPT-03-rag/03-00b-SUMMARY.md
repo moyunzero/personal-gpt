@@ -49,7 +49,7 @@ patterns-established:
   - "Phase-3 regression files: placeholder harness + it.todo pointing to future modules"
   - "Shared stubs soft-skip missing ./module.js then it.todo naming the symbol"
 
-requirements-completed: [CORPUS-01, GOLDEN-01]
+requirements-completed: []  # CORPUS-01/GOLDEN-01 scaffolded only; remain Pending until Wave 1+/03-03b
 
 coverage:
   - id: D1
@@ -116,7 +116,7 @@ Each task was committed atomically:
 1. **Task 1: phase-3 regression stubs + package.json scripts** - `23e4beb` (test)
 2. **Task 2: shared unit stubs + migrate dry-run + VALIDATION frontmatter** - `a95e32e` (test)
 
-**Plan metadata:** see docs commit after SUMMARY land
+**Plan metadata:** `6ba4898` (docs: complete plan)
 
 ## Files Created/Modified
 
