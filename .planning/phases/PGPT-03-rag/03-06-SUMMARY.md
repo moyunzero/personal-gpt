@@ -105,7 +105,7 @@ Each task was committed atomically:
 2. **Task 2: VECTOR_BACKEND factory + optional ingest path** - `ebef082` (feat)
 3. **Task 3: Green 05 workspace isolation regression** - `2c6b573` (test)
 
-**Plan metadata:** (pending docs commit)
+**Plan metadata:** `f98f662` (docs: complete plan)
 
 ## Files Created/Modified
 
