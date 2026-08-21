@@ -10,6 +10,7 @@ import CorpusToggle, { type CorpusChoice } from "./components/CorpusToggle";
 import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
+import { getOrCreateThreadId, rotateThreadId } from "@/lib/chat/thread-id";
 import { getOrCreateUserKey } from "@/lib/chat/user-key";
 
 function lastUserTextFromMessages(messages: { role?: string; parts?: unknown[] }[]): string {
@@ -38,11 +39,17 @@ export default function Home() {
   const [corpus, setCorpus] = useState<CorpusChoice>("user");
   const [input, setInput] = useState("");
   const [userKey, setUserKey] = useState("");
+  const [threadId, setThreadId] = useState("");
+  const [chatInstance, setChatInstance] = useState(0);
   const streamRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setUserKey(getOrCreateUserKey());
   }, []);
+
+  useEffect(() => {
+    setThreadId(getOrCreateThreadId(mode));
+  }, [mode]);
 
   const transport = useMemo(
     () =>
@@ -51,13 +58,18 @@ export default function Home() {
         api: mode === "agent" ? "/api/agent/chat" : "/api/chat",
         // D-28: explicit corpus; default user (never silent seed)
         // D-18: opaque userKey for memory scope
-        body: { corpus, ...(userKey ? { userKey } : {}) },
+        // D-23: per-mode thread_id for checkpointer resume
+        body: {
+          corpus,
+          ...(userKey ? { userKey } : {}),
+          ...(threadId ? { thread_id: threadId } : {}),
+        },
       }),
-    [mode, corpus, userKey],
+    [mode, corpus, userKey, threadId],
   );
 
-  const { messages, sendMessage, regenerate, status, error, clearError } = useChat({
-    id: `home-${mode}`,
+  const { messages, sendMessage, regenerate, status, error, clearError, setMessages } = useChat({
+    id: `home-${mode}-${chatInstance}`,
     transport,
   });
 
@@ -98,9 +110,24 @@ export default function Home() {
     setMode("chat");
   };
 
+  const handleNewThread = () => {
+    clearError();
+    const next = rotateThreadId(mode);
+    setThreadId(next);
+    setMessages([]);
+    setChatInstance((n) => n + 1);
+    setInput("");
+  };
+
   return (
     <main>
-      <AppHeader activePage="chat" mode={mode} onModeChange={setMode} modeDisabled={isLoading} />
+      <AppHeader
+        activePage="chat"
+        mode={mode}
+        onModeChange={setMode}
+        modeDisabled={isLoading}
+        onNewThread={handleNewThread}
+      />
 
       <section ref={streamRef} className="chat-stream">
         <div className="chat-stream-inner">

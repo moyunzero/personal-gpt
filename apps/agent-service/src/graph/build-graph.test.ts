@@ -195,13 +195,14 @@ describe("AgentState checkpoint channels (D-22)", () => {
     await graph1.invoke(
       {
         messages: [new HumanMessage("记住这笔报销")],
-        todos: [{ id: "t1", label: "查政策", status: "completed" as const }],
+        todos: [{ id: "t1", content: "查政策", status: "completed" as const }],
         citations: [
           {
             documentId: "doc-1",
             title: "差旅政策",
             similarity: 0.91,
-            source: "kb" as const,
+            snippet: "需事先申请",
+            source: "kb",
           },
         ],
         workspaceId: "ws-d22",
