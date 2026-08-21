@@ -21,7 +21,7 @@
 
 - [x] **Phase 1: RAG 基础强化与知识库管理** — Monorepo、BullMQ 入库、KB UI、引用溯源 (completed 2026-07-02)
 - [x] **Phase 2: LangGraph 多 Agent 核心架构** — Supervisor + 子 Agent + Skills（MVP 关账 2026-08-12；v2.x 加固 2026-08-14；**非生产就绪**）
-- [ ] **Phase 3: 记忆、存储与高级 RAG** — Redis/Mem0、Milvus/ES/Neo4j、Agentic RAG（产品口径对齐 v3.0 检索/评测优先）
+- [x] **Phase 3: 记忆、存储与高级 RAG** — Redis/Mem0、Milvus/ES/Neo4j、Agentic RAG（产品口径对齐 v3.0 检索/评测优先）
 - [ ] **Phase 4: 全栈工程化与生产就绪** — Docker、认证、多租户、监控
 - [ ] **Phase 5: 高级企业特性** — 语音、定时 Agent、RAGAS、成本优化（持续）
 
@@ -147,7 +147,7 @@ Plans:
 6. Postgres checkpointer 单实例同 `thread_id` 可恢复；Chat/Agent 共用 `packages/shared` hybrid 入口
 7. 黄金集 ≥20（nightly）+ `tests/regression/phase-3/` 全绿
 
-**Plans**: 9/10 plans executed
+**Plans**: 10/10 plans executed
 
 Plans:
 
@@ -160,7 +160,7 @@ Plans:
 - [x] 03-04-PLAN.md — Wave2a：Redis 短期 + Mem0 长期记忆注入
 - [x] 03-05-PLAN.md — Wave2b：Postgres checkpointer 默认 + thread_id 分模持久化
 - [x] 03-06-PLAN.md — Wave3：Milvus VectorStore + factory + workspace 隔离回归
-- [ ] 03-07-PLAN.md — Wave4：Neo4j Graph RAG + Milestone 全并集关账
+- [x] 03-07-PLAN.md — Wave4：Neo4j Graph RAG + Milestone 全并集关账
 
 **Regression**: `tests/regression/phase-3/`（01–06）+ Phase 1–2 + `yarn eval:phase-3`
 
@@ -224,7 +224,7 @@ Plans:
 | --- | --- | --- | --- | --- |
 | 1. RAG + KB 管理 | v2.0 | 7/7 | Complete | 2026-07-02 |
 | 2. LangGraph 多 Agent | v2.0 | 5/5 | MVP Complete（非生产） | 2026-08-14 |
-| 3. 记忆 + 高级 RAG | v2.0 / v3.0 | 9/10 | In Progress|  |
+| 3. 记忆 + 高级 RAG | v2.0 / v3.0 | 10/10 | Complete | 2026-08-22 |
 | 4. 生产就绪 | v2.0 / v4.0 | 0/3 | Not started | — |
 | 5. 企业特性 | v2.0 / v5.0 | 0/1 | Not started | — |
 

@@ -483,7 +483,7 @@ apps/agent-service/skills/
 | **1 质量底座** | hybrid + RRF + rerank 默认开 + Corrective + corpus 分库 + ISSUE-001 Closed + 黄金集骨架 | ES BM25 + Astra 向量 → 应用层 RRF；Chat `/api/chat` 与 Agent `kb_search` 共用；默认只查 user corpus |
 | **2 记忆** | Redis 短期 + Mem0 长期 + Postgres checkpointer | 跨会话偏好召回；单实例同 `thread_id` 可恢复 |
 | **3 多存储** | Milvus VectorStore | 工厂可切换；workspace 隔离回归绿 |
-| **4 Graph** | Neo4j Graph RAG | 实体关系问答可 trace 路径；Milestone 全并集关账 |
+| **4 Graph** | Neo4j Graph RAG | ✅ 实体关系问答可 trace 路径（03-07）；Milestone 全并集关账 |
 
 **工期：** 约 **5–8 周**（不再按「~2–3 周」或把 Graph/Milvus 降为可选 P2）。
 
@@ -535,7 +535,7 @@ apps/agent-service/skills/
 | 03 | 会话 A 偏好 → 会话 B | Redis/Mem0 记忆可见 |
 | 04 | Agent 重启后续聊 | Postgres checkpointer 恢复 |
 | 05 | workspace A/B 同名文档 | 零交叉 |
-| 06 | Graph 实体关系 | Neo4j 路径可 trace |
+| 06 | Graph 实体关系 | ✅ Neo4j 路径可 trace（03-07 fixture + allowlist） |
 
 另：Corrective 单测（改写上限）+ `yarn eval:phase-3` 黄金集 smoke。
 
