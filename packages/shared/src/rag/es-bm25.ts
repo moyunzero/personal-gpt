@@ -89,7 +89,13 @@ export async function indexChunks(
       keywords: chunk.keywords,
     },
   ]);
-  await client.bulk({ refresh: true, operations });
+  const result = await client.bulk({ refresh: true, operations });
+  if (result.errors) {
+    const failed = (result.items ?? []).filter(
+      (item) => item.index?.error || item.create?.error || item.update?.error,
+    );
+    throw new Error(`ES bulk index failed (${failed.length} item errors)`);
+  }
 }
 
 export async function deleteByDocumentId(

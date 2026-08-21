@@ -8,11 +8,10 @@ import { Repository } from "typeorm";
 import { INGEST_QUEUE_NAME } from "@personal-gpt/shared";
 import type { IngestJobPayload } from "@personal-gpt/shared";
 import { getEnv } from "@personal-gpt/shared/schemas/env";
-import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
-
 import { DocumentEntity } from "../../../web/lib/db/entities/document.entity";
 import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity";
 
+import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
 import { parseDocument } from "./pipeline/parse";
 import { splitText, toChunkRecords } from "./pipeline/split";
@@ -103,7 +102,7 @@ export class IngestProcessor extends WorkerHost {
       this.logger.error(`Ingest failed for document ${documentId}: ${message}`);
 
       try {
-        await createVectorStore().deleteByDocument(workspaceId, documentId);
+        await deleteDocument(workspaceId, documentId, "user");
       } catch (cleanupErr) {
         this.logger.warn(
           `Vector cleanup after ingest failure failed: ${

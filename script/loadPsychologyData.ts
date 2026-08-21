@@ -6,16 +6,15 @@ import * as path from "path";
 
 import { embedTexts } from "@personal-gpt/shared/ai/embeddings";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
+import { resolveCorpusTargets } from "@personal-gpt/shared";
 
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? DEFAULT_WORKSPACE_ID;
 import { EMBEDDING_DIMENSION } from "@personal-gpt/shared/ai/embedding-models";
 
-const {
-  ASTRA_DB_NAMESPACE,
-  ASTRA_DB_COLLECTION,
-  ASTRA_DB_API_ENDPOINT,
-  ASTRA_DB_APPLICATION_TOKEN,
-} = process.env;
+const { ASTRA_DB_NAMESPACE, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN } = process.env;
+
+/** Seed corpus physical collection (D-24/D-25); not the legacy mixed ASTRA_DB_COLLECTION */
+const ASTRA_DB_COLLECTION = resolveCorpusTargets("seed").astraCollection;
 
 if (!ASTRA_DB_API_ENDPOINT || !ASTRA_DB_APPLICATION_TOKEN) {
   throw new Error(
