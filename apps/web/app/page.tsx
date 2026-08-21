@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "./components/AppHeader";
 import AgentErrorCard from "./components/AgentErrorCard";
 import Bubble from "./components/Bubble";
+import CorpusToggle, { type CorpusChoice } from "./components/CorpusToggle";
 import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
@@ -33,6 +34,7 @@ function lastUserTextFromMessages(messages: { role?: string; parts?: unknown[] }
 
 export default function Home() {
   const [mode, setMode] = useState<ChatMode>("chat");
+  const [corpus, setCorpus] = useState<CorpusChoice>("user");
   const [input, setInput] = useState("");
   const streamRef = useRef<HTMLElement>(null);
 
@@ -41,8 +43,10 @@ export default function Home() {
       new DefaultChatTransport({
         // Agent 走 BFF，便于注入 AGENT_INTERNAL_TOKEN，避免浏览器直连暴露密钥
         api: mode === "agent" ? "/api/agent/chat" : "/api/chat",
+        // D-28: explicit corpus; default user (never silent seed)
+        body: { corpus },
       }),
-    [mode],
+    [mode, corpus],
   );
 
   const { messages, sendMessage, regenerate, status, error, clearError } = useChat({
@@ -165,6 +169,9 @@ export default function Home() {
 
       <form onSubmit={handleSubmit} className="composer">
         <div className="composer-inner">
+          <div className="composer-toolbar">
+            <CorpusToggle value={corpus} onChange={setCorpus} disabled={isLoading} />
+          </div>
           <div className="composer-shell">
             <input
               className="composer-input"

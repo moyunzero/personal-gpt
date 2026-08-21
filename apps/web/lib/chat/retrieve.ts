@@ -1,7 +1,11 @@
 import { generateRagHelperText } from "@personal-gpt/shared/ai/rag-helper";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
-import type { RetrievedChunk } from "@personal-gpt/shared/stores/vector-store";
-import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
+import {
+  hybridSearch,
+  type Corpus,
+  type HybridSearchDeps,
+  type RetrievedChunk,
+} from "@personal-gpt/shared";
 
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -13,19 +17,14 @@ import {
   type RetrievedDoc,
   type VectorSearchResult,
 } from "./context";
-import { embedQueryText } from "./embedding-service";
-import { ROUTE_CORPUS_FILTER } from "./corpus-filters";
 import {
   ENABLE_HYDE,
   ENABLE_MULTI_QUERY,
   ENABLE_RERANKER,
-  RERANKER_CANDIDATE_LIMIT,
   RETRIEVAL_GRACE_MS,
   RETRIEVAL_LIMIT,
-  SEED_CORPUS_SIMILARITY_THRESHOLD,
   TOP1_SIMILARITY_THRESHOLD,
 } from "./rag-options";
-import { rerankHitsWithLlm } from "./reranker";
 import { traceRetrieveStep } from "./tracing";
 
 function hitKey(hit: RetrievedChunk): string {
@@ -44,16 +43,8 @@ function mergeHits(existing: RetrievedChunk[], incoming: RetrievedChunk[]): Retr
   return [...byKey.values()].sort((a, b) => b.similarity - a.similarity);
 }
 
-async function applyReranker(query: string, hits: RetrievedChunk[]): Promise<RetrievedChunk[]> {
-  const candidates = hits.slice(0, RERANKER_CANDIDATE_LIMIT);
-  if (!ENABLE_RERANKER) {
-    return candidates.slice(0, RETRIEVAL_LIMIT);
-  }
-  return rerankHitsWithLlm(query, candidates, RETRIEVAL_LIMIT);
-}
-
 function passesTop1PreCheck(hits: RetrievedChunk[]): boolean {
-  return hits.length > 0 && hits[0].similarity >= TOP1_SIMILARITY_THRESHOLD;
+  return hits.length > 0 && hits[0]!.similarity >= TOP1_SIMILARITY_THRESHOLD;
 }
 
 async function buildSearchQueries(query: string): Promise<string[]> {
@@ -88,38 +79,6 @@ async function buildEmbeddingInput(query: string): Promise<string> {
   );
 
   return hypothetical || query;
-}
-
-/** KB 上传与 prompt-suggestion 优先路（有 documentId 或显式 source） */
-const USER_CORPUS_FILTER = {
-  $or: [ROUTE_CORPUS_FILTER.$or[0], ROUTE_CORPUS_FILTER.$or[1]],
-} as const;
-
-const SEED_PSYCHOLOGY_FILTER = { source: { $eq: "psychology-qa" } } as const;
-
-async function searchWorkspace(workspaceId: string, vector: number[]): Promise<RetrievedChunk[]> {
-  const vectorStore = createVectorStore();
-  const limit = ENABLE_RERANKER ? RERANKER_CANDIDATE_LIMIT : RETRIEVAL_LIMIT;
-
-  // Path A：用户上传 / prompt-suggestion（Astra 全局 ANN 对后期 insert 不友好，需 metadata 过滤）
-  const userHits = await vectorStore.search({
-    workspaceId,
-    vector,
-    limit,
-    similarityThreshold: TOP1_SIMILARITY_THRESHOLD,
-    filter: USER_CORPUS_FILTER,
-  });
-
-  // Path B：psychology seed，更高门槛，避免泛化问法被 QA 挤占
-  const seedHits = await vectorStore.search({
-    workspaceId,
-    vector,
-    limit,
-    similarityThreshold: SEED_CORPUS_SIMILARITY_THRESHOLD,
-    filter: SEED_PSYCHOLOGY_FILTER,
-  });
-
-  return mergeHits(userHits, seedHits).slice(0, limit);
 }
 
 function mapHitsToDocs(hits: RetrievedChunk[]): RetrievedDoc[] {
@@ -173,15 +132,24 @@ async function awaitSearchWithGrace(
   }
 }
 
+export type GetRelevantContextOptions = {
+  corpus?: Corpus;
+  /** 测试注入 hybridSearch deps */
+  hybridDeps?: HybridSearchDeps;
+};
+
 /**
- * 向量检索：Multi-Query → HyDE embedding → search → Reranker → context。
+ * Chat 检索薄封装：可选 HyDE/MQ → shared hybridSearch（含 RRF/rerank/Corrective）。
+ * corpus 默认 user（D-27）；seed 须显式传入（D-28）。
  */
 export async function getRelevantContext(
   query: string,
   requestId: string,
   workspaceId: string = DEFAULT_WORKSPACE_ID,
+  options: GetRelevantContextOptions = {},
 ): Promise<VectorSearchResult> {
   const log = logger.child({ scope: "chat.retrieve", requestId });
+  const corpus = options.corpus ?? "user";
 
   if (!workspaceId?.trim()) {
     throw new Error("getRelevantContext requires workspaceId");
@@ -200,6 +168,7 @@ export async function getRelevantContext(
     log.debug("开始检索", {
       query,
       workspaceId,
+      corpus,
       hyde: ENABLE_HYDE,
       multiQuery: ENABLE_MULTI_QUERY,
       reranker: ENABLE_RERANKER,
@@ -214,21 +183,19 @@ export async function getRelevantContext(
 
         for (const searchQuery of searchQueries) {
           const embeddingInput = await buildEmbeddingInput(searchQuery);
-          const vector = await traceRetrieveStep("embed", traceCtx, () =>
-            embedQueryText(embeddingInput, log),
-          );
-          if (!vector) {
-            log.warn("embedding 生成失败");
-            continue;
-          }
-
           const hits = await traceRetrieveStep("search", traceCtx, () =>
-            searchWorkspace(workspaceId, vector),
+            hybridSearch(
+              {
+                query: embeddingInput,
+                workspaceId,
+                corpus,
+                limit: RETRIEVAL_LIMIT,
+              },
+              options.hybridDeps ?? {},
+            ),
           );
           mergedHits = mergeHits(mergedHits, hits);
         }
-
-        mergedHits = await applyReranker(query, mergedHits);
 
         log.debug("找到文档", {
           count: mergedHits.length,

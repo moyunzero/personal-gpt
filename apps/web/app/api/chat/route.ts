@@ -3,6 +3,7 @@ import { createUIMessageStreamResponse } from "ai";
 import { randomUUID } from "node:crypto";
 
 import { type VectorSearchResult } from "@/lib/chat/context";
+import { parseCorpus } from "@/lib/chat/corpus-filters";
 import { formatMessages, type InputMessage } from "@/lib/chat/messages";
 import { buildSystemPrompt } from "@/lib/chat/prompt";
 import { decideQueryRoute } from "@/lib/chat/query-router";
@@ -129,9 +130,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const { messages } = await req.json();
+    const body = (await req.json()) as { messages?: unknown; corpus?: unknown };
+    const { messages } = body;
+    // D-27/D-28 / T-03-seed: default user; seed only when explicit
+    const corpus = parseCorpus(body.corpus);
 
-    if (!messages || messages.length === 0) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response("No messages provided", {
         status: 400,
         headers: corsHeaders,
@@ -158,6 +162,7 @@ export async function POST(req: Request) {
       requestId,
     });
     log.debug("query route", {
+      corpus,
       route: routeDecision.route,
       reason: routeDecision.reason,
       fastPath: routeDecision.fastPath ?? false,
@@ -166,7 +171,9 @@ export async function POST(req: Request) {
 
     let contextResult: VectorSearchResult = { kind: "no-docs" };
     if (routeDecision.route === "retrieve") {
-      contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID);
+      contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID, {
+        corpus,
+      });
     }
 
     const citations = contextResult.kind === "ok" ? contextResult.citations : [];

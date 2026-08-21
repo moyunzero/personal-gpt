@@ -1,17 +1,14 @@
 /**
- * Retriever 薄封装：embed + VectorStore.search，强制 workspaceId（D-00d / D-07）。
- * 不回调 web INTERNAL_PROXY_KEY；不直连 Astra SDK。
- *
- * ISSUE-001 混库召回边界仍存在（本 Phase 不根治）。
- * 低相关 top-K 会诱发模型编造文档：必须用相似度门槛过滤。
+ * Retriever 薄封装：shared hybridSearch（D-12/D-29）。
+ * 强制 workspaceId；默认 corpus=user（D-27）。
  */
 
 import {
   DEFAULT_WORKSPACE_ID,
-  createVectorStore,
-  embedText,
+  hybridSearch,
+  type Corpus,
+  type HybridSearchDeps,
   type RetrievedChunk,
-  type VectorStore,
 } from "@personal-gpt/shared";
 
 export const DEFAULT_KB_TOP_K = 5;
@@ -42,10 +39,10 @@ export type RetrieveKbParams = {
   topK?: number;
   /** 最低相似度；缺省 AGENT_KB_MIN_SIMILARITY / 0.60 */
   minSimilarity?: number;
-  /** 测试注入；缺省 createVectorStore() */
-  store?: VectorStore;
-  /** 测试注入；缺省 embedText */
-  embed?: (text: string) => Promise<number[]>;
+  /** 默认 user；seed 须显式（D-27/D-28） */
+  corpus?: Corpus;
+  /** 测试注入 hybridSearch deps */
+  hybridDeps?: HybridSearchDeps;
 };
 
 /**
@@ -82,17 +79,19 @@ export async function retrieveKb(params: RetrieveKbParams): Promise<KbRetrieveRe
       ? Math.min(params.topK, 20)
       : DEFAULT_KB_TOP_K;
 
-  const embed = params.embed ?? embedText;
-  const store = params.store ?? createVectorStore();
-  const vector = await embed(query);
+  const corpus = params.corpus ?? "user";
   const minSimilarity = resolveKbMinSimilarity(params.minSimilarity);
 
-  // 先取裸召回再过滤，便于报告「最高相似度仍不足」
-  const raw = await store.search({
-    workspaceId,
-    vector,
-    limit: topK,
-  });
+  const raw = await hybridSearch(
+    {
+      query,
+      workspaceId,
+      corpus,
+      limit: topK,
+    },
+    params.hybridDeps ?? {},
+  );
+
   const topSimilarity =
     raw.length === 0
       ? undefined
