@@ -9,6 +9,34 @@ export const SharedEnvSchema = z
     ASTRA_DB_COLLECTION: z.string().min(1, "ASTRA_DB_COLLECTION 未设置"),
     ASTRA_DB_API_ENDPOINT: z.string().min(1, "ASTRA_DB_API_ENDPOINT 未设置"),
     ASTRA_DB_APPLICATION_TOKEN: z.string().min(1, "ASTRA_DB_APPLICATION_TOKEN 未设置"),
+
+    /** Corpus 分库（D-24）：用户上传 / 种子库物理隔离；未设时回退 ASTRA_DB_COLLECTION */
+    ASTRA_DB_COLLECTION_USER: z.string().min(1).optional(),
+    ASTRA_DB_COLLECTION_SEED: z.string().min(1).optional(),
+
+    /** Elasticsearch BM25（D-14）；本地 Compose 默认 http://localhost:9200 */
+    ES_NODE: z.string().url().default("http://localhost:9200"),
+    ES_INDEX_USER: z.string().min(1).default("kb_user"),
+    ES_INDEX_SEED: z.string().min(1).default("kb_seed"),
+
+    /** App-layer RRF rank constant k（经典 ≈60） */
+    RRF_K: z.coerce.number().int().min(1).max(200).default(60),
+
+    /**
+     * Dedicated rerank HTTP（OpenRouter/Cohere 兼容）。
+     * ENABLE_RERANKER 默认开（非 "false" 即启用）；Wave1c / 03-03 再统一切 Chat 调用点。
+     */
+    ENABLE_RERANKER: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((v) => v !== "false"),
+    RERANK_URL: z.string().url().optional(),
+    RERANK_API_KEY: z.string().min(1).optional(),
+    RERANK_MODEL: z.string().min(1).optional(),
+
+    /** Corrective 阈值（plan 03-03）；schema 先接受，本 plan 不接线 */
+    CORRECTIVE_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.35),
+
     /** Google AI Studio API Key（可选；国内不可用时可省略，RAG 辅助已改 Groq） */
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
 

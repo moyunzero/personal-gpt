@@ -32,6 +32,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # Elasticsearch 8.17 + IK（BM25 / 中文分词；Wave1 D-14）
+  elasticsearch:
+    build: ./docker/elasticsearch
+    container_name: personal_gpt_elasticsearch
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres_data:
   redis_data:
+  es_data:
