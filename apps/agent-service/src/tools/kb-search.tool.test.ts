@@ -158,8 +158,7 @@ describe("kb_search tool", () => {
         },
       ]);
     const { invokeKbSearch } = await import("./kb-search.tool");
-    const long =
-      "先查知识库里关于韶音手册的资料，再整理成一份简短 Markdown 报告";
+    const long = "先查知识库里关于韶音手册的资料，再整理成一份简短 Markdown 报告";
     const out = await invokeKbSearch({ query: long, userText: long });
     // query === userText → 只试 primary + condensed
     expect(searchMock).toHaveBeenCalledTimes(2);

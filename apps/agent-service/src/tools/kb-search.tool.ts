@@ -96,10 +96,7 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
     let topSimilarity: number | undefined;
     let workspaceId = "";
 
-    const tryQuery = async (
-      query: string,
-      via: HitVia,
-    ): Promise<string | undefined> => {
+    const tryQuery = async (query: string, via: HitVia): Promise<string | undefined> => {
       const q = query.trim();
       if (!q || tried.has(q)) return undefined;
       tried.add(q);
@@ -128,11 +125,7 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
     const condensedHit = await tryQuery(condensed, "condensed");
     if (condensedHit) return condensedHit;
 
-    return formatKbNoHitMessage(
-      workspaceId || "unknown",
-      minSimilarity,
-      topSimilarity,
-    );
+    return formatKbNoHitMessage(workspaceId || "unknown", minSimilarity, topSimilarity);
   } catch (err) {
     console.error("[kb_search] retrieve failed", err);
     return "知识库检索失败（降级）：请稍后重试，勿编造文档内容。";
