@@ -4,18 +4,18 @@ milestone: v2.0
 milestone_name: 企业级知识库平台
 current_phase: 03
 current_phase_name: rag-memory-eval
-current_plan: 4
+current_plan: 5
 status: executing
-stopped_at: Completed 03-02-PLAN.md (ingest dual-write + corpus migrate)
-last_updated: "2026-08-21T15:11:25.043Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-08-21T15:45:39.210Z"
 last_activity: 2026-08-21
-last_activity_desc: Completed 03-02 Wave1b ingest dual-write + corpus migrate
+last_activity_desc: Completed 03-03 Wave1c Corrective + Chat/Agent hybrid wire
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 23
-  completed_plans: 16
-  percent: 70
+  completed_plans: 17
+  percent: 74
 ---
 
 # Project State
@@ -25,24 +25,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** 用户能上传企业文档、基于自有知识库获得可溯源的准确回答  
-**Current focus:** Phase 3 — executing; next `03-03` Chat/Agent hybrid + corpus UI
+**Current focus:** Phase 3 — executing; next `03-03b` Wave1c gate (regression / ISSUE-001 / GOLDEN)
 
 ## Current Position
 
 Phase: PGPT-03 (rag-memory-eval) — **EXECUTING**  
-Plan: 4 of 10 in current phase  
-Current Plan: 4  
+Plan: 5 of 10 (next: 03-03b)
+Current Plan: 5
 Total Plans in Phase: 10  
-Status: Executing Phase 3  
-Last activity: 2026-08-21 — Completed 03-02 Wave1b ingest dual-write + corpus migrate
+Status: Ready to execute
+Last activity: 2026-08-21 — Completed 03-03 Wave1c Corrective + Chat/Agent hybrid wire
 
-Progress: Phase 1–2 plans 12/12 complete; Phase 3 4/10 (through 03-02)
+Progress: Phase 1–2 plans 12/12 complete; Phase 3 5/10 (through 03-03)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 16（Phase 1: 7 · Phase 2: 5 · Phase 3: 4）
+- Total plans completed: 17（Phase 1: 7 · Phase 2: 5 · Phase 3: 5）
 - Phase 2 closeout evidence: `tests/acceptance/phase-2-agent/CLOSEOUT.md`
 
 **By Phase:**
@@ -51,7 +51,7 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 4/10 (through 03-02)
 | --- | --- | --- |
 | 1 (PGPT-01-rag) | 7/7 | Complete 2026-07-02 |
 | 2 (PGPT-02-langgraph-agent) | 5/5 | MVP Complete 2026-08-14 |
-| 3 | 4/10 | In progress |
+| 3 | 5/10 | In progress |
 | 4 | 0/3 | Not started |
 | 5 | 0/1 | Not started |
 
@@ -63,7 +63,9 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 4/10 (through 03-02)
 | 03-00b | 8min | 2 | 12 |
 | 03-01 | 4min | 3 | 14 |
 | 03-02 | 7min | 3 | 12 |
+| 03-03 | 32min | 2 | 16 |
 | Phase 03 P02 | 7min | 3 tasks | 12 files |
+| Phase 03 P03 | 32min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -74,7 +76,7 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 4/10 (through 03-02)
 - Phase 1 末搭 agent-service 透传骨架 → Phase 2 替换为真实 LangGraph SSE
 - yarn workspaces monorepo，不引入 turborepo
 - Citations emit post text-end via data-citations SSE part
-- HyDE/Multi-Query/Reranker default off in rag-options.ts
+- HyDE/Multi-Query default off; Reranker default ON (03-03 D-11)
 - LangSmith fail-open tracing
 - Phase 2: Chat/Agent 双模；方案 A 消息内嵌步骤；三 Skills；recursion/降级护栏
 - Phase 2 stack: createSupervisor + @ai-sdk/langchain 2.x + MemorySaver；Skills≠Agent
@@ -90,10 +92,14 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 4/10 (through 03-02)
 - [Phase 03]: STORE-01/RAG-06 not marked complete yet — 03-01 is ES+hybrid skeleton only
 - [Phase 03]: ingest dual-write Astra+ES fail-closed; createVectorStore corpus targeting; migrate --execute gated on USER/SEED
 - [Phase 03]: ISSUE-001/CORPUS-01 not Closed until 03-03b; Chat corpus UI deferred to 03-03
+- [Phase 03]: Corrective max 1 rewrite inside hybridSearch (D-32–D-34)
+- [Phase 03]: ENABLE_RERANKER default ON; HyDE/MQ stay OFF (D-11/D-15)
+- [Phase 03]: Chat/Agent retrieve thin wrappers over shared hybridSearch (D-12/D-29)
+- [Phase 03]: corpus API+UI default user; explicit seed only (D-27/D-28)
 
 ### Pending Todos
 
-- Continue `/gsd-execute-phase 3` — next `03-03` Chat/Agent hybrid + corpus UI
+- Continue `/gsd-execute-phase 3` — next `03-03b` Wave1c gate (regression / ISSUE-001 / GOLDEN)
 - 执行中遵守书面降级协议 D-06（7 自然日 + 用户确认）
 - Run `migrate-corpus-split --execute` in credentialed env when ready to cut over
 
@@ -104,11 +110,11 @@ Progress: Phase 1–2 plans 12/12 complete; Phase 3 4/10 (through 03-02)
 
 ## Session Continuity
 
-**Last session:** 2026-08-21T15:09:09.490Z
+**Last session:** 2026-08-21T15:45:39.158Z
 **Resume file:** None
 
-**Stopped at:** Completed 03-02-PLAN.md (ingest dual-write + corpus migrate)
+**Stopped at:** Completed 03-03-PLAN.md
 
-**Resume next:** execute `03-03-PLAN.md`
+**Resume next:** execute `03-03b-PLAN.md`
 
-Last session note: 2026-08-21 completed 03-02 Wave1b (dual-write + corpus migrate)
+Last session note: 2026-08-21 completed 03-03 Wave1c (Corrective + Chat/Agent hybrid + corpus UI)

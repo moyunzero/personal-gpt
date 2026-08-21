@@ -147,7 +147,7 @@ Plans:
 6. Postgres checkpointer 单实例同 `thread_id` 可恢复；Chat/Agent 共用 `packages/shared` hybrid 入口
 7. 黄金集 ≥20（nightly）+ `tests/regression/phase-3/` 全绿
 
-**Plans**: 4/10 plans executed
+**Plans**: 5/10 plans executed
 
 Plans:
 
@@ -155,7 +155,7 @@ Plans:
 - [x] 03-00b-PLAN.md — Wave 0b：Nyquist 回归/单测骨架 + migrate dry-run + scripts
 - [x] 03-01-PLAN.md — Wave1a：ES Compose + shared RRF/hybrid/BM25/corpus
 - [x] 03-02-PLAN.md — Wave1b：Ingest 双写 ES + Astra 分 collection + 迁移脚本
-- [ ] 03-03-PLAN.md — Wave1c wiring：Corrective + 默认 Rerank + Chat/Agent 接线 + RAG-05 multi-hop
+- [x] 03-03-PLAN.md — Wave1c wiring：Corrective + 默认 Rerank + Chat/Agent 接线 + RAG-05 multi-hop
 - [ ] 03-03b-PLAN.md — Wave1c gate：回归 01/02 + ISSUE-001 Closed + GOLDEN-01 smoke
 - [ ] 03-04-PLAN.md — Wave2a：Redis 短期 + Mem0 长期记忆注入
 - [ ] 03-05-PLAN.md — Wave2b：Postgres checkpointer 默认 + thread_id 分模持久化
@@ -224,7 +224,7 @@ Plans:
 | --- | --- | --- | --- | --- |
 | 1. RAG + KB 管理 | v2.0 | 7/7 | Complete | 2026-07-02 |
 | 2. LangGraph 多 Agent | v2.0 | 5/5 | MVP Complete（非生产） | 2026-08-14 |
-| 3. 记忆 + 高级 RAG | v2.0 / v3.0 | 4/10 | In Progress|  |
+| 3. 记忆 + 高级 RAG | v2.0 / v3.0 | 5/10 | In Progress|  |
 | 4. 生产就绪 | v2.0 / v4.0 | 0/3 | Not started | — |
 | 5. 企业特性 | v2.0 / v5.0 | 0/1 | Not started | — |
 

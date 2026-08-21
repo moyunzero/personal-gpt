@@ -60,7 +60,7 @@
 - [ ] **MEM-01**: Redis 短期会话记忆
 - [ ] **MEM-02**: 长期记忆（Mem0 或自研分层）跨会话召回
 - [ ] **STORE-01**: 多存储抽象：Milvus（向量）、ElasticSearch（全文）、Neo4j（图谱）
-- [ ] **RAG-05**: Agentic RAG — Agent 决定检索策略与次数
+- [x] **RAG-05**: Agentic RAG — Agent 决定检索策略与次数
 - [ ] **RAG-06**: 混合检索（向量 + BM25）与 Graph RAG
 - [ ] **GOLDEN-01**: Phase 3 黄金集 ≥20 + CI deterministic smoke（`yarn eval:phase-3`）；非 RAGAS（RAGAS 仍为 Phase 5 EVAL-01）
 - [ ] **CP-01**: Postgres checkpointer 单实例同 thread_id 可恢复
@@ -129,7 +129,7 @@
 | MEM-01 | Phase 3 | Pending |
 | MEM-02 | Phase 3 | Pending |
 | STORE-01 | Phase 3 | Pending |
-| RAG-05 | Phase 3 | Pending |
+| RAG-05 | Phase 3 | Complete |
 | RAG-06 | Phase 3 | Pending |
 | GOLDEN-01 | Phase 3 | Pending |
 | CP-01 | Phase 3 | Pending |
