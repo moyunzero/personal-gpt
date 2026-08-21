@@ -140,14 +140,14 @@ export class ShortTermRedisMemory {
   }
 }
 
-let singleton: ShortTermRedisMemory | null | undefined;
+let singleton: ShortTermRedisMemory | undefined;
 
 /**
  * 从 env 创建单例。无 REDIS_URL 时返回 fail-open 实例（redis=null）。
  * 懒加载 ioredis，避免未装包时模块 import 即炸。
  */
 export async function getShortTermRedisMemory(): Promise<ShortTermRedisMemory> {
-  if (singleton !== undefined) return singleton;
+  if (singleton) return singleton;
 
   const keyPrefix = process.env.MEMORY_KEY_PREFIX?.trim() || DEFAULT_PREFIX;
   const nRaw = Number(process.env.SHORT_MEMORY_N ?? DEFAULT_N);

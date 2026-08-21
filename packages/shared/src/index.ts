@@ -36,3 +36,15 @@ export {
   type ShortTermPayload,
   type ShortTermRedisMemoryOptions,
 } from "./memory/short-term-redis";
+export {
+  memoryUserId,
+  createScopedMem0Client,
+  getMem0Client,
+  setMem0ClientForTests,
+  resetMem0ClientForTests,
+  formatMem0ContextBlock,
+  type Mem0Message,
+  type Mem0SearchHit,
+  type Mem0RawClient,
+  type ScopedMem0Client,
+} from "./memory/mem0-client";
