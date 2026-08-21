@@ -19,6 +19,26 @@ export const SharedEnvSchema = z
     ES_INDEX_USER: z.string().min(1).default("kb_user"),
     ES_INDEX_SEED: z.string().min(1).default("kb_seed"),
 
+    /**
+     * 向量后端（Wave3 STORE-01）。默认 astra；设 milvus 时走本地/自托管 Milvus。
+     */
+    VECTOR_BACKEND: z.enum(["astra", "milvus"]).default("astra"),
+
+    /** Milvus gRPC 地址（Compose 默认 localhost:19530） */
+    MILVUS_ADDRESS: z.string().min(1).default("localhost:19530"),
+
+    /** Milvus collection；未设时回退 Astra corpus collection 名 */
+    MILVUS_COLLECTION_USER: z.string().min(1).optional(),
+    MILVUS_COLLECTION_SEED: z.string().min(1).optional(),
+
+    /**
+     * Astra 默认时是否额外双写 Milvus（可选；VECTOR_BACKEND=milvus 时主写 Milvus）。
+     */
+    MILVUS_DUAL_WRITE: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((v) => v === "true"),
+
     /** App-layer RRF rank constant k（经典 ≈60） */
     RRF_K: z.coerce.number().int().min(1).max(200).default(60),
 

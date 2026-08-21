@@ -1,6 +1,6 @@
 /**
  * VectorStore 抽象：业务层唯一向量读写入口（D-00d）。
- * Astra 具体实现见 vector-store.astra.ts。
+ * Astra：vector-store.astra.ts；Milvus：vector-store.milvus.ts；工厂：vector-store.factory.ts。
  */
 
 export interface ChunkRecord {
@@ -48,3 +48,10 @@ export {
   resolveAstraCollectionName,
   type AstraVectorStoreOptions,
 } from "./vector-store.astra";
+
+export {
+  createMilvusVectorStore,
+  resolveMilvusCollectionName,
+  type MilvusClientLike,
+  type MilvusVectorStoreOptions,
+} from "./vector-store.milvus";
