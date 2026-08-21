@@ -65,3 +65,27 @@ export {
   type MemoryDeps,
   type MemoryScope,
 } from "./memory/session-memory";
+
+export {
+  assertAllowlistedCypher,
+  CypherAllowlistError,
+  ALLOWED_REL_TYPES,
+  ALLOWED_LABELS,
+} from "./rag/graph-cypher-allowlist";
+export {
+  graphRagQuery,
+  seedMilkTeaSubgraph,
+  createSeededMilkTeaFixtureExecutor,
+  getNeo4jDriverFromEnv,
+  resetNeo4jDriverForTests,
+  resolveProductName,
+  MILK_TEA_PATH_CYPHER,
+  MILK_TEA_SEED_CYPHER,
+  type GraphRagResult,
+  type GraphPathTrace,
+  type GraphPathNode,
+  type GraphPathRel,
+  type GraphQueryExecutor,
+  type GraphRagQueryOptions,
+} from "./rag/graph-rag";
+

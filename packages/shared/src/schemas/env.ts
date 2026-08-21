@@ -39,6 +39,11 @@ export const SharedEnvSchema = z
       .optional()
       .transform((v) => v === "true"),
 
+    /** Neo4j Bolt URI（Wave4 Graph RAG；Compose 默认 bolt://localhost:7687） */
+    NEO4J_URI: z.string().min(1).default("bolt://localhost:7687"),
+    NEO4J_USER: z.string().min(1).default("neo4j"),
+    NEO4J_PASSWORD: z.string().min(1).default("personal_gpt_neo4j"),
+
     /** App-layer RRF rank constant k（经典 ≈60） */
     RRF_K: z.coerce.number().int().min(1).max(200).default(60),
 

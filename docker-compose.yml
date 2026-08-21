@@ -114,6 +114,26 @@ services:
       timeout: 20s
       retries: 3
 
+  # Neo4j Graph RAG（Wave4 STORE-01 / RAG-06；窄域奶茶种子图）
+  neo4j:
+    image: neo4j:5.26-community
+    container_name: personal_gpt_neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-personal_gpt_neo4j}
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
 volumes:
   postgres_data:
   redis_data:
@@ -121,3 +141,4 @@ volumes:
   milvus_etcd_data:
   milvus_minio_data:
   milvus_data:
+  neo4j_data:
