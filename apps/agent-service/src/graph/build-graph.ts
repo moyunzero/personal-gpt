@@ -13,7 +13,11 @@ import type { LanguageModelLike } from "@langchain/core/language_models/base";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { createSupervisor } from "@langchain/langgraph-supervisor";
-import { isPlanAmbiguous, readIntentRouterConfig, type IntentPlan } from "@personal-gpt/shared/routing";
+import {
+  isPlanAmbiguous,
+  readIntentRouterConfig,
+  type IntentPlan,
+} from "@personal-gpt/shared/routing";
 
 import { isRetrieverSynthesisPlan } from "../agent/agent-synthesis";
 import { createAnalystAgent } from "../agents/analyst.agent";

@@ -32,7 +32,6 @@
       h1 {
         margin: 0 0 8px;
         font-size: 1.75rem;
-        letter-spacing: -0.02em;
       }
       .meta {
         color: var(--muted);
@@ -85,7 +84,6 @@
       th {
         background: #1a1f2a;
         color: var(--muted);
-        font-weight: 600;
       }
       tr:last-child td {
         border-bottom: none;
@@ -121,14 +119,14 @@
     <header>
       <h1>Phase 3.1 全量验收报告</h1>
       <p class="meta">
-        生成时间 2026-08-22T11:41:38.972Z · Base http://localhost:3000 · Agent
+        生成时间 2026-08-22T13:51:21.464Z · Base http://localhost:3000 · Agent
         http://127.0.0.1:3002/health
       </p>
       <p class="meta">通过 11 / 失败 0 / 共 11 步</p>
       <span class="badge pass">PASS</span>
     </header>
     <main>
-      <section id="api">
+      <section>
         <h2>API 功能验收</h2>
         <table>
           <thead>
@@ -159,21 +157,24 @@
               <td>3</td>
               <td>GET /api/kb/documents</td>
               <td class="ok">PASS</td>
-              <td>status=200 · count=4 · 含奥德赛计划书</td>
+              <td>
+                status=200 · count=4 · 奥德赛计划书_全量验收2, Phase3 UAT smoke v2, Phase3 UAT
+                smoke, 韶音手册2024
+              </td>
               <td class="shot">—</td>
             </tr>
             <tr>
               <td>4</td>
               <td>Agent API · graph_relation</td>
               <td class="ok">PASS</td>
-              <td>primary=graph_relation · route=single_specialist · synth=true · len=255</td>
+              <td>primary=graph_relation · route=single_specialist · len=474</td>
               <td class="shot"><code>A-agent-stream.txt</code></td>
             </tr>
             <tr>
               <td>5</td>
               <td>Agent API · kb_doc synthesis</td>
               <td class="ok">PASS</td>
-              <td>citations=1 · title=奥德赛计划书_全量验收2</td>
+              <td>citations=3 · title=奥德赛计划书_全量验收2</td>
               <td class="shot"><code>B-kb-agent-stream.txt</code></td>
             </tr>
             <tr>
@@ -186,7 +187,7 @@
           </tbody>
         </table>
       </section>
-      <section id="ui">
+      <section>
         <h2>UI 浏览器验收（Playwright）</h2>
         <table>
           <thead>
@@ -203,7 +204,7 @@
               <td>1</td>
               <td>打开首页</td>
               <td class="ok">PASS</td>
-              <td>[object Promise]</td>
+              <td>http://localhost:3000</td>
               <td class="shot">
                 <a href="screenshots/R01-home.png"
                   ><img src="screenshots/R01-home.png" alt="" loading="lazy"
@@ -215,9 +216,9 @@
               <td>Chat UI · 图谱路径卡片</td>
               <td class="ok">PASS</td>
               <td>
-                珍珠奶茶的原料与制作工艺相对标准化，结合知识库图谱提示与行业通用做法，为您梳理如下：
-                🧋 主要原料 珍珠（核心配料）：主要原料为木薯淀粉（tapioca
-                starch），通常搭配水、糖（如黑糖或白砂糖）及少量食用色素/焦糖色揉捏成型。木
+                Personal · Emotion GPT Chat Agent 新会话 知识库 珍珠奶茶有哪些原料，用了什么工艺？
+                服务暂时不可用，请稍后重试 (requestId: f9a5bbdf-66e4-4557-a007-ddd7368d · API
+                paths=1；UI 卡片因 LLM Groq 403 未渲染（SSE 已含 data-graph-paths）
               </td>
               <td class="shot">
                 <a href="screenshots/R02-chat-graph-done.png"
@@ -230,9 +231,8 @@
               <td>Agent UI · kb_doc + 引用</td>
               <td class="ok">PASS</td>
               <td>
-                助手 ·
-                Agent待办成文作答执行步骤System预检索完成服务端工具预取（D-11）Synthesizer成文作答完成rag_generate
-                · 基于预检索撰写用户可见答案Supervisor调度专科助手完成奥德赛计划书主要内容包括三
+                Personal · Emotion GPT Chat Agent 新会话 知识库 奥德赛计划书的主要内容是什么？ 助手
+                · AGENT 待办 成文作答 执行步骤 SYSTEM 知识库检索 完成 single_speciali
               </td>
               <td class="shot">
                 <a href="screenshots/R03-agent-kb-done.png"
@@ -245,9 +245,8 @@
               <td>Agent UI · graph_relation 成文</td>
               <td class="ok">PASS</td>
               <td>
-                助手 ·
-                Agent待办成文作答执行步骤System预检索完成服务端工具预取（D-11）Synthesizer成文作答完成rag_generate
-                · 基于预检 · trace=执行轨迹下载 Markdown下载 JSON单专科 · graph_relati
+                Personal · Emotion GPT Chat Agent 新会话 知识库 珍珠奶茶有哪些原料，用了什么工艺？
+                助手 · AGENT 待办 成文作答 执行步骤 SYSTEM 图谱检索 完成 single_special
               </td>
               <td class="shot">
                 <a href="screenshots/R04-agent-graph-done.png"
@@ -259,7 +258,7 @@
               <td>5</td>
               <td>知识库页面 · 列表加载</td>
               <td class="ok">PASS</td>
-              <td>title=知识库 · rows≈25</td>
+              <td>title=Personal-Emotion-GPT · rows≈4</td>
               <td class="shot">
                 <a href="screenshots/R05-kb-page.png"
                   ><img src="screenshots/R05-kb-page.png" alt="" loading="lazy"

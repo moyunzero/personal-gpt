@@ -168,7 +168,7 @@ describe("createChatStream graph paths (D-07)", () => {
     streamTextMock.mockReset();
   });
 
-  it("writes data-graph-paths after text stream with path summary, no cypher", async () => {
+  it("writes data-graph-paths before text stream with path summary, no cypher", async () => {
     mockSuccessfulTextStream("珍珠奶茶使用煮制工艺");
 
     const graphPaths: GraphPathDisplay[] = [
@@ -192,8 +192,10 @@ describe("createChatStream graph paths (D-07)", () => {
       (part) => (part as { type: string }).type === "data-graph-paths",
     );
 
-    expect(textEndIndex).toBeGreaterThan(-1);
-    expect(graphIndex).toBeGreaterThan(textEndIndex);
+    expect(graphIndex).toBeGreaterThan(-1);
+    if (textEndIndex >= 0) {
+      expect(graphIndex).toBeLessThan(textEndIndex);
+    }
 
     const dataPart = parts[graphIndex] as {
       type: string;

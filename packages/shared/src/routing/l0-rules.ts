@@ -97,8 +97,7 @@ export function orderSpecialistsByKeywordAppearance(query: string): SpecialistNa
   const wantsReport = REPORT_RE.test(t);
   const wantsAnalyst = ANALYST_RE.test(t);
   const seedProduct = resolveSeedProductName(t);
-  const wantsGraph =
-    GRAPH_KB_RE.test(t) || (hasGraphRelationCue(t) && seedProduct !== null);
+  const wantsGraph = GRAPH_KB_RE.test(t) || (hasGraphRelationCue(t) && seedProduct !== null);
 
   const need: SpecialistNeed[] = [];
   if (wantsGraph) {

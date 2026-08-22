@@ -75,8 +75,5 @@ export interface SynthesizeInput {
   l1?: L1Signals;
   l2Hint?: Partial<IntentPlan> | null;
   neo4jOk?: boolean;
-  config?: {
-    routeRetrieveSimilarity?: number;
-    routeDirectSimilarity?: number;
-  };
+  config?: import("./config").IntentRouterConfig;
 }

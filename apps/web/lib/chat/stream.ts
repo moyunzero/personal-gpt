@@ -42,6 +42,14 @@ export function createChatStream({
       let hasStarted = false;
       let lastError: Error | null = null;
 
+      if (graphPaths.length > 0) {
+        writer.write({
+          type: "data-graph-paths",
+          id: `graph-paths-${messageId}`,
+          data: { paths: graphPaths },
+        });
+      }
+
       const models = resolveChatModels();
       for (let i = 0; i < models.length; i++) {
         const modelName = models[i]!;
@@ -98,14 +106,6 @@ export function createChatStream({
               type: "data-citations",
               id: `citations-${messageId}`,
               data: { citations },
-            });
-          }
-
-          if (graphPaths.length > 0) {
-            writer.write({
-              type: "data-graph-paths",
-              id: `graph-paths-${messageId}`,
-              data: { paths: graphPaths },
             });
           }
 

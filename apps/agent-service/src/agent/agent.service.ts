@@ -140,6 +140,7 @@ function collectCitationsFromUpdate(
       }
       if (trace) {
         // 仅认「工具原文」形态，避免专科复述被当成重复 tool 事件
+        const trimmed = content.trim();
         if (/KB_SEARCH_STATUS:/i.test(content) || content.includes("[citation")) {
           trace.recordTool({
             name: "kb_search",
@@ -1578,8 +1579,9 @@ export class AgentService {
 
               await drainGraphStream({ messages: seededMessages });
 
-              const kbMissDominates =
-                /知识库未找到足够|KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(finalBuf);
+              const kbMissDominates = /知识库未找到足够|KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(
+                finalBuf,
+              );
               const hasSubstantiveGraphAnswer =
                 !kbMissDominates && /[\u4e00-\u9fff]{10,}/.test(finalBuf);
               if (
