@@ -1,4 +1,11 @@
 export {
+  chatRetrieveSafeReason,
+  isPlanAmbiguous,
+  mapIntentPlanToChatRoute,
+  type ChatQueryRoute,
+  type ChatRouteDecision,
+} from "./chat-map";
+export {
   readIntentRouterConfig,
   type IntentRouterConfig,
 } from "./config";
@@ -9,6 +16,11 @@ export {
   type CollectL1SignalsDeps,
 } from "./l1-signals";
 export {
+  classifyIntentL2,
+  needsL2,
+  type ClassifyL2Fn,
+} from "./l2-classifier";
+export {
   GRAPH_RELATION_RE,
   isGreetingOnly,
   isPureMathExpression,
@@ -16,6 +28,11 @@ export {
   matchL0Rules,
   orderSpecialistsByKeywordAppearance,
 } from "./l0-rules";
+export {
+  resolveIntentPlan,
+  type ResolveIntentPlanDeps,
+  type ResolveIntentPlanResult,
+} from "./resolve";
 export { synthesizeIntentPlan } from "./synthesize";
 export {
   IntentPlanSchema,
