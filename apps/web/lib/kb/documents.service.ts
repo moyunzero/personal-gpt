@@ -7,7 +7,12 @@ import type { IngestJobPayload } from "@personal-gpt/shared/types/kb";
 import { normalizeUploadMime } from "@personal-gpt/shared/utils/ingest";
 import { getUploadsDir } from "@personal-gpt/shared/utils/paths";
 import { deleteByDocumentId, resolveCorpusTargets } from "@personal-gpt/shared";
-import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
+import {
+  createVectorStore,
+  shouldWriteAstra,
+  shouldWriteMilvus,
+} from "@personal-gpt/shared/stores/vector-store";
+import { createMilvusVectorStore } from "@personal-gpt/shared/stores/vector-store.milvus";
 
 import { DocumentEntity } from "@/lib/db/entities/document.entity";
 import { IngestJobEntity } from "@/lib/db/entities/ingest-job.entity";
@@ -328,9 +333,19 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   });
   if (!document) return false;
 
-  const vectorStore = createVectorStore({ corpus: "user" });
-  await vectorStore.deleteByDocument(DEFAULT_WORKSPACE_ID, documentId);
-  // D-09: keep ES in sync with Astra on document delete
+  if (shouldWriteAstra()) {
+    await createVectorStore({ corpus: "user" }).deleteByDocument(
+      DEFAULT_WORKSPACE_ID,
+      documentId,
+    );
+  }
+  if (shouldWriteMilvus()) {
+    await createMilvusVectorStore({ corpus: "user" }).deleteByDocument(
+      DEFAULT_WORKSPACE_ID,
+      documentId,
+    );
+  }
+  // D-09: keep ES in sync with vector stores on document delete
   await deleteByDocumentId(resolveCorpusTargets("user").esIndex, DEFAULT_WORKSPACE_ID, documentId);
 
   if (document.filePath) {

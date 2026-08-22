@@ -1,8 +1,10 @@
 /**
- * Delete document vectors from Astra + ES (D-09).
+ * Delete document vectors from Astra/Milvus + ES (D-09).
  */
-import { createAstraVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 import type { Corpus } from "@personal-gpt/shared";
+import { shouldWriteAstra, shouldWriteMilvus } from "@personal-gpt/shared/stores/vector-store";
+import { createAstraVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
+import { createMilvusVectorStore } from "@personal-gpt/shared/stores/vector-store.milvus";
 
 import { deleteDocumentFromEs } from "./es-upsert";
 
@@ -11,7 +13,11 @@ export async function deleteDocument(
   documentId: string,
   corpus: Corpus = "user",
 ): Promise<void> {
-  const store = createAstraVectorStore({ corpus });
-  await store.deleteByDocument(workspaceId, documentId);
+  if (shouldWriteAstra()) {
+    await createAstraVectorStore({ corpus }).deleteByDocument(workspaceId, documentId);
+  }
+  if (shouldWriteMilvus()) {
+    await createMilvusVectorStore({ corpus }).deleteByDocument(workspaceId, documentId);
+  }
   await deleteDocumentFromEs(workspaceId, documentId, corpus);
 }
