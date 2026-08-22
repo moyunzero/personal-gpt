@@ -168,7 +168,7 @@ export function extractStableFactsFromUserText(userText: string): string[] {
   for (const re of patterns) {
     const m = text.match(re);
     if (m?.[1]?.trim()) {
-      facts.push(text);
+      facts.push(m[1].trim());
       break;
     }
   }
