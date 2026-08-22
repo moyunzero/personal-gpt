@@ -13,13 +13,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { RetrievedChunk, VectorStore } from "@personal-gpt/shared/stores/vector-store";
 import { hybridSearch } from "@personal-gpt/shared";
+import { resolveIntentPlan } from "@personal-gpt/shared/routing";
 
 type GoldenItem = {
   id: string;
   query: string;
   corpus: "user" | "seed";
-  expectCitationSource: string;
+  expectCitationSource?: string;
   forbidSources?: string[];
+  expectIntentPrimary?: string;
+  expectTool?: string | null;
 };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -55,7 +58,9 @@ describe("Phase 3 GOLDEN-01 CI smoke (deterministic)", () => {
       expect(item.id).toBeTruthy();
       expect(item.query.length).toBeGreaterThan(0);
       expect(["user", "seed"]).toContain(item.corpus);
-      expect(item.expectCitationSource.length).toBeGreaterThan(0);
+      if (item.expectCitationSource) {
+        expect(item.expectCitationSource.length).toBeGreaterThan(0);
+      }
     }
     // Must not reuse Phase 5 EVAL-01 naming in this artifact set
     const raw = readFileSync(goldenPath, "utf8");
@@ -91,6 +96,29 @@ describe("Phase 3 GOLDEN-01 CI smoke (deterministic)", () => {
       expect(result[0]!.source).toBe(item.expectCitationSource);
       for (const forbidden of item.forbidSources ?? []) {
         expect(result.every((h) => h.source !== forbidden)).toBe(true);
+      }
+    }
+  });
+
+  it("intent golden g23–g25: resolveIntentPlan primary + retrieverTools (D-09)", async () => {
+    const intentIds = new Set(["g23", "g24", "g25"]);
+    const intentItems = golden.filter((g) => intentIds.has(g.id));
+    expect(intentItems.length).toBe(3);
+
+    for (const item of intentItems) {
+      const probeKb = vi.fn().mockResolvedValue({
+        probed: true,
+        topSimilarity: item.id === "g25" ? 0.9 : 0.2,
+        title: item.id === "g25" ? "奥德赛计划书" : undefined,
+      });
+
+      const { plan } = await resolveIntentPlan(item.query, { probeKb });
+      expect(plan.primary).toBe(item.expectIntentPrimary);
+
+      if (item.expectTool) {
+        expect(plan.retrieverTools).toContain(item.expectTool);
+      } else {
+        expect(plan.retrieverTools).toEqual([]);
       }
     }
   });

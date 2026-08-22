@@ -152,5 +152,28 @@
     "corpus": "seed",
     "expectCitationSource": "prompt-suggestion",
     "forbidSources": []
+  },
+  {
+    "id": "g23",
+    "query": "珍珠奶茶有哪些原料，用了什么工艺？",
+    "corpus": "user",
+    "expectIntentPrimary": "graph_relation",
+    "expectTool": "graph_search"
+  },
+  {
+    "id": "g24",
+    "query": "你好",
+    "corpus": "user",
+    "expectIntentPrimary": "chitchat",
+    "expectTool": null
+  },
+  {
+    "id": "g25",
+    "query": "奥德赛计划书给了什么建议",
+    "corpus": "user",
+    "expectIntentPrimary": "kb_doc",
+    "expectTool": "kb_search",
+    "expectCitationSource": "奥德赛计划书_2026-06-30.md",
+    "forbidSources": ["psychology-qa"]
   }
 ]
