@@ -334,10 +334,7 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   if (!document) return false;
 
   if (shouldWriteAstra()) {
-    await createVectorStore({ corpus: "user" }).deleteByDocument(
-      DEFAULT_WORKSPACE_ID,
-      documentId,
-    );
+    await createVectorStore({ corpus: "user" }).deleteByDocument(DEFAULT_WORKSPACE_ID, documentId);
   }
   if (shouldWriteMilvus()) {
     await createMilvusVectorStore({ corpus: "user" }).deleteByDocument(
