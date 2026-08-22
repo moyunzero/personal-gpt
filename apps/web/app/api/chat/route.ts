@@ -1,7 +1,9 @@
+import { graphRagQuery } from "@personal-gpt/shared";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createUIMessageStreamResponse } from "ai";
 import { randomUUID } from "node:crypto";
 
+import { graphPathsToDisplay } from "@/app/components/GraphPathCards";
 import { type VectorSearchResult } from "@/lib/chat/context";
 import { parseCorpus } from "@/lib/chat/corpus-filters";
 import { loadMemoryContextBlock, parseUserKey, persistTurnMemory } from "@/lib/chat/memory-context";
@@ -182,6 +184,18 @@ export async function POST(req: Request) {
       });
     }
 
+    let graphSummary = "";
+    let graphPathsForUi = graphPathsToDisplay([]);
+    if (routeDecision.needsGraphContext) {
+      try {
+        const graphResult = await graphRagQuery({ question: lastContent });
+        graphSummary = graphResult.summary;
+        graphPathsForUi = graphPathsToDisplay(graphResult.paths);
+      } catch (err) {
+        log.warn("graphRagQuery failed, continuing without graph context", { err });
+      }
+    }
+
     const citations = contextResult.kind === "ok" ? contextResult.citations : [];
 
     // 把检索结果记一条 telemetry，让 ok / no-docs / timeout / api-error 在
@@ -197,19 +211,21 @@ export async function POST(req: Request) {
     // timeout / api-error 的日志在 getRelevantContext 里已经发过，避免重复。
 
     const systemPromptBase = buildSystemPrompt(contextResult);
+    const graphBlock = graphSummary ? `\n\n## 图谱知识\n${graphSummary}` : "";
     const memoryBlock = await loadMemoryContextBlock(
       { workspaceId: DEFAULT_WORKSPACE_ID, userKey },
       lastContent,
     );
     const systemPrompt = memoryBlock
-      ? `${systemPromptBase}\n\n${memoryBlock}`
-      : systemPromptBase;
+      ? `${systemPromptBase}${graphBlock}\n\n${memoryBlock}`
+      : `${systemPromptBase}${graphBlock}`;
 
     const stream = createChatStream({
       systemPrompt,
       messages: formattedMessages,
       requestId,
       citations,
+      graphPaths: graphPathsForUi,
       onComplete: async (assistantText) => {
         await persistTurnMemory(
           { workspaceId: DEFAULT_WORKSPACE_ID, userKey },

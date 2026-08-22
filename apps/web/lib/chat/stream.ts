@@ -4,6 +4,8 @@ import { streamText, createUIMessageStream } from "ai";
 
 import { logger } from "@/lib/logger";
 
+import type { GraphPathDisplay } from "@/app/components/GraphPathCards";
+
 import type { FormattedMessage } from "./messages";
 import { ThinkStripFilter } from "./think-strip";
 
@@ -12,6 +14,8 @@ export interface ChatStreamOptions {
   messages: FormattedMessage[];
   requestId: string;
   citations?: Citation[];
+  /** D-07: graph path cards — no cypher field */
+  graphPaths?: GraphPathDisplay[];
   /** 流成功结束后回调（用于短期记忆 / Mem0 持久化）；失败不调用 */
   onComplete?: (assistantText: string) => void | Promise<void>;
 }
@@ -27,6 +31,7 @@ export function createChatStream({
   messages,
   requestId,
   citations = [],
+  graphPaths = [],
   onComplete,
 }: ChatStreamOptions) {
   const log = logger.child({ scope: "chat.stream", requestId });
@@ -93,6 +98,14 @@ export function createChatStream({
               type: "data-citations",
               id: `citations-${messageId}`,
               data: { citations },
+            });
+          }
+
+          if (graphPaths.length > 0) {
+            writer.write({
+              type: "data-graph-paths",
+              id: `graph-paths-${messageId}`,
+              data: { paths: graphPaths },
             });
           }
 
