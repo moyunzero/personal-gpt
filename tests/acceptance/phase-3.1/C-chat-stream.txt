@@ -1,6 +1,0 @@
-data: {"type":"data-graph-paths","id":"graph-paths-msg-1787406949891","data":{"paths":[{"nodes":["Product:珍珠奶茶","Ingredient:珍珠","Method:煮制"],"relationships":["CONTAINS","USES"]}]}}
-
-data: {"type":"error","errorText":"服务暂时不可用，请稍后重试 (requestId: 37b65760-622f-45c5-bdac-8d662c292c95)"}
-
-data: [DONE]
-

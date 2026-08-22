@@ -1,4 +1,0 @@
-{
-  "summary": "GRAPH_RAG_STATUS: HIT\n[path 1] nodes: Product:product:pearl-milk-tea -> Ingredient:ingredient:tapioca -> Method:method:boil\n[path 1] relationships: CONTAINS,USES",
-  "pathCount": 1
-}
