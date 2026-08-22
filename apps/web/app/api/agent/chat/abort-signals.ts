@@ -26,7 +26,10 @@ export function combineAbortSignals(
 
 export const AGENT_UPSTREAM_TIMEOUT_MS = (() => {
   const raw = Number(process.env.AGENT_UPSTREAM_TIMEOUT_MS);
-  return Number.isFinite(raw) && raw > 0 ? raw : 120_000;
+  if (!Number.isFinite(raw) || raw <= 0 || !Number.isInteger(raw) || raw > 2_147_483_647) {
+    return 120_000;
+  }
+  return raw;
 })();
 
 export function createUpstreamTimeoutSignal(ms = AGENT_UPSTREAM_TIMEOUT_MS): {

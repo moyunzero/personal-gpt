@@ -47,6 +47,9 @@ function isTraceDocument(data: unknown): data is AgentTraceDocument {
     ) {
       return false;
     }
+    if ("name" in ev && ev.name !== undefined && typeof ev.name !== "string") {
+      return false;
+    }
   }
   return true;
 }
@@ -79,7 +82,7 @@ function routeLabel(route: string): string {
 }
 
 function eventSummaryLabel(event: AgentTraceEvent): string {
-  const name = event.name?.toLowerCase() ?? "";
+  const name = typeof event.name === "string" ? event.name.toLowerCase() : "";
   if (event.kind === "tool") {
     if (name === "graph_search" || /图谱/.test(event.summary)) return "图谱检索";
     if (name === "kb_search" || /知识库|kb/i.test(event.summary)) return "知识库检索";

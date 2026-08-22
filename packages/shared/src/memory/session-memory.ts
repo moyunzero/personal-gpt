@@ -33,18 +33,31 @@ export async function loadMemoryContextBlock(
 ): Promise<string> {
   const userKey = normalizeUserKey(scope.userKey);
   const workspaceId = scope.workspaceId.trim() || "default";
+  const MEMORY_LOAD_TIMEOUT_MS = 3_000;
 
   try {
     const shortTerm = deps?.shortTerm ?? (await getShortTermRedisMemory());
     const mem0 = deps?.mem0 ?? (await getMem0Client());
 
-    const [shortBlock, hits] = await Promise.all([
+    const loadPromise = Promise.all([
       shortTerm.getContextBlock(workspaceId, userKey),
       mem0.searchMemories(workspaceId, userKey, query),
-    ]);
+    ]).then(([shortBlock, hits]) => {
+      const longBlock = formatMem0ContextBlock(hits);
+      return [shortBlock, longBlock].filter(Boolean).join("\n\n");
+    });
 
-    const longBlock = formatMem0ContextBlock(hits);
-    return [shortBlock, longBlock].filter(Boolean).join("\n\n");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const result = await Promise.race([
+      loadPromise,
+      new Promise<string>((resolve) => {
+        timer = setTimeout(() => resolve(""), MEMORY_LOAD_TIMEOUT_MS);
+        timer.unref?.();
+      }),
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+    return result;
   } catch (err) {
     console.warn("[memory] loadMemoryContextBlock failed (fail-open)", err);
     return "";

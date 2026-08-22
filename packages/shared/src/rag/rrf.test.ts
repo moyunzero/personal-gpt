@@ -54,4 +54,19 @@ describe("reciprocalRankFusion", () => {
       "onlyEs:0",
     ]);
   });
+
+  it("keeps chunks without documentId distinct via text fallback", () => {
+    const fused = reciprocalRankFusion(
+      [
+        [
+          { text: "alpha chunk", similarity: 0.9, chunkIndex: 0 },
+          { text: "beta chunk", similarity: 0.8, chunkIndex: 0 },
+        ],
+      ],
+      60,
+    );
+
+    expect(fused).toHaveLength(2);
+    expect(fused.map((c) => c.text)).toEqual(["alpha chunk", "beta chunk"]);
+  });
 });

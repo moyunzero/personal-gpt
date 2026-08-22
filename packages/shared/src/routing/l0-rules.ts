@@ -32,7 +32,8 @@ export function isEmptyQuery(text: string): boolean {
 }
 
 export function isPureMathExpression(text: string): boolean {
-  return /^[\d\s+\-*/()=？?]+$/.test(text.trim());
+  const trimmed = text.trim();
+  return /\d/.test(trimmed) && /^[\d\s+\-*/()=？?]+$/.test(trimmed);
 }
 
 export function isGreetingOnly(text: string): boolean {

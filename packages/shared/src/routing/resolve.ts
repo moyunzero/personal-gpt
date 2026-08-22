@@ -14,6 +14,8 @@ export interface ResolveIntentPlanDeps {
 export interface ResolveIntentPlanResult {
   plan: IntentPlan;
   layers: RouterLayer[];
+  /** L1 embedding precheck similarity when probed */
+  precheckSimilarity?: number;
 }
 
 /** D-03: L0 → optional L1 (skip when l0.terminal) → optional L2 → L3 synthesize */
@@ -40,8 +42,12 @@ export async function resolveIntentPlan(
 
   let l2Hint: Partial<IntentPlan> | null | undefined;
   if (config.enableL2IntentClassifier && needsL2(l0, l1) && deps.classifyL2) {
-    l2Hint = await deps.classifyL2(query);
-    if (l2Hint) layers.push("L2");
+    try {
+      l2Hint = await deps.classifyL2(query);
+      if (l2Hint) layers.push("L2");
+    } catch {
+      l2Hint = null;
+    }
   } else if (config.enableL2IntentClassifier && needsL2(l0, l1)) {
     l2Hint = await classifyIntentL2(query);
     if (l2Hint) layers.push("L2");
@@ -56,5 +62,8 @@ export async function resolveIntentPlan(
     config,
   });
 
-  return { plan, layers };
+  const precheckSimilarity =
+    l1?.kb?.probed && Number.isFinite(l1.kb.topSimilarity) ? l1.kb.topSimilarity : undefined;
+
+  return { plan, layers, precheckSimilarity };
 }

@@ -50,35 +50,50 @@ const RouteSchema = z.object({
 
 let neo4jOkCache: boolean | null = null;
 let neo4jOkCachedAt = 0;
+let neo4jProbeInFlight: Promise<boolean> | null = null;
 const NEO4J_PROBE_TTL_MS = 30_000;
+const NEO4J_PROBE_TIMEOUT_MS = 2_000;
+
+async function probeNeo4jOnce(): Promise<boolean> {
+  try {
+    const driver = getNeo4jDriverFromEnv();
+    if (!driver) return false;
+    await Promise.race([
+      driver.verifyConnectivity(),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("neo4j_probe_timeout")), NEO4J_PROBE_TIMEOUT_MS);
+      }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** Cached Neo4j probe — fail-open degrade per D-10; TTL re-probe (WR-05) */
 async function probeNeo4jAvailable(): Promise<boolean> {
   if (neo4jOkCache !== null && Date.now() - neo4jOkCachedAt < NEO4J_PROBE_TTL_MS) {
     return neo4jOkCache;
   }
-  try {
-    const driver = getNeo4jDriverFromEnv();
-    if (!driver) {
-      neo4jOkCache = false;
-      neo4jOkCachedAt = Date.now();
-      return false;
-    }
-    await driver.verifyConnectivity();
-    neo4jOkCache = true;
-    neo4jOkCachedAt = Date.now();
-    return true;
-  } catch {
-    neo4jOkCache = false;
-    neo4jOkCachedAt = Date.now();
-    return false;
+  if (!neo4jProbeInFlight) {
+    neo4jProbeInFlight = probeNeo4jOnce()
+      .then((ok) => {
+        neo4jOkCache = ok;
+        neo4jOkCachedAt = Date.now();
+        return ok;
+      })
+      .finally(() => {
+        neo4jProbeInFlight = null;
+      });
   }
+  return neo4jProbeInFlight;
 }
 
 /** Test hook */
 export function resetNeo4jAvailabilityCacheForTests(): void {
   neo4jOkCache = null;
   neo4jOkCachedAt = 0;
+  neo4jProbeInFlight = null;
 }
 
 function tryIntentFastPath(query: string): QueryRouteDecision | null {
@@ -223,7 +238,7 @@ async function decideWithSharedRouter(
   options: DecideQueryRouteOptions,
 ): Promise<QueryRouteDecision> {
   const neo4jOk = await probeNeo4jAvailable();
-  const { plan } = await resolveIntentPlan(query, {
+  const { plan, precheckSimilarity } = await resolveIntentPlan(query, {
     probeKb: async (q) =>
       probeKbRelevance(
         q,
@@ -235,13 +250,12 @@ async function decideWithSharedRouter(
   });
 
   const mapped = mapIntentPlanToChatRoute(plan);
-  const simMatch = plan.reason.match(/([0-9.]+)/);
 
   return {
     route: mapped.route,
     reason: mapped.reason,
     fastPath: true,
-    precheckSimilarity: simMatch ? Number(simMatch[1]) : undefined,
+    precheckSimilarity,
     needsGraphContext: mapped.needsGraphContext,
     graphContextType: mapped.graphContextType,
     intentPrimary: plan.primary,

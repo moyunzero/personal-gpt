@@ -201,6 +201,70 @@ export function attachResponseAbortSignal(res: Response): AbortSignal {
   return ac.signal;
 }
 
+const EXTERNAL_TOOL_TIMEOUT_MS = 8_000;
+const INTENT_RESOLVE_TIMEOUT_MS = 5_000;
+const MEMORY_LOAD_TIMEOUT_MS = 3_000;
+
+async function raceExternalCall<T>(
+  promise: Promise<T>,
+  opts: { signal?: AbortSignal; timeoutMs?: number },
+): Promise<T | undefined> {
+  const timeoutMs = opts.timeoutMs ?? EXTERNAL_TOOL_TIMEOUT_MS;
+  const { signal } = opts;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let onAbort: (() => void) | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), timeoutMs);
+        timer.unref?.();
+      }),
+      new Promise<undefined>((resolve) => {
+        if (signal?.aborted) {
+          resolve(undefined);
+          return;
+        }
+        onAbort = () => resolve(undefined);
+        signal?.addEventListener("abort", onAbort, { once: true });
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+    if (onAbort) signal?.removeEventListener("abort", onAbort);
+  }
+}
+
+async function withBoundedTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), ms);
+        timer.unref?.();
+      }),
+    ]);
+  } catch {
+    return fallback;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function memoryHintForShortReply(userText: string, memoryBlock: string): string | undefined {
+  if (!memoryBlock || !/喜欢|偏好|记住|习惯/.test(userText)) return undefined;
+  if (!memoryBlock.includes("【长期记忆】")) return undefined;
+  const fact = memoryBlock
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("【") && !line.startsWith("---"))
+    .map((line) => line.replace(/^[-•]\s*/, ""))
+    .find(Boolean);
+  if (!fact) return "我会根据你之前告诉我的偏好来回答。";
+  return `我记得你之前提过：${fact}`;
+}
+
 /**
  * 合并流可能重复 enqueue 同一 text-delta 事件。
  * - 有 seq：按 id 单调序号去重；同 seq 丢弃，seq 前进则保留（含合法重复正文）
@@ -465,10 +529,16 @@ async function prefetchForSingleSpecialist(input: {
   workspaceId: string;
   trace: AgentTraceCollector;
   tracker?: ProgressTracker;
+  abortSignal?: AbortSignal;
 }): Promise<SystemMessage[]> {
   const seeds: SystemMessage[] = [];
   if (input.plan.retrieverTools.includes("graph_search")) {
-    const graphOut = await invokeGraphSearch({ question: input.userText });
+    const graphOut = await raceExternalCall(
+      invokeGraphSearch({ question: input.userText }),
+      { signal: input.abortSignal },
+    );
+    if (input.abortSignal?.aborted) return seeds;
+    if (!graphOut) return seeds;
     input.trace.recordTool({
       name: "graph_search",
       agent: "system",
@@ -490,41 +560,53 @@ async function prefetchForSingleSpecialist(input: {
         ),
       );
     } else if (input.plan.fallbackChain.includes("kb_search")) {
-      const kbOut = await invokeKbSearch({
-        query: extractKbSearchQuery(input.userText),
-        userText: input.userText,
-        workspaceId: input.workspaceId,
-      });
-      if (kbOut) {
+      const kbOut = await raceExternalCall(
+        invokeKbSearch({
+          query: extractKbSearchQuery(input.userText),
+          userText: input.userText,
+          workspaceId: input.workspaceId,
+        }),
+        { signal: input.abortSignal },
+      );
+      if (input.abortSignal?.aborted) return seeds;
+      if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
         input.trace.recordTool({
           name: "kb_search",
           agent: "system",
           summary: `图谱未命中回退 · ${summarizeKbToolOutput(kbOut)}`,
           detail: kbOut,
         });
-        if (/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
-          if (input.tracker) input.tracker.kbNoRelevantHit = true;
-        } else {
-          seeds.push(
-            new SystemMessage(
-              [
-                "【知识库回退检索·工具结果·可信】",
-                "图谱未命中后按 IntentPlan fallbackChain 触发 kb_search；必须采信。",
-                kbOut,
-              ].join("\n"),
-            ),
-          );
-        }
+        seeds.push(
+          new SystemMessage(
+            [
+              "【知识库回退检索·工具结果·可信】",
+              "图谱未命中后按 IntentPlan fallbackChain 触发 kb_search；必须采信。",
+              kbOut,
+            ].join("\n"),
+          ),
+        );
+      } else if (kbOut) {
+        input.trace.recordTool({
+          name: "kb_search",
+          agent: "system",
+          summary: `图谱未命中回退 · ${summarizeKbToolOutput(kbOut)}`,
+          detail: kbOut,
+        });
+        if (input.tracker) input.tracker.kbNoRelevantHit = true;
       }
     }
   }
   if (input.plan.retrieverTools.includes("kb_search")) {
-    const kbOut = await invokeKbSearch({
-      query: extractKbSearchQuery(input.userText),
-      userText: input.userText,
-      workspaceId: input.workspaceId,
-    });
-    if (kbOut) {
+    const kbOut = await raceExternalCall(
+      invokeKbSearch({
+        query: extractKbSearchQuery(input.userText),
+        userText: input.userText,
+        workspaceId: input.workspaceId,
+      }),
+      { signal: input.abortSignal },
+    );
+    if (input.abortSignal?.aborted) return seeds;
+    if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
       input.trace.recordTool({
         name: "kb_search",
         agent: "system",
@@ -1178,13 +1260,25 @@ export class AgentService {
     let executionMode: ExecutionMode;
 
     if (routerConfig.enableIntentRouter) {
-      const resolved = await resolveIntentPlanForAgent({
-        query: userText,
-        workspaceId: parsed.workspaceId,
-      });
-      intentPlan = resolved.plan;
-      routerLayers = resolved.layers;
-      executionMode = resolveExecutionMode(intentPlan);
+      try {
+        const resolved = await withBoundedTimeout(
+          resolveIntentPlanForAgent({
+            query: userText,
+            workspaceId: parsed.workspaceId,
+          }),
+          INTENT_RESOLVE_TIMEOUT_MS,
+          null as { plan: IntentPlan; layers: RouterLayer[] } | null,
+        );
+        if (resolved?.plan) {
+          intentPlan = resolved.plan;
+          routerLayers = resolved.layers;
+          executionMode = resolveExecutionMode(intentPlan);
+        } else {
+          executionMode = resolveAgentRoute(userText) === "short" ? "short" : "supervisor";
+        }
+      } catch {
+        executionMode = resolveAgentRoute(userText) === "short" ? "short" : "supervisor";
+      }
     } else {
       executionMode = resolveAgentRoute(userText) === "short" ? "short" : "supervisor";
     }
@@ -1195,10 +1289,14 @@ export class AgentService {
     const abortSignal = attachResponseAbortSignal(res);
     // 请求级 runId：避免同 thread 并发互相覆盖 KB/web 配额状态
     const runId = randomUUID();
-    const memoryBlock = await loadMemoryContextBlock(
-      { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
-      userText,
-    );
+    const memoryBlock = await withBoundedTimeout(
+      loadMemoryContextBlock(
+        { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
+        userText,
+      ),
+      MEMORY_LOAD_TIMEOUT_MS,
+      "",
+    ).catch(() => "");
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
@@ -1259,7 +1357,10 @@ export class AgentService {
                 /喜欢|偏好|记住|习惯/.test(userText) &&
                 memoryBlock.includes("【长期记忆】")
               ) {
-                shortText = `${shortText}\n\n（根据你的长期偏好）\n${memoryBlock}`;
+                const hint = memoryHintForShortReply(userText, memoryBlock);
+                if (hint) {
+                  shortText = `${shortText}\n\n${hint}`;
+                }
               }
               if (shortText) {
                 const messageId = `short-${parsed.threadId}`;
@@ -1412,26 +1513,35 @@ export class AgentService {
                       intentPlan &&
                       shouldGraphFallbackAfterKbMiss(intentPlan, routerConfig.enableKbGraphFallback)
                     ) {
-                      const graphOut = await invokeGraphSearch({ question: userText });
-                      trace.recordTool({
-                        name: "graph_search",
-                        agent: "system",
-                        summary: summarizeGraphToolOutput(graphOut),
-                        detail: graphOut,
-                      });
-                      if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
-                        tracker.graphSearchHit = true;
-                        tracker.graphPrefetchOutput = graphOut;
-                        seededMessages = [
-                          new SystemMessage(
-                            [
-                              "【图谱回退检索·工具结果·可信】",
-                              "KB 未命中后按 IntentPlan fallbackChain 触发 graph_search；必须采信。",
-                              graphOut,
-                            ].join("\n"),
-                          ),
-                          ...seededMessages,
-                        ];
+                      try {
+                        const graphOut = await raceExternalCall(
+                          invokeGraphSearch({ question: userText }),
+                          { signal: abortSignal },
+                        );
+                        if (graphOut) {
+                          trace.recordTool({
+                            name: "graph_search",
+                            agent: "system",
+                            summary: summarizeGraphToolOutput(graphOut),
+                            detail: graphOut,
+                          });
+                          if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
+                            tracker.graphSearchHit = true;
+                            tracker.graphPrefetchOutput = graphOut;
+                            seededMessages = [
+                              new SystemMessage(
+                                [
+                                  "【图谱回退检索·工具结果·可信】",
+                                  "KB 未命中后按 IntentPlan fallbackChain 触发 graph_search；必须采信。",
+                                  graphOut,
+                                ].join("\n"),
+                              ),
+                              ...seededMessages,
+                            ];
+                          }
+                        }
+                      } catch {
+                        /* fail-open: keep KB miss path */
                       }
                     }
                   }
@@ -1457,6 +1567,7 @@ export class AgentService {
                   workspaceId: parsed.workspaceId,
                   trace,
                   tracker,
+                  abortSignal,
                 });
                 if (prefetchSeeds.length) {
                   seededMessages = [...prefetchSeeds, ...seededMessages];
@@ -1583,7 +1694,7 @@ export class AgentService {
                 finalBuf,
               );
               const hasSubstantiveGraphAnswer =
-                !kbMissDominates && /[\u4e00-\u9fff]{10,}/.test(finalBuf);
+                !kbMissDominates && hasSubstantiveKbAnswer(finalBuf);
               if (
                 tracker.graphSearchHit &&
                 !hasSubstantiveGraphAnswer &&
@@ -1806,11 +1917,13 @@ export class AgentService {
             }
           } finally {
             try {
-              await persistTurnMemory(
-                { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
-                userText,
-                assistantForMemory,
-              );
+              if (assistantForMemory.trim()) {
+                await persistTurnMemory(
+                  { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
+                  userText,
+                  assistantForMemory,
+                );
+              }
             } catch {
               /* fail-open */
             }

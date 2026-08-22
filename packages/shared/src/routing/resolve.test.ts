@@ -22,9 +22,12 @@ describe("resolveIntentPlan", () => {
       topSimilarity: 0.9,
       title: "doc",
     });
-    const { plan, layers } = await resolveIntentPlan("奥德赛计划书建议", { probeKb });
+    const { plan, layers, precheckSimilarity } = await resolveIntentPlan("奥德赛计划书建议", {
+      probeKb,
+    });
     expect(layers).toContain("L1");
     expect(plan.primary).toBe("kb_doc");
+    expect(precheckSimilarity).toBe(0.9);
     expect(probeKb).toHaveBeenCalled();
   });
 
@@ -83,6 +86,30 @@ describe("resolveIntentPlan", () => {
     const { plan, layers } = await resolveIntentPlan("灰色问题", { probeKb, classifyL2 });
     expect(layers).not.toContain("L2");
     expect(plan.primary).toBeDefined();
+  });
+
+  it("classifyL2 rejection is fail-open; resolve succeeds via L3", async () => {
+    envSaved.ENABLE_L2_INTENT_CLASSIFIER = process.env.ENABLE_L2_INTENT_CLASSIFIER;
+    process.env.ENABLE_L2_INTENT_CLASSIFIER = "true";
+
+    const classifyL2 = vi.fn().mockRejectedValue(new Error("l2 down"));
+    const probeKb = vi.fn().mockResolvedValue({
+      probed: true,
+      topSimilarity: 0.55,
+    });
+    const { plan, layers } = await resolveIntentPlan("灰色问题", { probeKb, classifyL2 });
+    expect(layers).not.toContain("L2");
+    expect(plan.primary).toBeDefined();
+  });
+
+  it("probeKb rejection is fail-open with kb_unprobed", async () => {
+    const probeKb = vi.fn().mockRejectedValue(new Error("kb probe down"));
+    const { plan, layers, precheckSimilarity } = await resolveIntentPlan("奥德赛计划书建议", {
+      probeKb,
+    });
+    expect(layers).toContain("L1");
+    expect(plan.primary).toBeDefined();
+    expect(precheckSimilarity).toBeUndefined();
   });
 
   it("mixed graph+KB query → kb_graph_hybrid with both retriever tools (CR-X-01)", async () => {

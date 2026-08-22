@@ -27,7 +27,13 @@ export async function collectL1Signals(
     return signals;
   }
 
-  const kb = await deps.probeKb(query);
+  let kb: KbProbeResult;
+  try {
+    kb = await deps.probeKb(query);
+  } catch {
+    signals.reason = graphSignal ? "l1:graph_entity_unprobed" : "l1:kb_unprobed";
+    return signals;
+  }
   signals.kb = kb;
 
   if (!kb.probed) {

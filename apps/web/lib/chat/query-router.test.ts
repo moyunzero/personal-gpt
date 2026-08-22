@@ -67,9 +67,11 @@ describe("decideQueryRoute — shared intent router (D-01/D-16)", () => {
       probed: true,
     });
 
-    const decision = await decideQueryRoute("我的奥德赛计划书写的是什么？");
+    const decision = await decideQueryRoute("奥德赛计划书建议");
     expect(decision.route).toBe("retrieve");
     expect(decision.intentPrimary).toBe("kb_doc");
+    expect(decision.precheckSimilarity).toBe(0.88);
+    expect(probeKbRelevanceMock).toHaveBeenCalled();
     expect(generateRagHelperTextMock).not.toHaveBeenCalled();
   });
 
@@ -130,6 +132,11 @@ describe("decideQueryRoute — legacy embedding 预检 (shared router on)", () =
     getNeo4jDriverFromEnvMock.mockReturnValue({
       verifyConnectivity: vi.fn().mockResolvedValue(undefined),
     });
+  });
+
+  afterEach(() => {
+    delete process.env.ENABLE_INTENT_ROUTER;
+    resetNeo4jAvailabilityCacheForTests();
   });
 
   it("低相似度 → direct", async () => {

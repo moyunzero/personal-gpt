@@ -14,6 +14,7 @@ const L2_RESPONSE_SCHEMA = z.object({
   primary: PrimaryIntentSchema,
   confidence: z.number().min(0).max(1).optional(),
   reason: z.string().optional(),
+  ambiguous: z.boolean().optional(),
 });
 
 const L2_SYSTEM = `你是企业知识库意图分类器。仅输出 JSON，不要 markdown。
@@ -27,9 +28,9 @@ export async function classifyIntentL2(
   query: string,
   classifyFn?: ClassifyL2Fn,
 ): Promise<Partial<IntentPlan> | null> {
-  if (classifyFn) return classifyFn(query);
-
   try {
+    if (classifyFn) return await classifyFn(query);
+
     const raw = await generateRagHelperText(L2_SYSTEM, query, 0);
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;

@@ -67,6 +67,26 @@ describe("sanitizeUserFacingAgentText", () => {
     expect(isToolCallLeakText(raw)).toBe(true);
   });
 
+  it("does not treat embedded graph_search fence as whole-segment leak", () => {
+    const raw = [
+      "珍珠奶茶含有木薯粉珍珠与红茶基底。",
+      '```json\n{"name": "graph_search", "arguments": {"question": "珍珠奶茶"}}\n```',
+      "因此口感软糯。",
+    ].join("\n");
+    expect(isToolCallLeakText(raw)).toBe(false);
+    const out = sanitizeUserFacingAgentText(raw);
+    expect(out).toMatch(/珍珠奶茶含有木薯粉珍珠/);
+    expect(out).toMatch(/因此口感软糯/);
+    expect(out).not.toMatch(/graph_search/);
+  });
+
+  it("strips GRAPH_SEARCH_STATUS protocol markers", () => {
+    const raw = "图谱检索结果 GRAPH_SEARCH_STATUS: NO_PATH 无可用路径。";
+    const out = sanitizeUserFacingAgentText(raw);
+    expect(out).not.toMatch(/GRAPH_SEARCH_STATUS/i);
+    expect(out).toMatch(/未找到相关路径/);
+  });
+
   it("strips Cypher and internal id relationship leaks from graph answers", () => {
     const raw = [
       "根据企业内部知识图谱：",

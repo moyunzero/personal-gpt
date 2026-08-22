@@ -140,6 +140,13 @@ function looksLikeKbContentQuery(query: string): boolean {
   );
 }
 
+function buildPlanReason(input: SynthesizeInput, primary: PrimaryIntent): string {
+  if (input.l2Hint?.primary === primary && input.l2Hint.reason) {
+    return input.l2Hint.reason;
+  }
+  return input.l0?.reason ?? input.l1?.reason ?? input.l2Hint?.reason ?? "l3:default";
+}
+
 export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
   const neo4jOk = input.neo4jOk !== false;
   const cfg = input.config ?? readIntentRouterConfig();
@@ -171,7 +178,7 @@ export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
       input.l0,
       enableKbGraphFallback,
     ),
-    reason: input.l0?.reason ?? input.l1?.reason ?? input.l2Hint?.reason ?? "l3:default",
+    reason: buildPlanReason(input, primary),
     confidence: input.l2Hint?.confidence ?? (input.l0 ? 0.95 : input.l1?.kbHigh ? 0.85 : 0.65),
     graphSignal: graphSignal || undefined,
   };

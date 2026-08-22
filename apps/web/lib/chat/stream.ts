@@ -109,7 +109,7 @@ export function createChatStream({
             });
           }
 
-          if (onComplete) {
+          if (onComplete && assistantText.trim()) {
             try {
               await onComplete(assistantText);
             } catch (err) {

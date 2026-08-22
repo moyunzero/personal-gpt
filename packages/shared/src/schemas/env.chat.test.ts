@@ -44,4 +44,26 @@ describe("parseSharedEnv chat keys", () => {
       } as NodeJS.ProcessEnv),
     ).toThrow(/OPENAI_API_KEY/);
   });
+
+  it("allows milvus-only without Astra credentials", () => {
+    const env = parseSharedEnv({
+      ...base,
+      GROQ_API_KEY: "gsk",
+      VECTOR_BACKEND: "milvus",
+      ASTRA_DB_COLLECTION: undefined,
+      ASTRA_DB_API_ENDPOINT: undefined,
+      ASTRA_DB_APPLICATION_TOKEN: undefined,
+    } as NodeJS.ProcessEnv);
+    expect(env.VECTOR_BACKEND).toBe("milvus");
+  });
+
+  it("requires Astra credentials when VECTOR_BACKEND=astra", () => {
+    expect(() =>
+      parseSharedEnv({
+        GROQ_API_KEY: "gsk",
+        NIM_API_KEY: "nvapi-test",
+        VECTOR_BACKEND: "astra",
+      } as NodeJS.ProcessEnv),
+    ).toThrow(/ASTRA_DB_COLLECTION/);
+  });
 });

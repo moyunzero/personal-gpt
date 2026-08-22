@@ -33,7 +33,8 @@ export function isEmptyQuery(text: string): boolean {
 }
 
 export function isPureMathExpression(text: string): boolean {
-  return /^[\d\s+\-*/()=？?]+$/.test(text.trim());
+  const trimmed = text.trim();
+  return /\d/.test(trimmed) && /^[\d\s+\-*/()=？?]+$/.test(trimmed);
 }
 
 /** 整句仅为寒暄（词表匹配，非正则枚举） */

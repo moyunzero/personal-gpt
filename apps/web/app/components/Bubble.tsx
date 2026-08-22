@@ -86,7 +86,7 @@ const Bubble = ({
     role === "assistant" &&
     (extractTodos(message).length > 0 || extractAgentSteps(message).length > 0 || showTrace);
 
-  if (!content && !hasAgentChrome) {
+  if (!content && !hasAgentChrome && graphPaths.length === 0) {
     return null;
   }
 

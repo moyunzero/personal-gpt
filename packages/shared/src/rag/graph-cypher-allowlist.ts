@@ -63,15 +63,27 @@ export function assertAllowlistedCypher(cypher: string): void {
     }
   }
 
-  const relTypes: string[] = [];
-  const relTypeRe = /\[\s*(?:\w+\s*)?:([A-Za-z]\w*)\s*(?:\||\]|->)/g;
-  let relMatch: RegExpExecArray | null;
-  while ((relMatch = relTypeRe.exec(normalized)) !== null) {
-    relTypes.push(relMatch[1]!);
-  }
-  for (const rel of relTypes) {
-    if (!allowedRels.has(rel)) {
-      throw new CypherAllowlistError(`Cypher rejected: relationship type not allowlisted: ${rel}`);
+  const relPatterns = normalized.match(/-\[[^\]]*\]-?>?/g) ?? [];
+  for (const relPattern of relPatterns) {
+    const bracketMatch = relPattern.match(/\[([^\]]*)\]/);
+    if (!bracketMatch) continue;
+    const inner = bracketMatch[1]!.trim();
+    if (!inner.includes(":")) {
+      throw new CypherAllowlistError("Cypher rejected: untyped relationship pattern");
+    }
+    if (inner.includes("|")) {
+      throw new CypherAllowlistError("Cypher rejected: multi-type relationship not allowlisted");
+    }
+    const types = [...inner.matchAll(/:([A-Za-z]\w*)/g)].map((m) => m[1]!);
+    if (types.length !== 1) {
+      throw new CypherAllowlistError(
+        "Cypher rejected: relationship pattern must contain exactly one type",
+      );
+    }
+    if (!allowedRels.has(types[0]!)) {
+      throw new CypherAllowlistError(
+        `Cypher rejected: relationship type not allowlisted: ${types[0]}`,
+      );
     }
   }
 }

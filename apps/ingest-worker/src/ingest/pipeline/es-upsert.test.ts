@@ -6,6 +6,18 @@ const ensureEsIndexes = vi.fn();
 const astraUpsert = vi.fn();
 const astraDeleteByDocument = vi.fn();
 
+vi.mock("@personal-gpt/shared/stores/vector-store", () => ({
+  shouldWriteAstra: () => true,
+  shouldWriteMilvus: () => false,
+}));
+
+vi.mock("@personal-gpt/shared/stores/vector-store.milvus", () => ({
+  createMilvusVectorStore: () => ({
+    upsert: vi.fn(),
+    deleteByDocument: vi.fn(),
+  }),
+}));
+
 vi.mock("@personal-gpt/shared", () => ({
   resolveCorpusTargets: (corpus: string) => ({
     astraCollection: corpus === "seed" ? "kb_seed" : "kb_user",

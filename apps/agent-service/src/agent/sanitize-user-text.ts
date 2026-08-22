@@ -51,27 +51,23 @@ function isFencePart(part: string): boolean {
 
 const TOOL_CALL_NAMES = "graph_search|kb_search|web_search";
 
-/** 是否像 LLM 误输出的工具调用 JSON（应整段丢弃） */
+/** 是否整段仅为 LLM 误输出的工具调用 JSON（应整段丢弃；嵌入正文中的片段由 stripToolCallLeakText 处理） */
 export function isToolCallLeakText(text: string): boolean {
   const t = text.trim();
   if (!t) return false;
   if (
-    new RegExp(`\`\`\`(?:json)?\\s*\\{[\\s\\S]*?"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"`, "i").test(t)
-  ) {
-    return true;
-  }
-  if (
     new RegExp(
-      `^\\{[\\s\\S]*?"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"[\\s\\S]*?"arguments"\\s*:`,
+      `^\`\`\`(?:json)?\\s*\\{[\\s\\S]*?"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"[\\s\\S]*\\}\\s*\`\`\`$`,
       "i",
     ).test(t)
   ) {
     return true;
   }
   if (
-    t.length < 600 &&
-    new RegExp(`"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"`, "i").test(t) &&
-    /"arguments"\s*:/i.test(t)
+    new RegExp(
+      `^\\{[\\s\\S]*?"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"[\\s\\S]*?"arguments"\\s*:[\\s\\S]*\\}$`,
+      "i",
+    ).test(t)
   ) {
     return true;
   }
@@ -133,6 +129,10 @@ export function sanitizeUserFacingAgentText(text: string): string {
   out = out.replace(/KB_SEARCH_STATUS\s*[:：=为]?\s*HIT/gi, "");
   out = out.replace(/\bKB_SEARCH_STATUS\b/gi, "");
   out = out.replace(/\bNO_RELEVANT_HIT\b/gi, "未找到足够依据");
+  out = out.replace(/GRAPH_SEARCH_STATUS\s*[:：=为]?\s*NO_PATH/gi, "图谱未找到相关路径");
+  out = out.replace(/GRAPH_SEARCH_STATUS\s*[:：=为]?\s*HIT/gi, "");
+  out = out.replace(/\bGRAPH_SEARCH_STATUS\b/gi, "");
+  out = out.replace(/\bNO_PATH\b/gi, "未找到相关路径");
   // 清理空括号；空白折叠避开 fenced code（含未闭合 fence），避免破坏 Markdown 结构
   out = out.replace(/[（(]\s*[）)]/g, "");
   out = splitFenceAware(out)

@@ -187,13 +187,18 @@ describe("createChatStream graph paths (D-07)", () => {
     });
 
     const parts = await collectStreamParts(stream);
+    const textStartIndex = parts.findIndex(
+      (part) => (part as { type: string }).type === "text-start",
+    );
     const textEndIndex = parts.findIndex((part) => (part as { type: string }).type === "text-end");
     const graphIndex = parts.findIndex(
       (part) => (part as { type: string }).type === "data-graph-paths",
     );
 
     expect(graphIndex).toBeGreaterThan(-1);
-    if (textEndIndex >= 0) {
+    if (textStartIndex >= 0) {
+      expect(graphIndex).toBeLessThan(textStartIndex);
+    } else if (textEndIndex >= 0) {
       expect(graphIndex).toBeLessThan(textEndIndex);
     }
 

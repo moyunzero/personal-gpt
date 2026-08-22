@@ -6,9 +6,9 @@ import { z } from "zod";
  */
 export const SharedEnvSchema = z
   .object({
-    ASTRA_DB_COLLECTION: z.string().min(1, "ASTRA_DB_COLLECTION 未设置"),
-    ASTRA_DB_API_ENDPOINT: z.string().min(1, "ASTRA_DB_API_ENDPOINT 未设置"),
-    ASTRA_DB_APPLICATION_TOKEN: z.string().min(1, "ASTRA_DB_APPLICATION_TOKEN 未设置"),
+    ASTRA_DB_COLLECTION: z.string().min(1).optional(),
+    ASTRA_DB_API_ENDPOINT: z.string().min(1).optional(),
+    ASTRA_DB_APPLICATION_TOKEN: z.string().min(1).optional(),
 
     /** Corpus 分库（D-24）：用户上传 / 种子库物理隔离；未设时回退 ASTRA_DB_COLLECTION */
     ASTRA_DB_COLLECTION_USER: z.string().min(1).optional(),
@@ -240,6 +240,22 @@ export const SharedEnvSchema = z
         path: ["OPENAI_API_KEY"],
         message: "CHAT_PROVIDER=openai 时必须设置 OPENAI_API_KEY",
       });
+    }
+    const needsAstra = data.VECTOR_BACKEND === "astra" || data.MILVUS_DUAL_WRITE === true;
+    if (needsAstra) {
+      for (const field of [
+        "ASTRA_DB_COLLECTION",
+        "ASTRA_DB_API_ENDPOINT",
+        "ASTRA_DB_APPLICATION_TOKEN",
+      ] as const) {
+        if (!data[field]?.trim()) {
+          ctx.addIssue({
+            code: "custom",
+            path: [field],
+            message: `VECTOR_BACKEND=astra 或 MILVUS_DUAL_WRITE=true 时必须设置 ${field}`,
+          });
+        }
+      }
     }
   });
 

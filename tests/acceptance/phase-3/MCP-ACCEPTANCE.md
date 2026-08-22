@@ -35,3 +35,13 @@
 | Live Neo4j graph（UAT #2）                       | **Blocked** — Neo4j 未运行 |
 
 下一步：修好 Docker Hub / `docker compose up -d elasticsearch neo4j`，并用**真浏览器**或 `next start`（非 Turbopack）复跑上传+对话流。
+
+## 与 Phase 3.1 对齐（2026-08-22 后续）
+
+Phase 3.1 MCP UI 验收已确认 **Send 在输入文字后可点**、图谱路径卡片与 Agent trace DOM 端到端通过：
+
+- [../phase-3.1/UI-MCP-RESULT.md](../phase-3.1/UI-MCP-RESULT.md) — Run `2026-08-22T19:05–19:09+08:00`
+- [../phase-3.1/MCP-ACCEPTANCE.md](../phase-3.1/MCP-ACCEPTANCE.md) — 总评 **PASS**
+- [../phase-3.1/FULL-UAT-REPORT.html](../phase-3.1/FULL-UAT-REPORT.html) — 全量 11/11（Ollama）
+
+本文件 step 07–08 的「Send disabled / 推荐问题未生效」保留为 **Turbopack+headless 历史记录**；H-04 graph 与 Chat graph cards 以 Phase 3.1 证据为准。

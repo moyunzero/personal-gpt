@@ -54,8 +54,8 @@ describe("retrieveKb via hybridSearch", () => {
         rerank: async (_q, hits) => hits,
       },
     });
-    // RRF overwrites similarity; with single list, check topSimilarity from fused scores
-    expect(typeof out.topSimilarity === "number" || out.topSimilarity === undefined).toBe(true);
+    // topSimilarity is derived from raw hit similarity before minSimilarity filter
+    expect(out.topSimilarity).toBe(0.9);
     expect(out.chunks).toEqual([]);
   });
 

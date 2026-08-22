@@ -187,4 +187,23 @@ describe("synthesizeIntentPlan (D-03/D-13/D-10)", () => {
     expect(plan.primary).toBe("kb_doc");
     expect(plan.fallbackChain).not.toContain("graph_search");
   });
+
+  it("L2 primary wins → preserves L2 reason over L1 (kb_gray / retrieve_safe)", () => {
+    const plan = synthesizeIntentPlan({
+      query: "模糊问题",
+      l1: {
+        kbGray: true,
+        kb: { probed: true, topSimilarity: 0.55 },
+        reason: "l1:kb_gray:0.550",
+      },
+      l2Hint: {
+        primary: "kb_doc",
+        reason: "l2:kb_gray;retrieve_safe",
+        confidence: 0.75,
+      },
+      neo4jOk: true,
+    });
+    expect(plan.primary).toBe("kb_doc");
+    expect(plan.reason).toBe("l2:kb_gray;retrieve_safe");
+  });
 });

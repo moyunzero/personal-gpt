@@ -42,14 +42,17 @@ export async function rerankDedicated(
           documents: hits.map((h) => h.text),
           top_n: topN,
         }),
+        signal: AbortSignal.timeout(8_000),
       });
       if (res.ok) {
         const body = (await res.json()) as DedicatedRerankResponse;
         const ranked = mapDedicatedResults(hits, body.results ?? [], topN);
         if (ranked.length > 0) return ranked;
+      } else {
+        console.warn(`[rerank] dedicated rerank HTTP ${res.status}`);
       }
-    } catch {
-      // fall through to LLM
+    } catch (err) {
+      console.warn("[rerank] dedicated rerank request failed", err);
     }
   }
 

@@ -32,6 +32,8 @@ export type ShortTermRedisMemoryOptions = {
 const DEFAULT_PREFIX = "pgpt:short_memory";
 const DEFAULT_N = 10;
 const DEFAULT_TTL = 60 * 60 * 24; // 24h
+const TURN_CONTENT_MAX = 800;
+const CONTEXT_BLOCK_MAX = 4_000;
 
 /** Atomic append via Lua (requires Redis cjson). */
 const APPEND_TURN_LUA = `
@@ -189,10 +191,17 @@ export class ShortTermRedisMemory {
         parts.push("最近对话：");
         for (const t of current.turns) {
           const label = t.role === "user" ? "用户" : "助手";
-          parts.push(`${label}：${t.content}`);
+          const content =
+            t.content.length > TURN_CONTENT_MAX
+              ? `${t.content.slice(0, TURN_CONTENT_MAX)}…`
+              : t.content;
+          parts.push(`${label}：${content}`);
         }
       }
-      return parts.join("\n");
+      const block = parts.join("\n");
+      return block.length > CONTEXT_BLOCK_MAX
+        ? `${block.slice(0, CONTEXT_BLOCK_MAX)}…`
+        : block;
     } catch (err) {
       this.log("getContextBlock failed (fail-open)", err);
       return "";

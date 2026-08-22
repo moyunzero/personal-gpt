@@ -14,7 +14,10 @@ export function reciprocalRankFusion(
   for (let listIdx = 0; listIdx < lists.length; listIdx++) {
     const list = lists[listIdx]!;
     list.forEach((chunk, idx) => {
-      const id = `${chunk.documentId ?? ""}:${chunk.chunkIndex ?? idx}`;
+      const pos = chunk.chunkIndex ?? idx;
+      const id = chunk.documentId
+        ? `${chunk.documentId}:${pos}`
+        : `${chunk.text}:${pos}`;
       const add = 1 / (rankConstant + idx + 1);
       const prev = scores.get(id);
       if (!prev) {

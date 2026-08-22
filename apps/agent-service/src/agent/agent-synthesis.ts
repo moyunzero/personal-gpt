@@ -32,6 +32,7 @@ const SYNTHESIZER_ROLE = `【你的角色】
 
 /** single_specialist retriever 路径是否走 prefetch → synthesizer（非 Retriever 复述） */
 export function isRetrieverSynthesisPlan(plan: IntentPlan): boolean {
+  if (plan.specialists.length !== 1) return false;
   if (plan.specialists[0] !== "retriever") return false;
   if (plan.retrieverTools.length === 0) return false;
   return (

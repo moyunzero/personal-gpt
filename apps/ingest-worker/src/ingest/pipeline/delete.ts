@@ -13,11 +13,37 @@ export async function deleteDocument(
   documentId: string,
   corpus: Corpus = "user",
 ): Promise<void> {
+  const errors: Error[] = [];
+  const tasks: Promise<void>[] = [];
+
   if (shouldWriteAstra()) {
-    await createAstraVectorStore({ corpus }).deleteByDocument(workspaceId, documentId);
+    tasks.push(
+      createAstraVectorStore({ corpus })
+        .deleteByDocument(workspaceId, documentId)
+        .catch((err) => {
+          errors.push(err instanceof Error ? err : new Error(String(err)));
+        }),
+    );
   }
   if (shouldWriteMilvus()) {
-    await createMilvusVectorStore({ corpus }).deleteByDocument(workspaceId, documentId);
+    tasks.push(
+      createMilvusVectorStore({ corpus })
+        .deleteByDocument(workspaceId, documentId)
+        .catch((err) => {
+          errors.push(err instanceof Error ? err : new Error(String(err)));
+        }),
+    );
   }
-  await deleteDocumentFromEs(workspaceId, documentId, corpus);
+
+  await Promise.all(tasks);
+
+  try {
+    await deleteDocumentFromEs(workspaceId, documentId, corpus);
+  } catch (err) {
+    errors.push(err instanceof Error ? err : new Error(String(err)));
+  }
+
+  if (errors.length > 0) {
+    throw new AggregateError(errors, `deleteDocument failed for ${documentId}`);
+  }
 }

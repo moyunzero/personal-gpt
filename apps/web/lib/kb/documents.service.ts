@@ -333,17 +333,39 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   });
   if (!document) return false;
 
+  const errors: Error[] = [];
+  const tasks: Promise<void>[] = [];
+
   if (shouldWriteAstra()) {
-    await createVectorStore({ corpus: "user" }).deleteByDocument(DEFAULT_WORKSPACE_ID, documentId);
-  }
-  if (shouldWriteMilvus()) {
-    await createMilvusVectorStore({ corpus: "user" }).deleteByDocument(
-      DEFAULT_WORKSPACE_ID,
-      documentId,
+    tasks.push(
+      createVectorStore({ corpus: "user" })
+        .deleteByDocument(DEFAULT_WORKSPACE_ID, documentId)
+        .catch((err) => {
+          errors.push(err instanceof Error ? err : new Error(String(err)));
+        }),
     );
   }
-  // D-09: keep ES in sync with vector stores on document delete
-  await deleteByDocumentId(resolveCorpusTargets("user").esIndex, DEFAULT_WORKSPACE_ID, documentId);
+  if (shouldWriteMilvus()) {
+    tasks.push(
+      createMilvusVectorStore({ corpus: "user" })
+        .deleteByDocument(DEFAULT_WORKSPACE_ID, documentId)
+        .catch((err) => {
+          errors.push(err instanceof Error ? err : new Error(String(err)));
+        }),
+    );
+  }
+
+  await Promise.all(tasks);
+
+  try {
+    await deleteByDocumentId(resolveCorpusTargets("user").esIndex, DEFAULT_WORKSPACE_ID, documentId);
+  } catch (err) {
+    errors.push(err instanceof Error ? err : new Error(String(err)));
+  }
+
+  if (errors.length > 0) {
+    throw new AggregateError(errors, `deleteDocument failed for ${documentId}`);
+  }
 
   if (document.filePath) {
     try {

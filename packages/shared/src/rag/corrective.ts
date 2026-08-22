@@ -70,5 +70,11 @@ export async function maybeCorrective(
     return hits;
   }
 
-  return deps.reSearch(rewritten);
+  try {
+    const next = await deps.reSearch(rewritten);
+    if (!next.length) return hits;
+    return next;
+  } catch {
+    return hits;
+  }
 }

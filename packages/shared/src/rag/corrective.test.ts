@@ -97,4 +97,32 @@ describe("maybeCorrective", () => {
     expect(reSearch).not.toHaveBeenCalled();
     expect(out).toEqual([lowHit]);
   });
+
+  it("returns original hits when reSearch rejects", async () => {
+    const rewrite = vi.fn(async () => "rewritten");
+    const reSearch = vi.fn(async () => {
+      throw new Error("search down");
+    });
+
+    const out = await maybeCorrective({ query: "q", workspaceId: "ws-1" }, [lowHit], {
+      rewrite,
+      reSearch,
+      minScore: 0.35,
+    });
+
+    expect(out).toEqual([lowHit]);
+  });
+
+  it("returns original hits when reSearch is empty", async () => {
+    const rewrite = vi.fn(async () => "rewritten");
+    const reSearch = vi.fn(async () => []);
+
+    const out = await maybeCorrective({ query: "q", workspaceId: "ws-1" }, [lowHit], {
+      rewrite,
+      reSearch,
+      minScore: 0.35,
+    });
+
+    expect(out).toEqual([lowHit]);
+  });
 });

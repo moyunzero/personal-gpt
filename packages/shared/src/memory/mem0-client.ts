@@ -151,6 +151,8 @@ export function formatMem0ContextBlock(hits: Mem0SearchHit[]): string {
  * 从用户话术抽取显式偏好 / 稳定事实（D-19）。
  * 启发式、无 LLM；仅命中明确「记住/喜欢/偏好」等句式才写入。
  */
+const MAX_STABLE_FACT_LENGTH = 500;
+
 export function extractStableFactsFromUserText(userText: string): string[] {
   const text = userText.trim();
   if (!text) return [];
@@ -168,7 +170,7 @@ export function extractStableFactsFromUserText(userText: string): string[] {
   for (const re of patterns) {
     const m = text.match(re);
     if (m?.[1]?.trim()) {
-      facts.push(m[1].trim());
+      facts.push(m[1].trim().slice(0, MAX_STABLE_FACT_LENGTH));
       break;
     }
   }

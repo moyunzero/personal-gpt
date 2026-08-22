@@ -24,10 +24,7 @@ export function resolveCorpusTargets(corpus: Corpus): CorpusTargets {
 
   if (corpus === "seed") {
     return {
-      astraCollection: requireEnv(
-        "ASTRA_DB_COLLECTION_SEED",
-        legacyCollection ? `${legacyCollection}_seed` : "kb_seed",
-      ),
+      astraCollection: requireEnv("ASTRA_DB_COLLECTION_SEED", legacyCollection ?? "kb_seed"),
       esIndex: requireEnv("ES_INDEX_SEED", "kb_seed"),
     };
   }

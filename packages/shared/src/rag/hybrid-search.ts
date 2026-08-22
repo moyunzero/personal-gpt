@@ -30,7 +30,10 @@ export type HybridSearchDeps = {
 };
 
 const DEFAULT_LIMIT = 5;
-const CANDIDATE_LIMIT = 10;
+
+function resolveCandidateLimit(limit: number): number {
+  return Math.min(Math.max(limit * 2, limit), 50);
+}
 
 /** VectorStore bound to corpus via VECTOR_BACKEND factory (D-24 / STORE-01). */
 export function getVectorStoreForCorpus(corpus: Corpus): VectorStore {
@@ -47,6 +50,7 @@ async function hybridSearchOnce(
 ): Promise<RetrievedChunk[]> {
   const corpus = params.corpus ?? "user";
   const limit = params.limit ?? DEFAULT_LIMIT;
+  const candidateLimit = resolveCandidateLimit(limit);
   const embed = deps.embed ?? embedText;
   const getStore = deps.getStore ?? getVectorStoreForCorpus;
   const esSearch = deps.esSearch ?? esBm25Search;
@@ -63,14 +67,14 @@ async function hybridSearchOnce(
   const vectorPromise = getStore(corpus).search({
     workspaceId: params.workspaceId,
     vector,
-    limit: CANDIDATE_LIMIT,
+    limit: candidateLimit,
   });
 
   const esPromise = esSearch({
     query: params.query,
     workspaceId: params.workspaceId,
     corpus,
-    limit: CANDIDATE_LIMIT,
+    limit: candidateLimit,
   }).catch((err: unknown) => {
     logWarn("es unavailable; vector-only", { err });
     return [] as RetrievedChunk[];

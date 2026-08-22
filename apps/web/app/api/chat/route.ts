@@ -17,6 +17,22 @@ import { logger } from "@/lib/logger";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
 const MAX_CHAT_MESSAGES = 50;
+const GRAPH_RAG_TIMEOUT_MS = 12_000;
+
+async function withGraphRagTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("graph_rag_timeout")), ms);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 function isTrustedInternalProxy(req: Request): boolean {
   const expected = process.env.INTERNAL_PROXY_KEY;
@@ -191,7 +207,10 @@ export async function POST(req: Request) {
     let graphPathsForUi = graphPathsToDisplay([]);
     if (routeDecision.needsGraphContext) {
       try {
-        const graphResult = await graphRagQuery({ question: lastContent });
+        const graphResult = await withGraphRagTimeout(
+          graphRagQuery({ question: lastContent }),
+          GRAPH_RAG_TIMEOUT_MS,
+        );
         if (graphResult.paths.length > 0) {
           graphSummary = graphResult.summary;
           graphPathsForUi = graphPathsToDisplay(graphResult.paths);
@@ -199,6 +218,16 @@ export async function POST(req: Request) {
       } catch (err) {
         log.warn("graphRagQuery failed, continuing without graph context", { err });
       }
+    }
+
+    if (
+      graphOnlyRetrieve &&
+      graphPathsForUi.length === 0 &&
+      routeDecision.route === "retrieve"
+    ) {
+      contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID, {
+        corpus,
+      });
     }
 
     const citations = contextResult.kind === "ok" ? contextResult.citations : [];

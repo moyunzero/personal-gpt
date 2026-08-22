@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isPureMathExpression,
   matchGraphRelationL0,
   matchL0Rules,
   orderSpecialistsByKeywordAppearance,
 } from "./l0-rules";
+
+describe("isPureMathExpression", () => {
+  it("requires at least one digit", () => {
+    expect(isPureMathExpression("?")).toBe(false);
+    expect(isPureMathExpression("()")).toBe(false);
+    expect(isPureMathExpression("1+1")).toBe(true);
+  });
+});
 
 describe("matchGraphRelationL0 (D-06 / H-04)", () => {
   it("「珍珠奶茶有哪些原料，用了什么工艺？」→ terminal graph_relation, graph_search only", () => {
