@@ -40,7 +40,10 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
 
     const pathBlocks = result.paths.map((p, i) => {
       const nodes = p.nodes
-        .map((n) => `  - id=${n.id} labels=${n.labels.join("|")} name=${String(n.properties.name ?? "")}`)
+        .map(
+          (n) =>
+            `  - id=${n.id} labels=${n.labels.join("|")} name=${String(n.properties.name ?? "")}`,
+        )
         .join("\n");
       const rels = p.relationships
         .map((r) => `  - ${r.startNodeId} -[${r.type}]-> ${r.endNodeId}`)

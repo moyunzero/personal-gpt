@@ -71,11 +71,7 @@ export interface AgentTraceEvent {
 }
 
 /** D-04/D-08: Agent execution mode surfaced on trace */
-export type AgentExecutionRoute =
-  | "short"
-  | "supervisor"
-  | "sequential"
-  | "single_specialist";
+export type AgentExecutionRoute = "short" | "supervisor" | "sequential" | "single_specialist";
 
 export interface AgentTraceIntent {
   route: AgentExecutionRoute;

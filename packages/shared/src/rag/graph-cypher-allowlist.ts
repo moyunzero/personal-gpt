@@ -24,7 +24,10 @@ export class CypherAllowlistError extends Error {
  * Does not execute; call before any Neo4j session.run.
  */
 export function assertAllowlistedCypher(cypher: string): void {
-  const normalized = cypher.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ").trim();
+  const normalized = cypher
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/\/\/[^\n]*/g, " ")
+    .trim();
   if (!normalized) {
     throw new CypherAllowlistError("Cypher is empty");
   }

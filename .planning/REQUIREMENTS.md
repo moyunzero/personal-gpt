@@ -61,16 +61,31 @@
 - [x] **MEM-02**: 长期记忆（Mem0 或自研分层）跨会话召回
 - [x] **STORE-01**: 多存储抽象：Milvus（向量）、ElasticSearch（全文）、Neo4j（图谱）
 - [x] **RAG-05**: Agentic RAG — Agent 决定检索策略与次数
-- [x] **RAG-06**: 混合检索（向量 + BM25）与 Graph RAG
+- [x] **RAG-06**: 混合检索（向量 + BM25）与 Graph RAG（**Phase 3 关账 = demo 级**：seed 子图 + allowlist；应用级 Graph KB → Phase 4 GRAPH-01–04）
 - [x] **GOLDEN-01**: Phase 3 黄金集 ≥20 + CI deterministic smoke（`yarn eval:phase-3`）；非 RAGAS（RAGAS 仍为 Phase 5 EVAL-01）
 - [x] **CP-01**: Postgres checkpointer 单实例同 thread_id 可恢复
 - [x] **CORPUS-01**: 物理 user/seed 分库 + 默认 corpus=user + ISSUE-001 Closed
 
-### Production（生产就绪 — Phase 4）
+### Intent Routing（意图路由 — Phase 3.1）
 
-- [ ] **PROD-01**: Docker Compose 一键启动 web + agent + ingest + PG + Redis + MinIO
+- [x] **ROUTE-01**: Shared Intent Router（`packages/shared/routing`）— Chat/Agent 共用 IntentPlan + L0/L1 规则
+- [x] **ROUTE-02**: Agent 确定性路由 — tool 白名单、single_specialist、KB→Graph fallback、trace 可观测
+- [x] **ROUTE-03**: Chat shared router + graph inject + 可折叠「图谱路径」卡片
+- [x] **ROUTE-04**: KB miss → graph fallback（Chat + Agent 共用 fallbackChain）
+- [x] **ROUTE-05**: Agent Synthesizer 成文层（retrieve → rag_generate，对齐 enterprise 模式）
+
+### Graph Knowledge Base（Graph KB — Phase 4 Wave 0）
+
+- [ ] **GRAPH-01**: Ingest 构图 — 文档入库时抽取实体/关系写入 Neo4j（绑 `workspaceId` + `documentId`）
+- [ ] **GRAPH-02**: Workspace 实体 catalog — 路由 L0/L1 实体链接替换 `graph-entities.ts` seed
+- [ ] **GRAPH-03**: Cypher 模板库 — 多路径 allowlist 查询；Phase 4 不默认 LLM Text2Cypher
+- [ ] **GRAPH-04**: 图生命周期 — 删文档/重索引同步清理或重建图，与 KB chunk 一致
+
+### Production（生产就绪 — Phase 4 Wave 1）
+
+- [ ] **PROD-01**: Docker Compose 一键启动 web + agent + ingest + PG + Redis + MinIO + **Neo4j**
 - [ ] **PROD-02**: 用户认证（Clerk 或 Auth.js）+ workspace 成员/角色
-- [ ] **PROD-03**: 多租户隔离验证 — 跨 workspace 零泄漏
+- [ ] **PROD-03**: 多租户隔离验证 — 跨 workspace 零泄漏（**向量 + ES + Neo4j** 三通道）
 - [ ] **PROD-04**: 限流、操作审计日志
 - [ ] **PROD-05**: Prometheus + Grafana 监控 + CI/CD
 
@@ -91,6 +106,8 @@
 | 全 Serverless 队列（Inngest） | 已决策 BullMQ + Redis，与 Nest Worker 同栈 |
 | Phase 1 多 workspace UI | schema 预留，认证/UI Phase 4 |
 | Phase 1–2 Milvus/ES/Neo4j | Phase 3 存储扩展阶段引入 |
+| Phase 3 demo Graph（seed 子图） | Phase 3 RAG-06 关账；应用级 Graph KB → Phase 4 GRAPH-01–04 |
+| LLM Text2Cypher / GraphRAG 社区 | Phase 5 spike |
 | Phase 1 Reranker 默认开启 | 降低复杂度，作为可选开关 |
 | 实时协作编辑 | 非核心，Phase 5+ 探索 |
 
@@ -130,10 +147,19 @@
 | MEM-02 | Phase 3 | Complete |
 | STORE-01 | Phase 3 | Complete |
 | RAG-05 | Phase 3 | Complete |
-| RAG-06 | Phase 3 | Complete (hybrid + Graph RAG via 03-03b/03-07) |
+| RAG-06 | Phase 3 | Complete（demo Graph RAG；应用级 → GRAPH-01–04） |
 | GOLDEN-01 | Phase 3 | Complete |
 | CP-01 | Phase 3 | Complete |
 | CORPUS-01 | Phase 3 | Complete |
+| ROUTE-01 | Phase 3.1 | Complete |
+| ROUTE-02 | Phase 3.1 | Complete |
+| ROUTE-03 | Phase 3.1 | Complete |
+| ROUTE-04 | Phase 3.1 | Complete |
+| ROUTE-05 | Phase 3.1 | Complete |
+| GRAPH-01 | Phase 4 | Pending |
+| GRAPH-02 | Phase 4 | Pending |
+| GRAPH-03 | Phase 4 | Pending |
+| GRAPH-04 | Phase 4 | Pending |
 | PROD-01 | Phase 4 | Pending |
 | PROD-02 | Phase 4 | Pending |
 | PROD-03 | Phase 4 | Pending |
@@ -142,10 +168,10 @@
 
 **Coverage:**
 
-- v2.0 requirements: 35 total
-- Mapped to phases: 35
+- v2.0 requirements: 42 total（+ GRAPH-01–04, ROUTE-03–05 正式入表）
+- Mapped to phases: 42
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-02*  
-*Last updated: 2026-08-20 — AGENT-04/05 marked Complete (Phase 2 MVP)*
+*Last updated: 2026-08-22 — Phase 4 扩展：GRAPH-01–04（Wave 0 Graph KB）；RAG-06 标注 demo vs 应用级边界；PROD-03 三通道隔离*

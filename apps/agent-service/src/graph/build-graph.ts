@@ -15,10 +15,12 @@ import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { createSupervisor } from "@langchain/langgraph-supervisor";
 import { isPlanAmbiguous, type IntentPlan } from "@personal-gpt/shared/routing";
 
+import { isRetrieverSynthesisPlan } from "../agent/agent-synthesis";
 import { createAnalystAgent } from "../agents/analyst.agent";
 import { createEditorAgent } from "../agents/editor.agent";
 import { createResearcherAgent } from "../agents/researcher.agent";
 import { createRetrieverAgent } from "../agents/retriever.agent";
+import { createSynthesizerAgent } from "../agents/synthesizer.agent";
 import {
   buildSupervisorPrompt,
   inferRequiredSpecialists,
@@ -44,6 +46,11 @@ export type ExecutionMode = "short" | "sequential" | "single_specialist" | "supe
 
 /** D-11: prefetch node id — tested for single_specialist wiring */
 export const SINGLE_SPECIALIST_PREFETCH_NODE = "prefetch";
+
+/** rag_generate 成文节点（single_specialist kb/graph 路径） */
+export const SINGLE_SPECIALIST_SYNTHESIZE_NODE = "synthesizer";
+
+export { isRetrieverSynthesisPlan };
 
 export type BuildAgentGraphOptions = {
   /** 注入模型（测试用 mock）；缺省 createChatModel() */
@@ -238,7 +245,9 @@ export function resetCheckpointerSingletonsForTests(): void {
 }
 
 /** 测试用：注入假 PostgresSaver（含 setup）以断言 bootstrap 契约 */
-export function plantPostgresSaverForTests(saver: BaseCheckpointSaver & { setup: () => Promise<void> }): void {
+export function plantPostgresSaverForTests(
+  saver: BaseCheckpointSaver & { setup: () => Promise<void> },
+): void {
   postgresSaverSingleton = saver;
   postgresSetupDone = false;
   postgresSetupPromise = null;
@@ -360,7 +369,7 @@ function createSupervisorWorkflow(
   });
 }
 
-/** D-11: server-side prefetch before Retriever LLM in single_specialist path */
+/** D-11: server-side prefetch before synthesizer / Retriever in single_specialist path */
 function buildPrefetchNode(plan: IntentPlan) {
   return async (
     state: AgentStateType,
@@ -369,19 +378,36 @@ function buildPrefetchNode(plan: IntentPlan) {
     const text = lastUserText(state.messages);
     const workspaceId = String(config?.configurable?.workspaceId ?? "default");
     const blocks: string[] = [];
+    const graphOnly =
+      plan.retrieverTools.includes("graph_search") && !plan.retrieverTools.includes("kb_search");
 
-    if (plan.retrieverTools.includes("graph_search")) {
+    if (graphOnly) {
       const graphOut = await invokeGraphSearch({ question: text });
       blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
-    }
-    if (plan.retrieverTools.includes("kb_search")) {
+    } else if (plan.retrieverTools.includes("kb_search")) {
       const kbOut = await invokeKbSearch({
         query: extractKbSearchQuery(text),
         userText: text,
         workspaceId,
       });
       if (kbOut) {
-        blocks.push(`【知识库预检索·工具结果·可信】\n${kbOut}`);
+        const kbMiss = /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut);
+        if (kbMiss && plan.fallbackChain.includes("graph_search")) {
+          const graphOut = await invokeGraphSearch({ question: text });
+          if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
+            blocks.push(
+              `【图谱回退检索·工具结果·可信】\nKB 未命中后按 fallbackChain 触发 graph_search；必须采信。\n${graphOut}`,
+            );
+          } else {
+            blocks.push(`【知识库预检索·工具结果·可信】\n${kbOut}`);
+          }
+        } else {
+          blocks.push(`【知识库预检索·工具结果·可信】\n${kbOut}`);
+        }
+      }
+      if (plan.primary === "kb_graph_hybrid" && plan.retrieverTools.includes("graph_search")) {
+        const graphOut = await invokeGraphSearch({ question: text });
+        blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
       }
     }
 
@@ -390,19 +416,18 @@ function buildPrefetchNode(plan: IntentPlan) {
       messages: [
         new SystemMessage(
           [
-            "以下由服务端在 Retriever 运行前直接调用工具得到；子 Agent 必须采信，禁止编造相反结论。",
+            "以下由服务端在成文层运行前直接调用工具得到；Synthesizer 必须采信，禁止编造相反结论。",
             ...blocks,
           ].join("\n\n"),
         ),
-        ...state.messages,
       ],
     };
   };
 }
 
 /**
- * D-11: single specialist — START → prefetch (optional) → specialist → END.
- * Retriever synthesizes answer; prefetch injects tool output as SystemMessage.
+ * D-11: single specialist — START → prefetch (optional) → synthesizer|specialist → END.
+ * kb/graph retriever 路径：prefetch → Synthesizer（rag_generate）；其余专科保持原样。
  */
 export function createSingleSpecialistWorkflow(
   model: LanguageModelLike,
@@ -415,18 +440,26 @@ export function createSingleSpecialistWorkflow(
     throw new Error(`createSingleSpecialistWorkflow: unknown specialist ${specialistName}`);
   }
 
+  const useSynthesis = specialistName === "retriever" && isRetrieverSynthesisPlan(plan);
+  const terminalNode = useSynthesis ? SINGLE_SPECIALIST_SYNTHESIZE_NODE : specialistName;
   const needsPrefetch = specialistName === "retriever" && plan.retrieverTools.length > 0;
-  let g: any = new StateGraph(AgentState).addNode(specialistName, specialist.graph);
+
+  let g: any = new StateGraph(AgentState);
+  if (useSynthesis) {
+    g = g.addNode(SINGLE_SPECIALIST_SYNTHESIZE_NODE, createSynthesizerAgent(model, plan).graph);
+  } else {
+    g = g.addNode(specialistName, specialist.graph);
+  }
 
   if (needsPrefetch) {
     g = g
       .addNode(SINGLE_SPECIALIST_PREFETCH_NODE, buildPrefetchNode(plan))
       .addEdge(START, SINGLE_SPECIALIST_PREFETCH_NODE)
-      .addEdge(SINGLE_SPECIALIST_PREFETCH_NODE, specialistName);
+      .addEdge(SINGLE_SPECIALIST_PREFETCH_NODE, terminalNode);
   } else {
-    g = g.addEdge(START, specialistName);
+    g = g.addEdge(START, terminalNode);
   }
-  g = g.addEdge(specialistName, END);
+  g = g.addEdge(terminalNode, END);
   return g;
 }
 

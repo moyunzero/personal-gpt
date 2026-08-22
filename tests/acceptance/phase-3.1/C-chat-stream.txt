@@ -1,0 +1,640 @@
+data: {"type":"text-start","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"结合","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"企业","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"知识","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"图谱","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"与","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"通用","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"饮品","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"工艺","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"珍珠","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"奶茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"的","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"原料","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"与","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"核心","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"工艺","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"如下","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"🥤","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" ","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"主要","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"原料","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"珍珠","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"（","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"粉","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"圆","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"）**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"核心","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"配料","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"主要由","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"木","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"薯","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"淀粉","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"（","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"T","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"api","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"oca","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"）","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"制成","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"部分","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"配方","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"会","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"加入","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"少量","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"糖","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"或","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"食用","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"色素","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"。","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"底","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"常用","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"红茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"（","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"阿","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"萨","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"姆","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"锡","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"兰","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"等","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"）、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"乌龙","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"绿茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"或","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茉莉","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"花茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"。","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"乳","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"基","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"鲜","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"牛奶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"奶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"精","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"（","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"植","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"脂","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"末","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"）、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"豆浆","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"或","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"植物","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"奶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"（","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"燕麦","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"奶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"椰","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"奶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"等","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"）。","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"甜味","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"剂","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"果","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"糖","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"蔗糖","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"或","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"蜂蜜","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"用于","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"平衡","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"涩","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"与","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"乳","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"香","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"。","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"可选","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"小","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"料","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"椰","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"果","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"布丁","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"芋","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"圆","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"仙","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"草","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"或","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"冰块","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"。","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"🔥","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" ","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"核心","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"工艺","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"煮","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"制","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"（","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"Bo","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"il","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"）**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"珍珠","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"需在","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"沸","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"水中","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"煮","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"至","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"熟","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"透","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"期间","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"需","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"持续","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"搅拌","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"防止","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"粘连","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"；","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"煮熟","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"后","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"通常","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"需","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"焖","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"制","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"并","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"过","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"冷水","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"以","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"锁定","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"Q","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"弹","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"口感","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"（","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"该","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"工艺","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"路径","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"已","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"收录","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"于","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"企业","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"知识","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"图谱","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"）。","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"冲泡","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"底","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茶叶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"按","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"标准","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"水","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"投","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"比","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"高温","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"萃取","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"过滤","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"渣","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"后","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"得到","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"纯净","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茶汤","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"。","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"调配","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"与","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"出品","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"将","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茶汤","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"乳","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"基","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"与","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"糖浆","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"按比例","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"混合","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"加入","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"煮","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"好的","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"珍珠","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"与","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"冰块","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"摇","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"匀","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"或","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"搅拌","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"后即可","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"装","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"杯","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"。","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"\n\n","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"如果您","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"需要","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"某","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"款","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"特定","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"口味","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"（","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"如","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"黑","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"糖","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"珍珠","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"鲜","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"奶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"四季","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"春","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"茶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"奶","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"）","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"的详细","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"配比","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"或","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"想了解","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"外卖","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"点","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"单","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"时的","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"健康","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"替换","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"建议","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"随时","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"告诉我","id":"msg-1787398833419"}
+
+data: {"type":"text-delta","delta":"！","id":"msg-1787398833419"}
+
+data: {"type":"text-end","id":"msg-1787398833419"}
+
+data: {"type":"data-citations","id":"citations-msg-1787398833419","data":{"citations":[{"documentId":"unknown-0","title":"未命名文档","similarity":0.57339674,"snippet":"4. **饮品选择策略**\n   - 用「渐进替换法」调整饮品：\n   第1周：含糖饮料减半+加等量矿泉水\n   第2周：替换为无糖茶饮/柠檬水\n   第3周：完全转为白开水+适量无糖饮品\n\n**三、实用执行方案**\n5. **备餐解决方案**\n   - 周末进行2小时批量备餐：\n   * 预处理蔬菜：洗净切好分装冷藏\n   * 预制蛋白质：水煮鸡胸/煎牛排切块冷冻\n   * 杂粮预处理：煮好三色糙米分装冷冻\n\n6. **外食选择指南**\n   - 火锅：选择菌汤/番茄锅底，先涮蔬菜后吃肉\n   - 快餐：选烤鸡腿堡（去酱）+蔬菜沙拉\n   - 中餐：点…","source":"psychology-qa","category":"psychology","chunkIndex":1}]}}
+
+data: {"type":"data-graph-paths","id":"graph-paths-msg-1787398833419","data":{"paths":[{"nodes":["Product:珍珠奶茶","Ingredient:珍珠","Method:煮制"],"relationships":["CONTAINS","USES"]}]}}
+
+data: [DONE]
+

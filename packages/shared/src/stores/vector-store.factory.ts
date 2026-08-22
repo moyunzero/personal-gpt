@@ -10,9 +10,7 @@ import type { VectorStore } from "./vector-store";
 
 export type VectorBackend = "astra" | "milvus";
 
-export function resolveVectorBackend(
-  source: NodeJS.ProcessEnv = process.env,
-): VectorBackend {
+export function resolveVectorBackend(source: NodeJS.ProcessEnv = process.env): VectorBackend {
   const raw = source.VECTOR_BACKEND?.trim().toLowerCase();
   return raw === "milvus" ? "milvus" : "astra";
 }
@@ -39,21 +37,16 @@ export function createVectorStoreFromEnv(
     });
   }
 
-  const collectionName =
-    options.collectionName ?? resolveCorpusTargets(corpus).astraCollection;
+  const collectionName = options.collectionName ?? resolveCorpusTargets(corpus).astraCollection;
   return createAstraVectorStore({ corpus, collectionName });
 }
 
 /** True when ingest should also write Milvus (primary or dual-write). */
-export function shouldWriteMilvus(
-  source: NodeJS.ProcessEnv = process.env,
-): boolean {
+export function shouldWriteMilvus(source: NodeJS.ProcessEnv = process.env): boolean {
   return resolveVectorBackend(source) === "milvus" || source.MILVUS_DUAL_WRITE === "true";
 }
 
 /** True when ingest should write Astra (primary unless milvus-only). */
-export function shouldWriteAstra(
-  source: NodeJS.ProcessEnv = process.env,
-): boolean {
+export function shouldWriteAstra(source: NodeJS.ProcessEnv = process.env): boolean {
   return resolveVectorBackend(source) !== "milvus";
 }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const deleteByDocumentId = vi.fn();
 const indexChunks = vi.fn();
+const ensureEsIndexes = vi.fn();
 const astraUpsert = vi.fn();
 const astraDeleteByDocument = vi.fn();
 
@@ -12,6 +13,7 @@ vi.mock("@personal-gpt/shared", () => ({
   }),
   deleteByDocumentId: (...args: unknown[]) => deleteByDocumentId(...args),
   indexChunks: (...args: unknown[]) => indexChunks(...args),
+  ensureEsIndexes: (...args: unknown[]) => ensureEsIndexes(...args),
 }));
 
 vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
@@ -41,10 +43,12 @@ describe("es dual-write fail-closed (D-10)", () => {
   beforeEach(() => {
     deleteByDocumentId.mockReset();
     indexChunks.mockReset();
+    ensureEsIndexes.mockReset();
     astraUpsert.mockReset();
     astraDeleteByDocument.mockReset();
     deleteByDocumentId.mockResolvedValue(undefined);
     indexChunks.mockResolvedValue(undefined);
+    ensureEsIndexes.mockResolvedValue(undefined);
     astraUpsert.mockResolvedValue(undefined);
     astraDeleteByDocument.mockResolvedValue(undefined);
   });
@@ -52,11 +56,8 @@ describe("es dual-write fail-closed (D-10)", () => {
   it("upsertChunksToEs deletes then indexes into user ES index", async () => {
     await upsertChunksToEs([sampleChunk], "user");
 
-    expect(deleteByDocumentId).toHaveBeenCalledWith(
-      "es_user",
-      sampleChunk.workspaceId,
-      "doc-1",
-    );
+    expect(ensureEsIndexes).toHaveBeenCalledWith(["es_user"]);
+    expect(deleteByDocumentId).toHaveBeenCalledWith("es_user", sampleChunk.workspaceId, "doc-1");
     expect(indexChunks).toHaveBeenCalledWith(
       "es_user",
       expect.arrayContaining([
@@ -78,23 +79,12 @@ describe("es dual-write fail-closed (D-10)", () => {
 
   it("deleteDocumentFromEs removes docs for documentId", async () => {
     await deleteDocumentFromEs(sampleChunk.workspaceId, "doc-1", "user");
-    expect(deleteByDocumentId).toHaveBeenCalledWith(
-      "es_user",
-      sampleChunk.workspaceId,
-      "doc-1",
-    );
+    expect(deleteByDocumentId).toHaveBeenCalledWith("es_user", sampleChunk.workspaceId, "doc-1");
   });
 
   it("deleteDocument clears Astra then ES", async () => {
     await deleteDocument(sampleChunk.workspaceId, "doc-1", "user");
-    expect(astraDeleteByDocument).toHaveBeenCalledWith(
-      sampleChunk.workspaceId,
-      "doc-1",
-    );
-    expect(deleteByDocumentId).toHaveBeenCalledWith(
-      "es_user",
-      sampleChunk.workspaceId,
-      "doc-1",
-    );
+    expect(astraDeleteByDocument).toHaveBeenCalledWith(sampleChunk.workspaceId, "doc-1");
+    expect(deleteByDocumentId).toHaveBeenCalledWith("es_user", sampleChunk.workspaceId, "doc-1");
   });
 });

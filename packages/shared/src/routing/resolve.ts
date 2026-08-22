@@ -39,11 +39,7 @@ export async function resolveIntentPlan(
   }
 
   let l2Hint: Partial<IntentPlan> | null | undefined;
-  if (
-    config.enableL2IntentClassifier &&
-    needsL2(l0, l1) &&
-    deps.classifyL2
-  ) {
+  if (config.enableL2IntentClassifier && needsL2(l0, l1) && deps.classifyL2) {
     l2Hint = await deps.classifyL2(query);
     if (l2Hint) layers.push("L2");
   } else if (config.enableL2IntentClassifier && needsL2(l0, l1)) {

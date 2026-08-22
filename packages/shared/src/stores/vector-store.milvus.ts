@@ -2,28 +2,18 @@
  * Milvus VectorStore（Wave3 STORE-01）：与 Astra 同接口；search/upsert 强制 workspaceId。
  */
 
-import {
-  DataType,
-  IndexType,
-  MetricType,
-  MilvusClient,
-} from "@zilliz/milvus2-sdk-node";
+import { DataType, IndexType, MetricType, MilvusClient } from "@zilliz/milvus2-sdk-node";
 
 import { EMBEDDING_DIMENSION } from "../ai/embedding-models";
 import type { Corpus } from "../rag/corpus";
 import { resolveCorpusTargets } from "../rag/corpus";
-import {
-  assertChunkWorkspaceId,
-  assertSearchWorkspaceId,
-} from "./vector-store.astra";
-import type { ChunkRecord, RetrievedChunk, VectorSearchParams, VectorStore } from "./vector-store";
+import { assertChunkWorkspaceId, assertSearchWorkspaceId } from "./vector-store.astra";
+import type { RetrievedChunk, VectorSearchParams, VectorStore } from "./vector-store";
 
 /** Minimal client surface for tests / injection. */
 export interface MilvusClientLike {
   connectPromise?: Promise<unknown>;
-  hasCollection: (params: {
-    collection_name: string;
-  }) => Promise<{ value?: boolean } | boolean>;
+  hasCollection: (params: { collection_name: string }) => Promise<{ value?: boolean } | boolean>;
   createCollection: (params: Record<string, unknown>) => Promise<unknown>;
   createIndex: (params: Record<string, unknown>) => Promise<unknown>;
   loadCollection: (params: { collection_name: string }) => Promise<unknown>;
@@ -62,23 +52,17 @@ export function resolveMilvusCollectionName(
   const corpus = options.corpus ?? "user";
   if (corpus === "seed") {
     return (
-      process.env.MILVUS_COLLECTION_SEED?.trim() ||
-      resolveCorpusTargets("seed").astraCollection
+      process.env.MILVUS_COLLECTION_SEED?.trim() || resolveCorpusTargets("seed").astraCollection
     );
   }
-  return (
-    process.env.MILVUS_COLLECTION_USER?.trim() ||
-    resolveCorpusTargets("user").astraCollection
-  );
+  return process.env.MILVUS_COLLECTION_USER?.trim() || resolveCorpusTargets("user").astraCollection;
 }
 
 function chunkPrimaryKey(documentId: string, chunkIndex: number): string {
   return `${documentId}#${chunkIndex}`;
 }
 
-function mapMilvusHit(
-  hit: Record<string, unknown> & { score?: number },
-): RetrievedChunk {
+function mapMilvusHit(hit: Record<string, unknown> & { score?: number }): RetrievedChunk {
   return {
     text: String(hit.content ?? hit.text ?? ""),
     similarity: Number(hit.score ?? 0),
@@ -101,8 +85,7 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
   const address = options.address ?? process.env.MILVUS_ADDRESS ?? "localhost:19530";
 
   const client: MilvusClientLike =
-    options.client ??
-    (new MilvusClient({ address }) as unknown as MilvusClientLike);
+    options.client ?? (new MilvusClient({ address }) as unknown as MilvusClientLike);
 
   let ensured = Boolean(options.skipEnsure);
 
@@ -222,9 +205,7 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
       });
 
       const threshold = params.similarityThreshold ?? 0;
-      return (result.results ?? [])
-        .map(mapMilvusHit)
-        .filter((doc) => doc.similarity >= threshold);
+      return (result.results ?? []).map(mapMilvusHit).filter((doc) => doc.similarity >= threshold);
     },
   };
 }

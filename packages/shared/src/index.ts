@@ -11,10 +11,7 @@ export * from "./schemas/env";
 export * from "./utils/ingest";
 export * from "./stores/vector-store";
 export { createAstraVectorStore, createVectorStore } from "./stores/vector-store.astra";
-export {
-  createMilvusVectorStore,
-  resolveMilvusCollectionName,
-} from "./stores/vector-store.milvus";
+export { createMilvusVectorStore, resolveMilvusCollectionName } from "./stores/vector-store.milvus";
 export {
   createVectorStoreFromEnv,
   resolveVectorBackend,
@@ -88,4 +85,3 @@ export {
   type GraphQueryExecutor,
   type GraphRagQueryOptions,
 } from "./rag/graph-rag";
-

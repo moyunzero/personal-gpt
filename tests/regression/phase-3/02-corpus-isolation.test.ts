@@ -67,9 +67,7 @@ describe("Phase 3 regression #2: corpus isolation forbids psychology-qa (CORPUS-
 
     expect(getStore).toHaveBeenCalledWith("user");
     expect(getStore).not.toHaveBeenCalledWith("seed");
-    expect(esSearch).toHaveBeenCalledWith(
-      expect.objectContaining({ corpus: "user" }),
-    );
+    expect(esSearch).toHaveBeenCalledWith(expect.objectContaining({ corpus: "user" }));
 
     expect(result.length).toBeGreaterThan(0);
     for (const hit of result) {

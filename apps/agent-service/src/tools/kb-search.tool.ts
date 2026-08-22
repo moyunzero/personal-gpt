@@ -7,6 +7,8 @@ import type { RunnableConfig } from "@langchain/core/runnables";
 import { tool } from "langchain";
 import { z } from "zod";
 
+import type { HybridSearchDeps } from "@personal-gpt/shared";
+
 import { resolveKbMinSimilarity, retrieveKb, type RetrieveKbParams } from "../rag/retrieve";
 import { extractKbSearchQuery } from "./extract-kb-query";
 import { getKbSearchContextForThread } from "./kb-search-context";
@@ -21,6 +23,8 @@ export type KbSearchInput = {
    * 用户原话回退：LLM 改写 query 导致相似度跌破门槛时，再用原问题 / 压缩词检索。
    */
   userText?: string;
+  /** 测试注入 hybridSearch deps（禁止 live embed / ES） */
+  hybridDeps?: HybridSearchDeps;
 };
 
 const SNIPPET_MAX = 400;
@@ -89,6 +93,7 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
     topK: input.topK,
     workspaceId: input.workspaceId,
     minSimilarity,
+    hybridDeps: input.hybridDeps,
   };
 
   try {

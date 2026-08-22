@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import AppHeader from "./components/AppHeader";
 import AgentErrorCard from "./components/AgentErrorCard";
 import Bubble from "./components/Bubble";
@@ -38,18 +38,15 @@ export default function Home() {
   const [mode, setMode] = useState<ChatMode>("chat");
   const [corpus, setCorpus] = useState<CorpusChoice>("user");
   const [input, setInput] = useState("");
-  const [userKey, setUserKey] = useState("");
-  const [threadId, setThreadId] = useState("");
+  const [userKey] = useState(() => (typeof window !== "undefined" ? getOrCreateUserKey() : ""));
+  const [threadRevision, setThreadRevision] = useState(0);
+  const threadId = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    void threadRevision;
+    return getOrCreateThreadId(mode);
+  }, [mode, threadRevision]);
   const [chatInstance, setChatInstance] = useState(0);
   const streamRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    setUserKey(getOrCreateUserKey());
-  }, []);
-
-  useEffect(() => {
-    setThreadId(getOrCreateThreadId(mode));
-  }, [mode]);
 
   const transport = useMemo(
     () =>
@@ -112,8 +109,8 @@ export default function Home() {
 
   const handleNewThread = () => {
     clearError();
-    const next = rotateThreadId(mode);
-    setThreadId(next);
+    rotateThreadId(mode);
+    setThreadRevision((n) => n + 1);
     setMessages([]);
     setChatInstance((n) => n + 1);
     setInput("");

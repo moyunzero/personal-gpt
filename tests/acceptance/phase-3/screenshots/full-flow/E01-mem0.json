@@ -1,0 +1,13 @@
+{
+  "userKey": "fullflow-1787372011",
+  "facts": ["请记住：我喜欢简洁的回答，偏好用中文。"],
+  "hitCount": 1,
+  "hits": [
+    {
+      "memory": "User prefers concise answers and prefers to communicate in Chinese",
+      "score": 0.1959,
+      "id": "4b9d8dc2-915c-4ba0-95ba-a31bc3a9274d"
+    }
+  ],
+  "block": "【长期记忆】\n- User prefers concise answers and prefers to communicate in Chinese"
+}

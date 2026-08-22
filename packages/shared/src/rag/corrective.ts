@@ -17,7 +17,7 @@ export function correctiveMinScore(): number {
   return Number.isFinite(n) && n >= 0 && n <= 1 ? n : DEFAULT_CORRECTIVE_MIN_SCORE;
 }
 
-/** D-34: 「不够相关」= top1 similarity / RRF 分低于阈值；空结果亦触发改写。 */
+/** D-34: 「不够相关」= top1 cosine similarity 低于阈值；空结果亦触发改写。 */
 export function needsCorrectiveRewrite(
   hits: RetrievedChunk[],
   minScore: number = correctiveMinScore(),

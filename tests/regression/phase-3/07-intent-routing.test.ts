@@ -37,7 +37,8 @@ vi.mock("../../../apps/agent-service/src/routing/intent-plan", () => ({
 }));
 
 vi.mock("../../../apps/agent-service/src/graph/build-graph", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../apps/agent-service/src/graph/build-graph")>();
+  const actual =
+    await importOriginal<typeof import("../../../apps/agent-service/src/graph/build-graph")>();
   return {
     ...actual,
     buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
@@ -62,7 +63,8 @@ vi.mock("ai", async (importOriginal) => {
 });
 
 vi.mock("../../../apps/agent-service/src/tools/kb-search.tool", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../apps/agent-service/src/tools/kb-search.tool")>();
+  const actual =
+    await importOriginal<typeof import("../../../apps/agent-service/src/tools/kb-search.tool")>();
   return {
     ...actual,
     invokeKbSearch: (...args: unknown[]) => invokeKbSearchMock(...args),
@@ -70,7 +72,10 @@ vi.mock("../../../apps/agent-service/src/tools/kb-search.tool", async (importOri
 });
 
 vi.mock("../../../apps/agent-service/src/tools/graph-search.tool", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../apps/agent-service/src/tools/graph-search.tool")>();
+  const actual =
+    await importOriginal<
+      typeof import("../../../apps/agent-service/src/tools/graph-search.tool")
+    >();
   return {
     ...actual,
     invokeGraphSearch: (...args: unknown[]) => invokeGraphSearchMock(...args),
@@ -115,9 +120,7 @@ function setupAgentStreamMocks() {
     plan: GRAPH_PLAN,
     layers: ["L0"],
   });
-  invokeGraphSearchMock.mockResolvedValue(
-    "GRAPH_SEARCH_STATUS: HIT\n珍珠奶茶 path summary",
-  );
+  invokeGraphSearchMock.mockResolvedValue("GRAPH_SEARCH_STATUS: HIT\n珍珠奶茶 path summary");
   invokeKbSearchMock.mockResolvedValue(
     ["KB_SEARCH_STATUS: NO_RELEVANT_HIT", "No relevant knowledge base hits."].join("\n"),
   );
@@ -176,8 +179,14 @@ describe("Phase 3 regression #7: intent routing (H-04 pearl milk tea)", () => {
     expect(probeKb).not.toHaveBeenCalled();
   });
 
-  it("C2: Agent stream invokes graph_search with GRAPH_SEARCH_STATUS: HIT (D-06, ROADMAP SC #1)", async () => {
+  it("C2: Agent stream records graph_search HIT from prefetch (D-06, ROADMAP SC #1)", async () => {
     setupAgentStreamMocks();
+    const graphOut = "GRAPH_SEARCH_STATUS: HIT\n珍珠奶茶 path summary";
+    streamMock.mockImplementation(() =>
+      (async function* () {
+        yield ["updates", { prefetch: { messages: [{ content: graphOut }] } }];
+      })(),
+    );
     const { AgentService } = await import("../../../apps/agent-service/src/agent/agent.service");
     const service = new AgentService();
     const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
@@ -200,27 +209,26 @@ describe("Phase 3 regression #7: intent routing (H-04 pearl milk tea)", () => {
     };
     await streamArg?.__ready;
 
-    expect(invokeGraphSearchMock).toHaveBeenCalled();
-    const graphOut = await invokeGraphSearchMock.mock.results[0]?.value;
-    expect(String(graphOut)).toContain("GRAPH_SEARCH_STATUS: HIT");
-
+    expect(invokeGraphSearchMock).not.toHaveBeenCalled();
     const tracePart = streamArg?.__writes?.find(
       (w) => (w as { type?: string }).type === "data-agent-trace",
     ) as Record<string, unknown> | undefined;
     const traceData = tracePart?.data as {
-      events?: Array<{ name?: string; output?: string }>;
+      events?: Array<{ name?: string; output?: string; detail?: string }>;
     };
     const graphEvents = traceData?.events?.filter((e) => e.name === "graph_search");
     expect(graphEvents?.length).toBeGreaterThan(0);
+    expect(String(graphEvents?.[0]?.output ?? graphEvents?.[0]?.detail ?? "")).toContain(
+      "GRAPH_SEARCH_STATUS: HIT",
+    );
   });
 
   it("C3: 你好 → chitchat + Agent short route (D-04)", async () => {
     const { plan } = await resolveIntentPlan("你好");
     expect(plan.primary).toBe("chitchat");
 
-    const { resolveExecutionMode } = await import(
-      "../../../apps/agent-service/src/graph/build-graph"
-    );
+    const { resolveExecutionMode } =
+      await import("../../../apps/agent-service/src/graph/build-graph");
     expect(resolveExecutionMode(plan)).toBe("short");
   });
 
@@ -260,12 +268,26 @@ describe("Phase 3 regression #7: intent routing (H-04 pearl milk tea)", () => {
     expect(editorIdx).toBeGreaterThan(researcherIdx);
   });
 
-  it("C7: KB NO_RELEVANT_HIT + graphSignal → invokeGraphSearch (D-13)", async () => {
+  it("C7: KB NO_RELEVANT_HIT + graphSignal → graph_search via synthesis prefetch (D-13)", async () => {
     setupAgentStreamMocks();
     resolveIntentPlanForAgentMock.mockResolvedValue({
       plan: KB_PLAN_WITH_GRAPH_FALLBACK,
       layers: ["L1"],
     });
+    const kbMiss = "KB_SEARCH_STATUS: NO_RELEVANT_HIT\nNo relevant knowledge base hits.";
+    const graphOut = "GRAPH_SEARCH_STATUS: HIT\n珍珠奶茶 path summary";
+    streamMock.mockImplementation(() =>
+      (async function* () {
+        yield [
+          "updates",
+          {
+            prefetch: {
+              messages: [{ content: kbMiss }, { content: graphOut }],
+            },
+          },
+        ];
+      })(),
+    );
     toBaseMessagesMock.mockResolvedValue([{ content: "差旅报销政策有哪些条款？" }]);
 
     const { AgentService } = await import("../../../apps/agent-service/src/agent/agent.service");
@@ -285,11 +307,21 @@ describe("Phase 3 regression #7: intent routing (H-04 pearl milk tea)", () => {
       res,
     );
     const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __writes?: unknown[];
       __ready?: Promise<void>;
     };
     await streamArg?.__ready;
-    expect(invokeKbSearchMock).toHaveBeenCalled();
-    expect(invokeGraphSearchMock).toHaveBeenCalled();
+    expect(invokeKbSearchMock).not.toHaveBeenCalled();
+    expect(invokeGraphSearchMock).not.toHaveBeenCalled();
+    const tracePart = streamArg?.__writes?.find(
+      (w) => (w as { type?: string }).type === "data-agent-trace",
+    ) as Record<string, unknown> | undefined;
+    const traceData = tracePart?.data as {
+      events?: Array<{ name?: string; detail?: string }>;
+    };
+    const graphEvents = traceData?.events?.filter((e) => e.name === "graph_search");
+    expect(graphEvents?.length).toBeGreaterThan(0);
+    expect(String(graphEvents?.[0]?.detail ?? "")).toContain("GRAPH_SEARCH_STATUS: HIT");
   });
 
   it("C8: KB NO_RELEVANT_HIT without graphSignal → invokeGraphSearch NOT called (D-13)", async () => {
@@ -335,10 +367,12 @@ describe("Phase 3 regression #7: intent routing (H-04 pearl milk tea)", () => {
     expect(plan.reason).toContain("neo4j_unavailable");
   });
 
-  it("C10: single_specialist prefetch node before retriever (D-11/D-16)", async () => {
-    const { createSingleSpecialistWorkflow, SINGLE_SPECIALIST_PREFETCH_NODE } = await import(
-      "../../../apps/agent-service/src/graph/build-graph"
-    );
+  it("C10: single_specialist prefetch → synthesizer (D-11/D-16)", async () => {
+    const {
+      createSingleSpecialistWorkflow,
+      SINGLE_SPECIALIST_PREFETCH_NODE,
+      SINGLE_SPECIALIST_SYNTHESIZE_NODE,
+    } = await import("../../../apps/agent-service/src/graph/build-graph");
     const { ChatOpenAI } = await import("@langchain/openai");
     const model = new ChatOpenAI({
       model: "mock-model",
@@ -348,7 +382,7 @@ describe("Phase 3 regression #7: intent routing (H-04 pearl milk tea)", () => {
     const wf = createSingleSpecialistWorkflow(model, GRAPH_PLAN, "retriever");
     const nodes = (wf as { nodes?: Record<string, unknown> }).nodes ?? {};
     expect(Object.keys(nodes)).toContain(SINGLE_SPECIALIST_PREFETCH_NODE);
-    expect(Object.keys(nodes)).toContain("retriever");
+    expect(Object.keys(nodes)).toContain(SINGLE_SPECIALIST_SYNTHESIZE_NODE);
     expect(Object.keys(nodes)).not.toContain("supervisor");
   });
 

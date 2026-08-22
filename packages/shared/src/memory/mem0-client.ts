@@ -13,10 +13,7 @@ export type Mem0SearchHit = {
 
 /** 可注入的底层客户端（生产用 mem0ai MemoryClient；测试用 mock）。 */
 export type Mem0RawClient = {
-  add(
-    messages: Mem0Message[],
-    options: { userId: string },
-  ): Promise<unknown>;
+  add(messages: Mem0Message[], options: { userId: string }): Promise<unknown>;
   search(
     query: string,
     options: { filters: { user_id: string }; topK?: number },

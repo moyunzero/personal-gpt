@@ -27,7 +27,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { createChatStream } from "./stream";
-import type { GraphPathDisplay } from "@/app/components/GraphPathCards";
+import type { GraphPathDisplay } from "@/lib/chat/graph-path-display";
 
 function mockTextStream(chunks: Array<{ type: string; text?: string }>) {
   streamTextMock.mockReturnValue({

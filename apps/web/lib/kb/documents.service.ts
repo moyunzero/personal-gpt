@@ -331,11 +331,7 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   const vectorStore = createVectorStore({ corpus: "user" });
   await vectorStore.deleteByDocument(DEFAULT_WORKSPACE_ID, documentId);
   // D-09: keep ES in sync with Astra on document delete
-  await deleteByDocumentId(
-    resolveCorpusTargets("user").esIndex,
-    DEFAULT_WORKSPACE_ID,
-    documentId,
-  );
+  await deleteByDocumentId(resolveCorpusTargets("user").esIndex, DEFAULT_WORKSPACE_ID, documentId);
 
   if (document.filePath) {
     try {

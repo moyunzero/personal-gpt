@@ -47,11 +47,11 @@ describe("maybeCorrective", () => {
     const rewrite = vi.fn(async () => "rewritten");
     const reSearch = vi.fn(async () => [highHit]);
 
-    const out = await maybeCorrective(
-      { query: "original", workspaceId: "ws-1" },
-      [highHit],
-      { rewrite, reSearch, minScore: 0.35 },
-    );
+    const out = await maybeCorrective({ query: "original", workspaceId: "ws-1" }, [highHit], {
+      rewrite,
+      reSearch,
+      minScore: 0.35,
+    });
 
     expect(rewrite).not.toHaveBeenCalled();
     expect(reSearch).not.toHaveBeenCalled();
@@ -69,11 +69,11 @@ describe("maybeCorrective", () => {
     };
     const reSearch = vi.fn(async () => [better]);
 
-    const out = await maybeCorrective(
-      { query: "vague question", workspaceId: "ws-1" },
-      [lowHit],
-      { rewrite, reSearch, minScore: 0.35 },
-    );
+    const out = await maybeCorrective({ query: "vague question", workspaceId: "ws-1" }, [lowHit], {
+      rewrite,
+      reSearch,
+      minScore: 0.35,
+    });
 
     expect(rewrite).toHaveBeenCalledTimes(1);
     expect(rewrite).toHaveBeenCalledWith("vague question");
@@ -86,11 +86,12 @@ describe("maybeCorrective", () => {
     const rewrite = vi.fn(async () => "again");
     const reSearch = vi.fn(async () => [highHit]);
 
-    const out = await maybeCorrective(
-      { query: "q", workspaceId: "ws-1" },
-      [lowHit],
-      { rewrite, reSearch, minScore: 0.35, alreadyCorrected: true },
-    );
+    const out = await maybeCorrective({ query: "q", workspaceId: "ws-1" }, [lowHit], {
+      rewrite,
+      reSearch,
+      minScore: 0.35,
+      alreadyCorrected: true,
+    });
 
     expect(rewrite).not.toHaveBeenCalled();
     expect(reSearch).not.toHaveBeenCalled();

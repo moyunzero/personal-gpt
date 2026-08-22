@@ -7,6 +7,7 @@
 import neo4j, { type Driver, type Path as Neo4jPath } from "neo4j-driver";
 
 import { assertAllowlistedCypher } from "./graph-cypher-allowlist";
+import { resolveSeedProductName } from "../routing/graph-entities";
 
 export type GraphPathNode = {
   id: string;
@@ -58,11 +59,9 @@ MERGE (i)-[:USES]->(m)
 MERGE (p)-[:SUITABLE_FOR]->(peo)
 `.trim();
 
-export function resolveProductName(question: string): string {
-  const q = question.trim();
-  if (/珍珠奶茶|pearl\s*milk\s*tea/i.test(q)) return "珍珠奶茶";
-  if (/奶茶|milk\s*tea/i.test(q)) return "珍珠奶茶";
-  return "珍珠奶茶";
+/** @deprecated Prefer resolveSeedProductName from routing/graph-entities */
+export function resolveProductName(question: string): string | null {
+  return resolveSeedProductName(question);
 }
 
 function nodeIdFromProps(props: Record<string, unknown>, elementId: string): string {
@@ -208,7 +207,10 @@ export function resetNeo4jDriverForTests(): void {
   }
 }
 
-async function defaultExecutor(cypher: string, params: Record<string, unknown>): Promise<GraphPathTrace[]> {
+async function defaultExecutor(
+  cypher: string,
+  params: Record<string, unknown>,
+): Promise<GraphPathTrace[]> {
   assertAllowlistedCypher(cypher);
   const driver = getNeo4jDriverFromEnv();
   const session = driver.session({ defaultAccessMode: neo4j.session.READ });
@@ -232,6 +234,14 @@ async function defaultExecutor(cypher: string, params: Record<string, unknown>):
 export async function graphRagQuery(options: GraphRagQueryOptions): Promise<GraphRagResult> {
   const productName = options.productName ?? resolveProductName(options.question);
   const cypher = MILK_TEA_PATH_CYPHER;
+  if (!productName) {
+    return {
+      cypher,
+      params: {},
+      paths: [],
+      summary: "GRAPH_RAG_STATUS: NO_PATH",
+    };
+  }
   const params = { productName };
   assertAllowlistedCypher(cypher);
 

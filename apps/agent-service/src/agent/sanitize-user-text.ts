@@ -49,11 +49,81 @@ function isFencePart(part: string): boolean {
   return part.startsWith("```");
 }
 
+const TOOL_CALL_NAMES = "graph_search|kb_search|web_search";
+
+/** 是否像 LLM 误输出的工具调用 JSON（应整段丢弃） */
+export function isToolCallLeakText(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (
+    new RegExp(`\`\`\`(?:json)?\\s*\\{[\\s\\S]*?"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"`, "i").test(t)
+  ) {
+    return true;
+  }
+  if (
+    new RegExp(
+      `^\\{[\\s\\S]*?"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"[\\s\\S]*?"arguments"\\s*:`,
+      "i",
+    ).test(t)
+  ) {
+    return true;
+  }
+  if (
+    t.length < 600 &&
+    new RegExp(`"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"`, "i").test(t) &&
+    /"arguments"\s*:/i.test(t)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** 去掉误输出的工具调用 JSON 块 */
+export function stripToolCallLeakText(text: string): string {
+  if (!text) return text;
+  let out = text;
+  out = out.replace(
+    new RegExp(
+      `\`\`\`(?:json)?\\s*\\{[\\s\\S]*?"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"[\\s\\S]*?\\}\\s*\`\`\``,
+      "gi",
+    ),
+    "",
+  );
+  out = out.replace(
+    new RegExp(
+      `\\{[\\s\\S]*?"name"\\s*:\\s*"(${TOOL_CALL_NAMES})"[\\s\\S]*?"arguments"\\s*:\\s*\\{[\\s\\S]*?\\}\\s*\\}`,
+      "gi",
+    ),
+    "",
+  );
+  return out.trim();
+}
+
+/** 去掉 LLM 误复述的 Cypher / 内部 node id 关系行 */
+export function stripGraphTechLeakLines(text: string): string {
+  if (!text) return text;
+  const kept = text.split("\n").filter((line) => {
+    const t = line.trim();
+    if (!t) return true;
+    if (/^cypher\s*:/i.test(t)) return false;
+    if (/\[:[\w]+\]->\([^)]+\)/.test(t)) return false;
+    if (/^-\s*\[:[\w]+\]/.test(t)) return false;
+    if (/^-\s*[a-z]+:[\w-]+\s*→\s*[A-Z_]+\s*→\s*[a-z]+:[\w-]+$/i.test(t)) return false;
+    if (/^-\s*[a-z]+:[\w-]+\s*-\[[^\]]+\]->\s*[a-z]+:[\w-]+$/i.test(t)) return false;
+    return true;
+  });
+  return kept
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** 将 KB_SEARCH_STATUS / NO_RELEVANT_HIT 等协议串替换为可读中文或删除 */
 export function sanitizeUserFacingAgentText(text: string): string {
   if (!text) return text;
 
-  let out = text;
+  let out = stripToolCallLeakText(text);
+  out = stripGraphTechLeakLines(out);
   // 常见句式：「（KB_SEARCH_STATUS 为 NO_RELEVANT_HIT）」
   out = out.replace(
     /[（(]\s*KB_SEARCH_STATUS[^）)]*NO_RELEVANT_HIT[^）)]*[）)]/gi,

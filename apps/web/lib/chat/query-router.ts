@@ -7,6 +7,7 @@
 
 import { generateRagHelperText } from "@personal-gpt/shared/ai/rag-helper";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
+import type { Corpus } from "@personal-gpt/shared";
 import { getNeo4jDriverFromEnv } from "@personal-gpt/shared";
 import {
   mapIntentPlanToChatRoute,
@@ -39,6 +40,7 @@ export interface QueryRouteDecision {
 export interface DecideQueryRouteOptions {
   workspaceId?: string;
   requestId?: string;
+  corpus?: Corpus;
 }
 
 const RouteSchema = z.object({
@@ -88,7 +90,7 @@ function tryIntentFastPath(query: string): QueryRouteDecision | null {
 }
 
 function routeQueryHeuristic(): QueryRouteDecision {
-  return { route: "direct", reason: "heuristic_default_direct" };
+  return { route: "retrieve", reason: "heuristic_default_retrieve_safe" };
 }
 
 const ROUTER_SYSTEM = `你是企业知识库问答路由器。判断用户问题是否需要检索「私有知识库」（用户上传文档、企业内部资料）。
@@ -136,6 +138,7 @@ async function routeWithEmbeddingPrecheck(
       query,
       options.workspaceId ?? DEFAULT_WORKSPACE_ID,
       options.requestId,
+      options.corpus ?? "user",
     );
   } catch {
     return { kind: "skip" };
@@ -214,7 +217,12 @@ async function decideWithSharedRouter(
   const neo4jOk = await probeNeo4jAvailable();
   const { plan } = await resolveIntentPlan(query, {
     probeKb: async (q) =>
-      probeKbRelevance(q, options.workspaceId ?? DEFAULT_WORKSPACE_ID, options.requestId),
+      probeKbRelevance(
+        q,
+        options.workspaceId ?? DEFAULT_WORKSPACE_ID,
+        options.requestId,
+        options.corpus ?? "user",
+      ),
     neo4jAvailable: () => neo4jOk,
   });
 

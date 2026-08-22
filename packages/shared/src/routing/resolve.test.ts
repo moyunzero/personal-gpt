@@ -84,44 +84,68 @@ describe("resolveIntentPlan", () => {
     expect(layers).not.toContain("L2");
     expect(plan.primary).toBeDefined();
   });
+
+  it("心理学 content query → kb_doc retriever (not graph default)", async () => {
+    const { plan } = await resolveIntentPlan("心理学有哪些内容？整理给我", {
+      neo4jAvailable: () => true,
+    });
+    expect(plan.primary).toBe("kb_doc");
+    expect(plan.specialists).toEqual(["retriever"]);
+    expect(plan.retrieverTools).toEqual(["kb_search"]);
+    expect(plan.ambiguous).not.toBe(true);
+  });
+
+  it("企业知识库 content listing → kb_doc (corpus-agnostic, not psychology-only)", async () => {
+    const { plan } = await resolveIntentPlan("企业知识库有哪些文档？整理给我", {
+      neo4jAvailable: () => true,
+    });
+    expect(plan.primary).toBe("kb_doc");
+    expect(plan.retrieverTools).toEqual(["kb_search"]);
+  });
 });
 
 describe("mapIntentPlanToChatRoute (D-07/D-16)", () => {
   it("chitchat/general → direct", () => {
-    expect(mapIntentPlanToChatRoute({
-      primary: "chitchat",
-      channels: "none",
-      specialists: [],
-      retrieverTools: [],
-      fallbackChain: [],
-      reason: "l0:greeting",
-      confidence: 0.95,
-    }).route).toBe("direct");
+    expect(
+      mapIntentPlanToChatRoute({
+        primary: "chitchat",
+        channels: "none",
+        specialists: [],
+        retrieverTools: [],
+        fallbackChain: [],
+        reason: "l0:greeting",
+        confidence: 0.95,
+      }).route,
+    ).toBe("direct");
 
-    expect(mapIntentPlanToChatRoute({
-      primary: "general",
-      channels: "none",
-      specialists: [],
-      retrieverTools: [],
-      fallbackChain: [],
-      reason: "l1:kb_low",
-      confidence: 0.7,
-    }).route).toBe("direct");
+    expect(
+      mapIntentPlanToChatRoute({
+        primary: "general",
+        channels: "none",
+        specialists: [],
+        retrieverTools: [],
+        fallbackChain: [],
+        reason: "l1:kb_low",
+        confidence: 0.7,
+      }).route,
+    ).toBe("direct");
   });
 
   it("kb_doc → retrieve", () => {
-    expect(mapIntentPlanToChatRoute({
-      primary: "kb_doc",
-      channels: "kb",
-      specialists: ["retriever"],
-      retrieverTools: ["kb_search"],
-      fallbackChain: [],
-      reason: "l1:kb_high",
-      confidence: 0.85,
-    }).route).toBe("retrieve");
+    expect(
+      mapIntentPlanToChatRoute({
+        primary: "kb_doc",
+        channels: "kb",
+        specialists: ["retriever"],
+        retrieverTools: ["kb_search"],
+        fallbackChain: [],
+        reason: "l1:kb_high",
+        confidence: 0.85,
+      }).route,
+    ).toBe("retrieve");
   });
 
-  it("graph_relation → direct with needsGraphContext (D-07)", () => {
+  it("graph_relation → retrieve with needsGraphContext (D-07)", () => {
     const decision = mapIntentPlanToChatRoute({
       primary: "graph_relation",
       channels: "graph",
@@ -132,7 +156,7 @@ describe("mapIntentPlanToChatRoute (D-07/D-16)", () => {
       confidence: 0.95,
       graphSignal: true,
     });
-    expect(decision.route).toBe("direct");
+    expect(decision.route).toBe("retrieve");
     expect(decision.needsGraphContext).toBe(true);
     expect(decision.graphContextType).toBe("graph_relation");
   });
@@ -153,21 +177,27 @@ describe("mapIntentPlanToChatRoute (D-07/D-16)", () => {
 
 describe("isPlanAmbiguous (D-16 Agent)", () => {
   it("marks ambiguous true only when plan.ambiguous set", () => {
-    expect(isPlanAmbiguous(synthesizeIntentPlan({
-      query: "maybe",
-      l1: { kb: { probed: false, topSimilarity: 0 }, reason: "l1:no_probe" },
-    }))).toBe(true);
+    expect(
+      isPlanAmbiguous(
+        synthesizeIntentPlan({
+          query: "maybe",
+          l1: { kb: { probed: false, topSimilarity: 0 }, reason: "l1:no_probe" },
+        }),
+      ),
+    ).toBe(true);
 
-    expect(isPlanAmbiguous({
-      primary: "kb_doc",
-      channels: "kb",
-      specialists: ["retriever"],
-      retrieverTools: ["kb_search"],
-      fallbackChain: [],
-      reason: "l1:kb_high",
-      confidence: 0.9,
-      ambiguous: false,
-    })).toBe(false);
+    expect(
+      isPlanAmbiguous({
+        primary: "kb_doc",
+        channels: "kb",
+        specialists: ["retriever"],
+        retrieverTools: ["kb_search"],
+        fallbackChain: [],
+        reason: "l1:kb_high",
+        confidence: 0.9,
+        ambiguous: false,
+      }),
+    ).toBe(false);
   });
 });
 

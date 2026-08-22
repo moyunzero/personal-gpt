@@ -68,19 +68,16 @@ describe("Phase 3 regression #3: memory recall session A→B (MEM-02)", () => {
     expect(memoryUserId(workspaceId, userKey)).toBe("ws-reg-03:device-alice");
 
     // Session A：存偏好
-    await persistTurnMemory(
-      { workspaceId, userKey },
-      preference,
-      "好的，我会尽量简洁。",
-      { shortTerm, mem0 },
-    );
+    await persistTurnMemory({ workspaceId, userKey }, preference, "好的，我会尽量简洁。", {
+      shortTerm,
+      mem0,
+    });
 
     // Session B：新「会话」仅靠同一 userKey 召回
-    const block = await loadMemoryContextBlock(
-      { workspaceId, userKey },
-      "我喜欢什么回答风格？",
-      { shortTerm, mem0 },
-    );
+    const block = await loadMemoryContextBlock({ workspaceId, userKey }, "我喜欢什么回答风格？", {
+      shortTerm,
+      mem0,
+    });
 
     expect(block).toContain("简洁");
     expect(block).toMatch(/长期记忆|短期记忆/);

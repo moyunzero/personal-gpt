@@ -141,6 +141,7 @@ describe("Phase 2 regression #1: framework compare report", () => {
   });
 
   it("includes at least one citation part from mocked retrieval", async () => {
+    process.env.ENABLE_RERANKER = "false";
     const searchMock = vi.fn().mockResolvedValue([
       {
         text: "LangGraph Supervisor 适合 hub-and-spoke。",
@@ -151,16 +152,19 @@ describe("Phase 2 regression #1: framework compare report", () => {
         chunkIndex: 0,
       },
     ]);
-    const embedMock = vi.fn().mockResolvedValue([0.1, 0.2, 0.3]);
     const { retrieveKb } = await import("../../../apps/agent-service/src/rag/retrieve");
     const result = await retrieveKb({
       query: "LangGraph vs AutoGen",
-      store: {
-        search: searchMock,
-        upsert: vi.fn(),
-        deleteByDocument: vi.fn(),
+      hybridDeps: {
+        embed: async () => [0.1, 0.2, 0.3],
+        getStore: () => ({
+          search: searchMock,
+          upsert: vi.fn(),
+          deleteByDocument: vi.fn(),
+        }),
+        esSearch: async () => [],
+        rewriteQuery: async (q) => q,
       },
-      embed: embedMock,
     });
     expect(result.chunks.length).toBeGreaterThanOrEqual(1);
 

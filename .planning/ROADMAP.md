@@ -2,7 +2,7 @@
 
 ## Overview
 
-从 v0.1 RAG 聊天原型出发，分 5 个阶段演进为企业级知识库平台：Phase 1 建立 Monorepo、PostgreSQL 元数据、BullMQ 异步入库、知识库 UI 与引用溯源；Phase 2 引入 Nest.js + LangGraph 多 Agent；Phase 3 补齐记忆与多存储高级 RAG；Phase 4 生产化部署与多租户；Phase 5 持续优化（语音、评估、成本）。
+从 v0.1 RAG 聊天原型出发，分 5 个阶段演进为企业级知识库平台：Phase 1 建立 Monorepo、PostgreSQL 元数据、BullMQ 异步入库、知识库 UI 与引用溯源；Phase 2 引入 Nest.js + LangGraph 多 Agent；Phase 3 补齐记忆与多存储高级 RAG；Phase 4 **Graph KB 产品化（Wave 0）+ 生产化部署与多租户（Wave 1）**；Phase 5 持续优化（语音、评估、成本）。
 
 **详细设计：** [docs/enterprise-roadmap.md](../docs/enterprise-roadmap.md)
 
@@ -12,7 +12,7 @@
 - ✅ **v1.0 RAG + KB** — Phase 1 封板（2026-07-02）
 - ✅ **v2.0 LangGraph 多 Agent** — Phase 2 MVP 关账 + v2.x 加固（2026-08-14；**非生产就绪**）
 - 🔜 **v3.0 检索 / 记忆 / 评测** — Phase 3（下一步）
-- ⏳ **v4.0 身份 / 部署** — Phase 4
+- ⏳ **v4.0 Graph KB + 身份 / 部署** — Phase 4（Wave 0 Graph → Wave 1 PROD）
 - ⏳ **v5.0 连接器 / HITL** — Phase 5
 
 > 产品口径与 `README.md` / `docs/enterprise-roadmap.md` 对齐：v2 MVP ≠ 全量 v2.0「企业级可生产」；后者仍依赖 Phase 3–4。
@@ -22,7 +22,8 @@
 - [x] **Phase 1: RAG 基础强化与知识库管理** — Monorepo、BullMQ 入库、KB UI、引用溯源 (completed 2026-07-02)
 - [x] **Phase 2: LangGraph 多 Agent 核心架构** — Supervisor + 子 Agent + Skills（MVP 关账 2026-08-12；v2.x 加固 2026-08-14；**非生产就绪**）
 - [x] **Phase 3: 记忆、存储与高级 RAG** — Redis/Mem0、Milvus/ES/Neo4j、Agentic RAG（产品口径对齐 v3.0 检索/评测优先）
-- [ ] **Phase 4: 全栈工程化与生产就绪** — Docker、认证、多租户、监控
+- [x] **Phase 3.1: 企业级完整意图路由** — Shared Intent Router、Chat/Agent 统一、Graph 硬路由 + Fallback（Phase 3 D-07 Should 落地） (completed 2026-08-22)
+- [ ] **Phase 4: Graph KB 产品化 + 生产就绪** — Wave 0 入库构图/实体 catalog；Wave 1 Docker、认证、多租户、监控
 - [ ] **Phase 5: 高级企业特性** — 语音、定时 Agent、RAGAS、成本优化（持续）
 
 ## Phase Details
@@ -142,7 +143,7 @@ Plans:
 1. 会话 A 声明偏好后，会话 B 可召回该偏好（Redis + Mem0）
 2. 多跳问题触发 Agent 多轮 `kb_search` + 管道内 Corrective 并给出正确答案
 3. 混合检索（向量 + ES BM25 + app-layer RRF）+ 默认 Rerank 提升专有名词文档排名
-4. Graph RAG 实体关系问题可 trace Neo4j 路径
+4. Graph RAG 实体关系问题可 trace Neo4j 路径（**demo 级**：seed 子图 + allowlist；应用级 Graph KB → Phase 4 GRAPH-01–04）
 5. workspace A/B 同名文档检索结果不交叉；corpus=user 时 citation 不得出现 psychology-qa（ISSUE-001 Closed）
 6. Postgres checkpointer 单实例同 `thread_id` 可恢复；Chat/Agent 共用 `packages/shared` hybrid 入口
 7. 黄金集 ≥20（nightly）+ `tests/regression/phase-3/` 全绿
@@ -166,38 +167,90 @@ Plans:
 
 ---
 
-### Phase 4: 全栈工程化与生产就绪
+### Phase 3.1: 企业级完整意图路由
 
-**Goal**: `docker compose up` 一键部署，多租户认证，可观测可审计。  
-**Depends on**: Phase 3  
-**Requirements**: PROD-01–05  
-**Reference**: `reference/nest-dockerfile-test`, `nest-feature`
+**Goal**: Chat 与 Agent 共用 `packages/shared` Intent Router；实体关系问题 **确定性** 走 `graph_search`；KB 无命中自动 graph fallback；消灭 Supervisor 对单 intent 任务的直答漏路由。  
+**Depends on**: Phase 3（Graph RAG + hybrid + Agent 多 Agent 骨架）  
+**Requirements**: ROUTE-01–05, AGENT-01（路由增强）；RAG-06 仅 demo Graph 管道（应用级 → Phase 4）  
+**Reference**: Phase 3 H-04 gap、`apps/web/lib/chat/query-router.ts`、`apps/agent-service/src/agents/supervisor.prompt.ts`
 
 **Success Criteria**:
 
-1. 全新环境 `docker compose up` 后 5 分钟内可聊天 + 上传文档
-2. 用户 A 文档对用户 B 不可见（零 cross-tenant 泄漏）
-3. 触发限流返回 429 + 可读提示
-4. Prometheus 可 scrape agent/chat/ingest 指标
-5. Phase 1–3 回归套件 CI 全绿
+1. 「珍珠奶茶有哪些原料，用了什么工艺？」在 Agent UI trace 中 **必见** `graph_search` 且返回 `GRAPH_SEARCH_STATUS: HIT`
+2. Chat 与 Agent 共用 `packages/shared/src/routing/` 的 `IntentPlan` 类型与 L0/L1 规则（无平行 duplicate 路由）
+3. `graph_relation` intent 下 Retriever **仅** 绑定 `graph_search`（tool 白名单 enforced）
+4. KB `NO_RELEVANT_HIT` 且 fallback 启用时，服务端自动尝试 `graph_search`（非 prompt 建议）
+5. `tests/regression/phase-3/07-intent-routing.test.ts` 全绿 + Phase 1–3 既有回归不回归失败
 
-**Plans**: 3 plans
+**Plans**: 3/3 plans complete
 
 Plans:
 
-- [ ] 04-01: Docker Compose 全栈 + 健康检查 + 会话历史持久化
-- [ ] 04-02: Clerk/Auth.js + workspace 成员角色 + 安全加固
-- [ ] 04-03: 限流审计 + Prometheus/Grafana + CI/CD
+- [x] 03.1-01-PLAN.md — Wave 1: shared routing kernel（IntentPlan、L0/L1/L3、D-12 专科顺序、D-14 L2 默认关、D-16 灰区）
+- [x] 03.1-02-PLAN.md — Wave 2: Agent 集成（D-11 prefetch+Retriever、D-13 条件 fallback、D-15 双层 trace、白名单）
+- [x] 03.1-03-PLAN.md — Wave 3: Chat 薄包装 + D-07 图谱路径卡片 + 回归 07 + golden + H-04 关账
 
-**Regression**: `tests/regression/phase-4/`（生产冒烟 5 用例 + 全阶段）
+**Regression**: `tests/regression/phase-3/07-intent-routing.test.ts` + Phase 1–3 全量
+
+---
+
+### Phase 4: Graph KB 产品化 + 生产就绪
+
+**Goal**: 将 Phase 3 **demo 级** Neo4j 子图升级为 **从用户文档自动构图** 的应用级 Graph KB（Wave 0）；完成后执行 `docker compose up` 一键部署、多租户认证与可观测（Wave 1）。  
+**Depends on**: Phase 3.1（Intent Router + graph_search 管道）  
+**Requirements**: GRAPH-01–04（Wave 0）, PROD-01–05（Wave 1）  
+**Reference**: `reference/neo4j-graphrag`, `reference/nest-dockerfile-test`, `nest-feature`  
+**Context**: [phases/PGPT-04-prod/04-CONTEXT.md](phases/PGPT-04-prod/04-CONTEXT.md)
+
+**Notes**:
+
+- Phase 3 **RAG-06** 关账范围 = hybrid + **demo** Graph RAG（珍珠奶茶 seed）；**不**等同于应用级 Graph KB。
+- Wave 0 **不**默认 LLM Text2Cypher；Cypher 模板 + allowlist（Text2Cypher 留 Phase 5 spike）。
+- Wave 0 可用现有 `workspaceId` 做逻辑隔离；Wave 1 Auth 关账时验收 **KB + ES + Neo4j** 三通道零泄漏。
+
+**Success Criteria**:
+
+*Wave 0 — Graph KB*
+
+1. 用户上传文档后 Neo4j 出现 **非 seed** 实体/关系，且 `graph_search` 可 HIT
+2. workspace 内自建实体的关系型问法 → graph 路由/fallback **不依赖** `graph-entities.ts` 硬编码
+3. 删文档/重索引后图数据同步；workspace A/B 图与 KB 均不交叉
+4. Chat 图谱卡片 + Agent trace 仍满足 3.1 graph HIT 可观测性
+
+*Wave 1 — 生产就绪*
+
+5. 全新环境 `docker compose up` 后 5 分钟内可聊天 + 上传 + graph 检索
+6. 用户 A 文档/图对用户 B 不可见（零 cross-tenant 泄漏）
+7. 触发限流返回 429 + 可读提示
+8. Prometheus 可 scrape agent/chat/ingest 指标
+9. Phase 1–3.1 + Phase 4 回归套件 CI 全绿
+
+**Plans**: 6 plans（Wave 0 优先）
+
+Plans:
+
+*Wave 0 — Graph KB 产品化*
+
+- [ ] 04-00: Ingest 构图 MVP — chunk → 实体/关系抽取 → Neo4j upsert（`workspaceId` + `documentId`）
+- [ ] 04-01: Workspace 实体 catalog + 路由（替换 seed regex；L1 实体链接）
+- [ ] 04-02: Cypher 模板库 + `graph-rag` 多路径查询（allowlist 保留）
+- [ ] 04-03: 删/重索引图同步 + `tests/regression/phase-4/` graph 回归
+
+*Wave 1 — 生产就绪（原 Phase 4）*
+
+- [ ] 04-04: Docker Compose 全栈 + 健康检查 + 会话历史持久化
+- [ ] 04-05: Clerk/Auth.js + workspace 成员角色 + **三通道**隔离验收
+- [ ] 04-06: 限流审计 + Prometheus/Grafana + CI/CD
+
+**Regression**: `tests/regression/phase-4/`（graph + 生产冒烟 + 全阶段）
 
 ---
 
 ### Phase 5: 高级企业特性（持续）
 
-**Goal**: 语音、定时 Agent、RAGAS 评估、团队协作、成本优化。  
+**Goal**: 语音、定时 Agent、RAGAS 评估、团队协作、成本优化；可选 **LLM Text2Cypher** / GraphRAG 社区 spike。  
 **Depends on**: Phase 4  
-**Requirements**: v2.1+（VOICE-01, CRON-01, EVAL-01, TEAM-01, COST-01）  
+**Requirements**: v2.1+（VOICE-01, CRON-01, EVAL-01, TEAM-01, COST-01）+ Text2Cypher spike（非 v2.0 硬需求）  
 **Reference**: `reference/asr-and-tts-nest-service`, `cron-job-tool`, `langsmith-test/src/eval/`
 
 **Success Criteria**:
@@ -225,10 +278,11 @@ Plans:
 | 1. RAG + KB 管理 | v2.0 | 7/7 | Complete | 2026-07-02 |
 | 2. LangGraph 多 Agent | v2.0 | 5/5 | MVP Complete（非生产） | 2026-08-14 |
 | 3. 记忆 + 高级 RAG | v2.0 / v3.0 | 10/10 | Complete   | 2026-08-22 |
-| 4. 生产就绪 | v2.0 / v4.0 | 0/3 | Not started | — |
+| 3.1 意图路由 | v3.0 | 3/3 | Complete    | 2026-08-22 |
+| 4. Graph KB + 生产就绪 | v2.0 / v4.0 | 0/6 | Not started（Wave 0 优先） | — |
 | 5. 企业特性 | v2.0 / v5.0 | 0/1 | Not started | — |
 
-**Total plans:** 21 (+ Phase 5 TBD) · **Executed:** 12/12 Phase 1–2 plans · **Phase 3 planned:** 10
+**Total plans:** 28 (+ Phase 5 TBD) · **Executed:** Phase 1–3.1 complete · **Phase 4 planned:** 6（04-00～04-03 Graph → 04-04～04-06 PROD）
 
 ---
 *Roadmap created: 2026-07-02 after milestone v2.0 initialization*

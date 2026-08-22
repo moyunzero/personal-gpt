@@ -38,9 +38,7 @@ function parsePayload(raw: string | null): ShortTermPayload {
     const turns = Array.isArray(parsed.turns)
       ? parsed.turns.filter(
           (t): t is MemoryTurn =>
-            !!t &&
-            (t.role === "user" || t.role === "assistant") &&
-            typeof t.content === "string",
+            !!t && (t.role === "user" || t.role === "assistant") && typeof t.content === "string",
         )
       : [];
     return {
@@ -89,11 +87,7 @@ export class ShortTermRedisMemory {
     }
   }
 
-  async maybeUpdateSummary(
-    workspaceId: string,
-    userKey: string,
-    summary: string,
-  ): Promise<void> {
+  async maybeUpdateSummary(workspaceId: string, userKey: string, summary: string): Promise<void> {
     if (!this.redis) {
       this.log("skip maybeUpdateSummary: redis unavailable");
       return;

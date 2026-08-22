@@ -11,11 +11,7 @@ type CorpusToggleProps = {
 /**
  * Explicit seed corpus switch (D-28). Default remains user — never silent seed.
  */
-export default function CorpusToggle({
-  value,
-  onChange,
-  disabled = false,
-}: CorpusToggleProps) {
+export default function CorpusToggle({ value, onChange, disabled = false }: CorpusToggleProps) {
   const seedOn = value === "seed";
 
   return (

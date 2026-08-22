@@ -143,7 +143,7 @@ Each task was committed atomically:
 2. **Task 1 (GREEN):** `9fdb606` — feat(03-03): Corrective in hybrid + rerank default on
 3. **Task 2:** `df8563d` — feat(03-03): wire Chat/Agent to hybridSearch + corpus UI
 
-**Plan metadata:** (this docs commit)
+**Plan metadata:** `ade101d` (docs: complete plan)
 
 ## Files Created/Modified
 

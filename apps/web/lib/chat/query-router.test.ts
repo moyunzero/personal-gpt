@@ -85,9 +85,9 @@ describe("decideQueryRoute — shared intent router (D-01/D-16)", () => {
     expect(decision.reason).toContain("kb_gray");
   });
 
-  it("H-04 pearl milk tea → direct + needsGraphContext (D-06/D-07)", async () => {
+  it("H-04 pearl milk tea → retrieve + needsGraphContext (D-06/D-07)", async () => {
     const decision = await decideQueryRoute("珍珠奶茶有哪些原料，用了什么工艺？");
-    expect(decision.route).toBe("direct");
+    expect(decision.route).toBe("retrieve");
     expect(decision.needsGraphContext).toBe(true);
     expect(decision.graphContextType).toBe("graph_relation");
     expect(decision.intentPrimary).toBe("graph_relation");

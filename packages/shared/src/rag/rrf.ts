@@ -28,7 +28,7 @@ export function reciprocalRankFusion(
     });
   }
 
-  return [...scores.values()]
-    .sort((a, b) => b.score - a.score)
-    .map(({ chunk, score }) => ({ ...chunk, similarity: score }));
+  // Rank by RRF score only — keep original vector/BM25 similarity for downstream
+  // gates (Chat TOP1, Corrective, Agent minSimilarity) which expect cosine-scale.
+  return [...scores.values()].sort((a, b) => b.score - a.score).map(({ chunk }) => chunk);
 }

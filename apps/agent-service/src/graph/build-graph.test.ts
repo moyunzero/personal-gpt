@@ -16,6 +16,7 @@ import {
   resolveCheckpointer,
   resolveExecutionMode,
   SINGLE_SPECIALIST_PREFETCH_NODE,
+  SINGLE_SPECIALIST_SYNTHESIZE_NODE,
 } from "./build-graph";
 
 function mockChatModel() {
@@ -81,7 +82,7 @@ describe("resolveExecutionMode (D-04/D-12/D-16)", () => {
 });
 
 describe("createSingleSpecialistWorkflow (D-11)", () => {
-  it("includes prefetch node before retriever when retrieverTools set", () => {
+  it("includes prefetch + synthesizer for graph_relation retriever (rag_generate)", () => {
     const plan = {
       primary: "graph_relation" as const,
       channels: "graph" as const,
@@ -94,7 +95,24 @@ describe("createSingleSpecialistWorkflow (D-11)", () => {
     const wf = createSingleSpecialistWorkflow(mockChatModel(), plan, "retriever");
     const nodes = (wf as { nodes?: Record<string, unknown> }).nodes ?? {};
     expect(Object.keys(nodes)).toContain(SINGLE_SPECIALIST_PREFETCH_NODE);
-    expect(Object.keys(nodes)).toContain("retriever");
+    expect(Object.keys(nodes)).toContain(SINGLE_SPECIALIST_SYNTHESIZE_NODE);
+    expect(Object.keys(nodes)).not.toContain("retriever");
+  });
+
+  it("non-synthesis specialist keeps retriever node without synthesizer", () => {
+    const plan = {
+      primary: "web_research" as const,
+      channels: "web" as const,
+      specialists: ["researcher"],
+      retrieverTools: [],
+      fallbackChain: [],
+      reason: "test",
+      confidence: 1,
+    };
+    const wf = createSingleSpecialistWorkflow(mockChatModel(), plan, "researcher");
+    const nodes = (wf as { nodes?: Record<string, unknown> }).nodes ?? {};
+    expect(Object.keys(nodes)).toContain("researcher");
+    expect(Object.keys(nodes)).not.toContain(SINGLE_SPECIALIST_SYNTHESIZE_NODE);
   });
 });
 

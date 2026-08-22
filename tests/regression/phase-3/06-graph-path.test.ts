@@ -4,10 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  createSeededMilkTeaFixtureExecutor,
-  graphRagQuery,
-} from "@personal-gpt/shared";
+import { createSeededMilkTeaFixtureExecutor, graphRagQuery } from "@personal-gpt/shared";
 
 describe("Phase 3 regression #6: graph path Neo4j (RAG-06 Graph)", () => {
   it("returns a traceable Neo4j path for graph-backed RAG queries (no live LLM)", async () => {
@@ -22,11 +19,7 @@ describe("Phase 3 regression #6: graph path Neo4j (RAG-06 Graph)", () => {
     const relTypes = path.relationships.map((r) => r.type);
 
     expect(nodeIds).toEqual(
-      expect.arrayContaining([
-        "product:pearl-milk-tea",
-        "ingredient:tapioca",
-        "method:boil",
-      ]),
+      expect.arrayContaining(["product:pearl-milk-tea", "ingredient:tapioca", "method:boil"]),
     );
     expect(relTypes).toEqual(expect.arrayContaining(["CONTAINS", "USES"]));
     expect(result.summary).toMatch(/GRAPH_RAG_STATUS: HIT/);

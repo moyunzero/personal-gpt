@@ -3,7 +3,7 @@ import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createUIMessageStreamResponse } from "ai";
 import { randomUUID } from "node:crypto";
 
-import { graphPathsToDisplay } from "@/app/components/GraphPathCards";
+import { graphPathsToDisplay } from "@/lib/chat/graph-path-display";
 import { type VectorSearchResult } from "@/lib/chat/context";
 import { parseCorpus } from "@/lib/chat/corpus-filters";
 import { loadMemoryContextBlock, parseUserKey, persistTurnMemory } from "@/lib/chat/memory-context";
@@ -168,6 +168,7 @@ export async function POST(req: Request) {
     const routeDecision = await decideQueryRoute(lastContent, {
       workspaceId: DEFAULT_WORKSPACE_ID,
       requestId,
+      corpus,
     });
     log.debug("query route", {
       corpus,
@@ -189,8 +190,10 @@ export async function POST(req: Request) {
     if (routeDecision.needsGraphContext) {
       try {
         const graphResult = await graphRagQuery({ question: lastContent });
-        graphSummary = graphResult.summary;
-        graphPathsForUi = graphPathsToDisplay(graphResult.paths);
+        if (graphResult.paths.length > 0) {
+          graphSummary = graphResult.summary;
+          graphPathsForUi = graphPathsToDisplay(graphResult.paths);
+        }
       } catch (err) {
         log.warn("graphRagQuery failed, continuing without graph context", { err });
       }

@@ -3,11 +3,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  ShortTermRedisMemory,
-  type MemoryTurn,
-  type RedisLike,
-} from "./short-term-redis.js";
+import { ShortTermRedisMemory, type MemoryTurn, type RedisLike } from "./short-term-redis.js";
 
 /** Minimal in-memory Redis fake (no ioredis-mock dependency). */
 class FakeRedis implements RedisLike {
@@ -98,13 +94,17 @@ describe("ShortTermRedisMemory", () => {
 
   it("fail-opens to empty context when Redis missing or errors (no throw)", async () => {
     const noRedis = new ShortTermRedisMemory({ redis: null, log });
-    await expect(noRedis.appendTurn("ws", "u", { role: "user", content: "x" })).resolves.toBeUndefined();
+    await expect(
+      noRedis.appendTurn("ws", "u", { role: "user", content: "x" }),
+    ).resolves.toBeUndefined();
     await expect(noRedis.getContextBlock("ws", "u")).resolves.toBe("");
 
     const redis = new FakeRedis();
     redis.failNext = true;
     const mem = new ShortTermRedisMemory({ redis, keyPrefix: "pgpt:stm", n: 3, log });
-    await expect(mem.appendTurn("ws", "u", { role: "user", content: "x" })).resolves.toBeUndefined();
+    await expect(
+      mem.appendTurn("ws", "u", { role: "user", content: "x" }),
+    ).resolves.toBeUndefined();
     await expect(mem.getContextBlock("ws", "u")).resolves.toBe("");
     expect(logs.length).toBeGreaterThan(0);
   });

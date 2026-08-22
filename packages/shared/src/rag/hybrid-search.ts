@@ -103,7 +103,6 @@ export async function hybridSearch(
 
   return maybeCorrective(params, fused, {
     rewrite: deps.rewriteQuery,
-    reSearch: (query) =>
-      hybridSearch({ ...params, query }, { ...deps, skipCorrective: true }),
+    reSearch: (query) => hybridSearch({ ...params, query }, { ...deps, skipCorrective: true }),
   });
 }

@@ -22,4 +22,11 @@ describe("graph_search tool", () => {
     const out = await invokeGraphSearch({ question: "   " });
     expect(out).toMatch(/EMPTY_QUERY/);
   });
+
+  it("returns NO_PATH for unrelated questions (not default milk tea)", async () => {
+    const { invokeGraphSearchWithFixture } = await import("./graph-search.tool");
+    const out = await invokeGraphSearchWithFixture("心理学有哪些内容？整理给我");
+    expect(out).toMatch(/GRAPH_SEARCH_STATUS: NO_PATH/);
+    expect(out).not.toMatch(/product:pearl-milk-tea/);
+  });
 });

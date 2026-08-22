@@ -24,7 +24,10 @@ export function combineAbortSignals(
   return ac.signal;
 }
 
-export const AGENT_UPSTREAM_TIMEOUT_MS = 120_000;
+export const AGENT_UPSTREAM_TIMEOUT_MS = (() => {
+  const raw = Number(process.env.AGENT_UPSTREAM_TIMEOUT_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : 120_000;
+})();
 
 export function createUpstreamTimeoutSignal(ms = AGENT_UPSTREAM_TIMEOUT_MS): {
   signal: AbortSignal;

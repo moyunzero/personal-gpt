@@ -1,0 +1,33 @@
+{
+  "took": 4,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 1,
+      "relation": "eq"
+    },
+    "max_score": 0.2876821,
+    "hits": [
+      {
+        "_index": "kb_user",
+        "_id": "b0a2b171-3c44-4217-94dc-640df793de2a:0",
+        "_score": 0.2876821,
+        "_source": {
+          "workspaceId": "00000000-0000-4000-8000-000000000001",
+          "documentId": "b0a2b171-3c44-4217-94dc-640df793de2a",
+          "chunkIndex": 0,
+          "content": "# 奥德赛计划书_2026\n\n奥德赛计划书给出三条路径：保守、平衡、进取。本文件用于 Phase3 全量验收专有名词召回与 ES 双写。",
+          "title": "奥德赛计划书_全量验收",
+          "source": "full-flow-odyssey.md",
+          "keywords": []
+        }
+      }
+    ]
+  }
+}

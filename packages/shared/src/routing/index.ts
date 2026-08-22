@@ -5,21 +5,14 @@ export {
   type ChatQueryRoute,
   type ChatRouteDecision,
 } from "./chat-map";
-export {
-  readIntentRouterConfig,
-  type IntentRouterConfig,
-} from "./config";
+export { readIntentRouterConfig, type IntentRouterConfig } from "./config";
 export {
   collectL1Signals,
   l1SuggestsGeneral,
   l1SuggestsKbDoc,
   type CollectL1SignalsDeps,
 } from "./l1-signals";
-export {
-  classifyIntentL2,
-  needsL2,
-  type ClassifyL2Fn,
-} from "./l2-classifier";
+export { classifyIntentL2, needsL2, type ClassifyL2Fn } from "./l2-classifier";
 export {
   GRAPH_RELATION_RE,
   isGreetingOnly,

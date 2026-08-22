@@ -42,8 +42,7 @@ export function resetNeo4jAvailabilityCacheForTests(): void {
 
 function parseKbProbeFromToolOutput(text: string | undefined): KbProbeResult {
   if (!text) return { topSimilarity: 0, probed: false };
-  const simMatch =
-    text.match(/similarity:\s*([0-9.]+)/i) ?? text.match(/最高相似度\s*([0-9.]+)/);
+  const simMatch = text.match(/similarity:\s*([0-9.]+)/i) ?? text.match(/最高相似度\s*([0-9.]+)/);
   const topSimilarity = simMatch ? Number(simMatch[1]) : 0;
   return {
     topSimilarity: Number.isFinite(topSimilarity) ? topSimilarity : 0,

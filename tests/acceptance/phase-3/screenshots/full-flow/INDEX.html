@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Phase3 Full-Flow Screenshots</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0f1115;
+        color: #e8eefc;
+        font:
+          14px/1.45 ui-sans-serif,
+          system-ui;
+      }
+      h1 {
+        padding: 24px 24px 8px;
+        font-size: 22px;
+      }
+      h2 {
+        margin: 28px 24px 8px;
+        font-size: 16px;
+        color: #9db0ff;
+        border-bottom: 1px solid #2a3144;
+        padding-bottom: 6px;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0 24px 24px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+        gap: 16px;
+      }
+      li {
+        background: #171b24;
+        border: 1px solid #2a3144;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      li.miss {
+        padding: 16px;
+        color: #ff8f8f;
+      }
+      .cap {
+        padding: 10px 12px;
+        background: #1d2433;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12px;
+      }
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+        background: #000;
+      }
+      .note {
+        padding: 0 24px 24px;
+        opacity: 0.75;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Phase 3 Full-Flow — 各环节截图墙</h1>
+    <p class="note">
+      打开本文件即可浏览全部 PNG。路径：tests/acceptance/phase-3/screenshots/full-flow/INDEX.html
+    </p>
+    <section>
+      <h2>A UI壳</h2>
+      <ul>
+        <li class="ok">
+          <div class="cap">✅ A01-home.png</div>
+          <img src="A01-home.png" alt="A01-home.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ A02-corpus-seed.png</div>
+          <img src="A02-corpus-seed.png" alt="A02-corpus-seed.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ A03-corpus-user.png</div>
+          <img src="A03-corpus-user.png" alt="A03-corpus-user.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ A04-agent-mode.png</div>
+          <img src="A04-agent-mode.png" alt="A04-agent-mode.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ A05-chat-mode.png</div>
+          <img src="A05-chat-mode.png" alt="A05-chat-mode.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ A06-new-session.png</div>
+          <img src="A06-new-session.png" alt="A06-new-session.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ A08-kb.png</div>
+          <img src="A08-kb.png" alt="A08-kb.png" />
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h2>B ES双写/Chat</h2>
+      <ul>
+        <li class="ok">
+          <div class="cap">✅ B03-kb-ready.png</div>
+          <img src="B03-kb-ready.png" alt="B03-kb-ready.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ B03-kb-list.png</div>
+          <img src="B03-kb-list.png" alt="B03-kb-list.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ B04-es-hit.png</div>
+          <img src="B04-es-hit.png" alt="B04-es-hit.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ B00-es-board.png</div>
+          <img src="B00-es-board.png" alt="B00-es-board.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ B05-chat-ui-attempt.png</div>
+          <img src="B05-chat-ui-attempt.png" alt="B05-chat-ui-attempt.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ B05-chat-answer.png</div>
+          <img src="B05-chat-answer.png" alt="B05-chat-answer.png" />
+        </li>
+        <li class="miss">❌ B05-chat-board.png <em>pending screenshot</em></li>
+      </ul>
+    </section>
+    <section>
+      <h2>C Corpus</h2>
+      <ul>
+        <li class="ok">
+          <div class="cap">✅ C02-corpus-user.png</div>
+          <img src="C02-corpus-user.png" alt="C02-corpus-user.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ C03-corpus-seed.png</div>
+          <img src="C03-corpus-seed.png" alt="C03-corpus-seed.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ C00-corpus-board.png</div>
+          <img src="C00-corpus-board.png" alt="C00-corpus-board.png" />
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h2>D Graph</h2>
+      <ul>
+        <li class="ok">
+          <div class="cap">✅ D01-agent-mode.png</div>
+          <img src="D01-agent-mode.png" alt="D01-agent-mode.png" />
+        </li>
+        <li class="ok">
+          <div class="cap">✅ D04-agent-graph-answer.png</div>
+          <img src="D04-agent-graph-answer.png" alt="D04-agent-graph-answer.png" />
+        </li>
+        <li class="miss">❌ D04-agent-board.png <em>pending screenshot</em></li>
+        <li class="ok">
+          <div class="cap">✅ D00-graph-board.png</div>
+          <img src="D00-graph-board.png" alt="D00-graph-board.png" />
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h2>E Mem0</h2>
+      <ul>
+        <li class="ok">
+          <div class="cap">✅ E00-mem0-board.png</div>
+          <img src="E00-mem0-board.png" alt="E00-mem0-board.png" />
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h2>F Rerank</h2>
+      <ul>
+        <li class="ok">
+          <div class="cap">✅ F00-rerank-board.png</div>
+          <img src="F00-rerank-board.png" alt="F00-rerank-board.png" />
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h2>G Session</h2>
+      <ul>
+        <li class="ok">
+          <div class="cap">✅ G01-new-session.png</div>
+          <img src="G01-new-session.png" alt="G01-new-session.png" />
+        </li>
+      </ul>
+    </section>
+    <section>
+      <h2>H Regression</h2>
+      <ul>
+        <li class="ok">
+          <div class="cap">✅ H00-regression-board.png</div>
+          <img src="H00-regression-board.png" alt="H00-regression-board.png" />
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>

@@ -89,9 +89,7 @@ describe("agent tool caps (D-07 / D-15)", () => {
     });
     const { createRetrieverAgent } = await import("./retriever.agent");
     const agent = createRetrieverAgent(model, { allowedTools: ["graph_search"] });
-    const names = ((agent as { tools?: Array<{ name?: string }> }).tools ?? []).map(
-      (t) => t.name,
-    );
+    const names = ((agent as { tools?: Array<{ name?: string }> }).tools ?? []).map((t) => t.name);
     if (names.length) {
       expect(names).toEqual(["graph_search"]);
     } else {
@@ -110,9 +108,7 @@ describe("agent tool caps (D-07 / D-15)", () => {
     });
     const { createRetrieverAgent } = await import("./retriever.agent");
     const agent = createRetrieverAgent(model, { allowedTools: ["kb_search"] });
-    const names = ((agent as { tools?: Array<{ name?: string }> }).tools ?? []).map(
-      (t) => t.name,
-    );
+    const names = ((agent as { tools?: Array<{ name?: string }> }).tools ?? []).map((t) => t.name);
     if (names.length) {
       expect(names).toEqual(["kb_search"]);
       expect(names).not.toContain("graph_search");

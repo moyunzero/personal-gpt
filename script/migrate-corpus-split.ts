@@ -29,11 +29,7 @@ import "dotenv/config";
 
 import { DataAPIClient } from "@datastax/astra-db-ts";
 
-import {
-  ensureEsIndexes,
-  indexChunks,
-  resolveCorpusTargets,
-} from "@personal-gpt/shared";
+import { ensureEsIndexes, indexChunks, resolveCorpusTargets } from "@personal-gpt/shared";
 
 const SEED_SOURCES = new Set([
   "psychology-qa",
@@ -41,7 +37,6 @@ const SEED_SOURCES = new Set([
   "prompt-suggestion",
   "legacy-prompt-suggestion",
 ]);
-
 
 type CorpusKind = "user" | "seed";
 
@@ -107,9 +102,7 @@ async function copyBatch(
   let copiedSeed = 0;
   let skipped = 0;
 
-  const docs = (await sourceCol
-    .find({}, { limit: 50_000 })
-    .toArray()) as Record<string, unknown>[];
+  const docs = (await sourceCol.find({}, { limit: 50_000 }).toArray()) as Record<string, unknown>[];
 
   for (const doc of docs) {
     const kind = classifyCorpus(doc);
@@ -202,7 +195,10 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
   }
 
   // --execute gate: refuse without explicit USER/SEED targets (T-03-02-02)
-  if (!process.env.ASTRA_DB_COLLECTION_USER?.trim() || !process.env.ASTRA_DB_COLLECTION_SEED?.trim()) {
+  if (
+    !process.env.ASTRA_DB_COLLECTION_USER?.trim() ||
+    !process.env.ASTRA_DB_COLLECTION_SEED?.trim()
+  ) {
     console.error(
       "[migrate-corpus-split] refusing --execute: set ASTRA_DB_COLLECTION_USER and ASTRA_DB_COLLECTION_SEED explicitly",
     );

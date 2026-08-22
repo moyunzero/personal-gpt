@@ -9,10 +9,7 @@ import {
   getMem0Client,
   type ScopedMem0Client,
 } from "./mem0-client";
-import {
-  getShortTermRedisMemory,
-  type ShortTermRedisMemory,
-} from "./short-term-redis";
+import { getShortTermRedisMemory, type ShortTermRedisMemory } from "./short-term-redis";
 
 export type MemoryScope = {
   workspaceId: string;

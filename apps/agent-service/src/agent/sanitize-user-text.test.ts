@@ -3,7 +3,11 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { containsKbTechMarkers, sanitizeUserFacingAgentText } from "./sanitize-user-text";
+import {
+  containsKbTechMarkers,
+  isToolCallLeakText,
+  sanitizeUserFacingAgentText,
+} from "./sanitize-user-text";
 
 describe("sanitizeUserFacingAgentText", () => {
   it("rewrites parenthetical KB_SEARCH_STATUS NO_RELEVANT_HIT", () => {
@@ -49,5 +53,33 @@ describe("sanitizeUserFacingAgentText", () => {
     expect(containsKbTechMarkers(out)).toBe(false);
     expect(out).toMatch(/知识库未找到足够依据\n\n# 韶音手册/);
     expect(out).not.toMatch(/依据#/);
+  });
+
+  it("strips leaked graph_search tool JSON", () => {
+    const raw = '```json\n{"name": "graph_search", "arguments": {"question": "珍珠奶茶"}}\n```';
+    expect(sanitizeUserFacingAgentText(raw)).toBe("");
+    expect(isToolCallLeakText(raw)).toBe(true);
+  });
+
+  it("strips bare kb_search tool JSON leak", () => {
+    const raw = '{"name": "kb_search", "arguments": {"query": "test"}}';
+    expect(sanitizeUserFacingAgentText(raw)).toBe("");
+    expect(isToolCallLeakText(raw)).toBe(true);
+  });
+
+  it("strips Cypher and internal id relationship leaks from graph answers", () => {
+    const raw = [
+      "根据企业内部知识图谱：",
+      "- **珍珠奶茶**",
+      "**关系链：**",
+      "- [:CONTAINS]->(i:Ingredient) → :USES → (m:Method)",
+      "- product:pearl-milk-tea → CONTAINS → ingredient:tapioca",
+      "cypher: MATCH path = (p:Product)-[:CONTAINS]->(i:Ingredient)",
+    ].join("\n");
+    const out = sanitizeUserFacingAgentText(raw);
+    expect(out).not.toMatch(/\[:CONTAINS\]/);
+    expect(out).not.toMatch(/product:pearl-milk-tea/);
+    expect(out).not.toMatch(/cypher/i);
+    expect(out).toMatch(/珍珠奶茶/);
   });
 });

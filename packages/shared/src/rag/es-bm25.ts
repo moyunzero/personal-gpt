@@ -52,10 +52,7 @@ function chunkDocId(doc: Pick<EsChunkDoc, "documentId" | "chunkIndex">): string 
 
 /** Ensure user + seed indexes exist (IK analyzer; Chinese-capable). */
 export async function ensureEsIndexes(
-  indexes: string[] = [
-    resolveCorpusTargets("user").esIndex,
-    resolveCorpusTargets("seed").esIndex,
-  ],
+  indexes: string[] = [resolveCorpusTargets("user").esIndex, resolveCorpusTargets("seed").esIndex],
 ): Promise<void> {
   const client = getEsClient();
   for (const index of indexes) {
@@ -70,10 +67,7 @@ export async function ensureEsIndexes(
 }
 
 /** Idempotent write helpers for ingest dual-write (plan 03-02). */
-export async function indexChunks(
-  index: string,
-  chunks: EsChunkDoc[],
-): Promise<void> {
+export async function indexChunks(index: string, chunks: EsChunkDoc[]): Promise<void> {
   if (chunks.length === 0) return;
   const client = getEsClient();
   const operations = chunks.flatMap((chunk) => [
@@ -109,10 +103,7 @@ export async function deleteByDocumentId(
     refresh: true,
     query: {
       bool: {
-        filter: [
-          { term: { workspaceId } },
-          { term: { documentId } },
-        ],
+        filter: [{ term: { workspaceId } }, { term: { documentId } }],
       },
     },
   });
@@ -136,9 +127,7 @@ function mapHit(hit: {
 }
 
 /** BM25 search via structured client query (no string-concat injection). */
-export async function esBm25Search(
-  params: EsBm25SearchParams,
-): Promise<RetrievedChunk[]> {
+export async function esBm25Search(params: EsBm25SearchParams): Promise<RetrievedChunk[]> {
   const corpus = params.corpus ?? "user";
   const index = params.index ?? resolveCorpusTargets(corpus).esIndex;
   const limit = params.limit ?? 10;
@@ -165,5 +154,7 @@ export async function esBm25Search(
   });
 
   const hits = result.hits?.hits ?? [];
-  return hits.map((hit) => mapHit(hit as { _source?: Record<string, unknown>; _score?: number | null }));
+  return hits.map((hit) =>
+    mapHit(hit as { _source?: Record<string, unknown>; _score?: number | null }),
+  );
 }

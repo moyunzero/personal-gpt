@@ -59,8 +59,7 @@ describe("Phase 3 regression #1: hybrid proper-noun retrieval (RAG-06)", () => {
       },
       {
         embed: async () => [0.1, 0.2, 0.3],
-        getStore: () =>
-          mockStore([WEAK_VECTOR_NOISE, { ...USER_DOC, similarity: 0.55 }]),
+        getStore: () => mockStore([WEAK_VECTOR_NOISE, { ...USER_DOC, similarity: 0.55 }]),
         esSearch: async () => [USER_DOC, { ...WEAK_VECTOR_NOISE, similarity: 0.4 }],
         rewriteQuery: async (q) => q,
       },

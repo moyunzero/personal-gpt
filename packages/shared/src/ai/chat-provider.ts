@@ -4,6 +4,7 @@
  */
 
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import type { LanguageModel } from "ai";
 
 import { GROQ_CHAT_MODELS, GROQ_RAG_HELPER_MODEL } from "./groq-models";
 
@@ -128,12 +129,15 @@ function getCompatibleProvider(source: NodeJS.ProcessEnv = process.env): Compati
 }
 
 /** AI SDK 聊天模型（Groq 或 OpenAI 兼容端点） */
-export function chatModel(modelId: string, source: NodeJS.ProcessEnv = process.env) {
+export function chatModel(modelId: string, source: NodeJS.ProcessEnv = process.env): LanguageModel {
   return getCompatibleProvider(source).chatModel(modelId);
 }
 
 /** @deprecated 使用 chatModel；保留别名避免现有 import 断裂 */
-export function groqChatModel(modelId: string, source: NodeJS.ProcessEnv = process.env) {
+export function groqChatModel(
+  modelId: string,
+  source: NodeJS.ProcessEnv = process.env,
+): LanguageModel {
   return chatModel(modelId, source);
 }
 

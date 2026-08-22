@@ -77,10 +77,7 @@ function createInMemoryVectorStore(): VectorStore {
 describe("Phase 3 regression #5: workspace A/B isolation (STORE)", () => {
   it("returns zero cross-workspace hits between workspace A and B", async () => {
     const store = createInMemoryVectorStore();
-    await store.upsert([
-      makeChunk(WS_A, "doc-shared-title"),
-      makeChunk(WS_B, "doc-shared-title"),
-    ]);
+    await store.upsert([makeChunk(WS_A, "doc-shared-title"), makeChunk(WS_B, "doc-shared-title")]);
 
     const hitsA = await store.search({
       workspaceId: WS_A,

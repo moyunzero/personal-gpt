@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { graphPathsToDisplay } from "./GraphPathCards";
+import { graphPathsToDisplay } from "@/lib/chat/graph-path-display";
 
 describe("graphPathsToDisplay (D-07)", () => {
   it("formats human-readable nodes without cypher", () => {
@@ -23,19 +23,12 @@ describe("graphPathsToDisplay (D-07)", () => {
             properties: { name: "煮制" },
           },
         ],
-        relationships: [
-          { type: "CONTAINS" },
-          { type: "USES" },
-        ],
+        relationships: [{ type: "CONTAINS" }, { type: "USES" }],
       },
     ]);
 
     expect(display).toHaveLength(1);
-    expect(display[0]!.nodes).toEqual([
-      "Product:珍珠奶茶",
-      "Ingredient:珍珠",
-      "Method:煮制",
-    ]);
+    expect(display[0]!.nodes).toEqual(["Product:珍珠奶茶", "Ingredient:珍珠", "Method:煮制"]);
     expect(display[0]!.relationships).toEqual(["CONTAINS", "USES"]);
 
     const serialized = JSON.stringify(display);

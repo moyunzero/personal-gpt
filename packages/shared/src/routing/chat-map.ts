@@ -10,7 +10,7 @@ export interface ChatRouteDecision {
 }
 
 function directIntents(): PrimaryIntent[] {
-  return ["chitchat", "general", "graph_relation", "analytics", "report"];
+  return ["chitchat", "general", "analytics", "report"];
 }
 
 /** D-16: Agent-only — true when plan should use Supervisor hub-and-spoke */
@@ -25,14 +25,23 @@ export function isPlanAmbiguous(plan: IntentPlan): boolean {
 export function mapIntentPlanToChatRoute(plan: IntentPlan): ChatRouteDecision {
   if (plan.primary === "graph_relation") {
     return {
-      route: "direct",
+      route: "retrieve",
       reason: plan.reason,
       needsGraphContext: true,
       graphContextType: "graph_relation",
     };
   }
 
-  if (plan.primary === "kb_doc" || plan.primary === "kb_graph_hybrid" || plan.primary === "multi_step") {
+  if (plan.primary === "kb_graph_hybrid") {
+    return {
+      route: "retrieve",
+      reason: plan.reason,
+      needsGraphContext: true,
+      graphContextType: "graph_relation",
+    };
+  }
+
+  if (plan.primary === "kb_doc" || plan.primary === "multi_step") {
     return { route: "retrieve", reason: plan.reason };
   }
 

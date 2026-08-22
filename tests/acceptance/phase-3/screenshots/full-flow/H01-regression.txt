@@ -1,0 +1,12 @@
+yarn run v1.22.22
+$ vitest run tests/regression/phase-3
+
+ RUN  v4.1.6 /Users/moyun/code/personal-gpt
+
+
+ Test Files  6 passed (6)
+      Tests  13 passed (13)
+   Start at  12:16:32
+   Duration  1.96s (transform 468ms, setup 166ms, import 7.20s, tests 106ms, environment 1ms)
+
+Done in 3.77s.

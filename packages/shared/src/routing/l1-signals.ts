@@ -1,4 +1,5 @@
 import { GRAPH_RELATION_RE } from "./l0-rules";
+import { hasSeedGraphEntity } from "./graph-entities";
 import type { KbProbeResult, L1Signals } from "./types";
 
 export interface CollectL1SignalsDeps {
@@ -8,8 +9,7 @@ export interface CollectL1SignalsDeps {
 }
 
 function detectGraphSignal(query: string): boolean {
-  if (!GRAPH_RELATION_RE.test(query)) return false;
-  return /珍珠奶茶|pearl\s*milk\s*tea|奶茶|milk\s*tea/i.test(query);
+  return GRAPH_RELATION_RE.test(query) && hasSeedGraphEntity(query);
 }
 
 export async function collectL1Signals(

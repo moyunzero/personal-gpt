@@ -1,4 +1,4 @@
-import { resolveProductName } from "../rag/graph-rag";
+import { hasSeedGraphEntity, resolveSeedProductName } from "./graph-entities";
 import type { L0Hit, SpecialistName } from "./types";
 
 const GREETING_PHRASES = new Set([
@@ -42,14 +42,11 @@ export function isGreetingOnly(text: string): boolean {
 }
 
 /** D-06: entity relation patterns + seed entities → terminal graph_relation */
-export const GRAPH_RELATION_RE =
-  /原料|配料|工艺|路径|关联|包含|用了什么|有哪些/i;
-
-const SEED_ENTITIES = [/珍珠奶茶/, /pearl\s*milk\s*tea/i];
+export const GRAPH_RELATION_RE = /原料|配料|工艺|路径|关联|包含|用了什么|有哪些/i;
 
 export function matchGraphRelationL0(query: string): L0Hit | null {
   if (!GRAPH_RELATION_RE.test(query)) return null;
-  if (!SEED_ENTITIES.some((re) => re.test(query))) return null;
+  if (!hasSeedGraphEntity(query)) return null;
   return {
     primary: "graph_relation",
     channels: "graph",
@@ -92,11 +89,16 @@ export function orderSpecialistsByKeywordAppearance(query: string): SpecialistNa
   const wantsWeb = WEB_RE.test(t) && !refusesWeb;
   const wantsReport = REPORT_RE.test(t);
   const wantsAnalyst = ANALYST_RE.test(t);
-  const wantsGraph = GRAPH_KB_RE.test(t) || (GRAPH_RELATION_RE.test(t) && resolveProductName(t) !== "");
+  const seedProduct = resolveSeedProductName(t);
+  const wantsGraph = GRAPH_KB_RE.test(t) || (GRAPH_RELATION_RE.test(t) && seedProduct !== null);
 
   const need: SpecialistNeed[] = [];
   if (wantsGraph) {
-    need.push({ name: "retriever", idx: t.search(GRAPH_KB_RE) >= 0 ? t.search(GRAPH_KB_RE) : t.search(GRAPH_RELATION_RE), graphOnly: true });
+    need.push({
+      name: "retriever",
+      idx: t.search(GRAPH_KB_RE) >= 0 ? t.search(GRAPH_KB_RE) : t.search(GRAPH_RELATION_RE),
+      graphOnly: true,
+    });
   } else if (wantsKb) {
     need.push({ name: "retriever", idx: t.search(KB_RE) });
   }
@@ -118,7 +120,7 @@ export function matchMultiStepL0(query: string): L0Hit | null {
   const specialists = orderSpecialistsByKeywordAppearance(query);
   if (specialists.length < 2) return null;
 
-  const hasGraph = GRAPH_RELATION_RE.test(query) && SEED_ENTITIES.some((re) => re.test(query));
+  const hasGraph = GRAPH_RELATION_RE.test(query) && hasSeedGraphEntity(query);
   const hasKb = KB_RE.test(query);
   const hasWeb = WEB_RE.test(query) && !REFUSES_WEB_RE.test(query);
 
@@ -181,12 +183,7 @@ function matchChitchatL0(query: string): L0Hit | null {
 /** Run all L0 matchers — graph before multi_step to preserve H-04 terminal hit */
 export function matchL0Rules(query: string): L0Hit | null {
   const q = query.trim();
-  return (
-    matchChitchatL0(q) ??
-    matchGraphRelationL0(q) ??
-    matchMultiStepL0(q) ??
-    null
-  );
+  return matchChitchatL0(q) ?? matchGraphRelationL0(q) ?? matchMultiStepL0(q) ?? null;
 }
 
 /** Whether L0 hit used graph-only retriever tools for a step */

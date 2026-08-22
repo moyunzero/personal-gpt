@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { HybridSearchDeps, VectorStore } from "@personal-gpt/shared";
+
 const searchMock = vi.fn();
 const deleteByDocumentMock = vi.fn();
+const deleteByDocumentIdMock = vi.fn();
 
 vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
   createVectorStore: () => ({
@@ -10,16 +13,20 @@ vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
   }),
 }));
 
+vi.mock("@personal-gpt/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@personal-gpt/shared")>();
+  return {
+    ...actual,
+    deleteByDocumentId: (...args: unknown[]) => deleteByDocumentIdMock(...args),
+  };
+});
+
 vi.mock("@/lib/env", () => ({
   env: {
     ASTRA_DB_COLLECTION: "test-collection",
     VECTOR_SEARCH_TIMEOUT_MS: 5000,
     EMBEDDING_CACHE_SIZE: 100,
   },
-}));
-
-vi.mock("@personal-gpt/shared/ai/embeddings", () => ({
-  embedText: vi.fn().mockResolvedValue([0.1, 0.2, 0.3]),
 }));
 
 vi.mock("@/lib/chat/tracing", () => ({
@@ -38,14 +45,30 @@ import { getRelevantContext } from "@/lib/chat/retrieve";
 import { deleteDocument } from "@/lib/kb/documents.service";
 import { getDataSource } from "@/lib/db/get-data-source";
 
+function hybridDeps(): HybridSearchDeps {
+  const store: VectorStore = {
+    search: searchMock,
+    upsert: vi.fn(),
+    deleteByDocument: deleteByDocumentMock,
+  };
+  return {
+    embed: async () => [0.1, 0.2, 0.3],
+    getStore: () => store,
+    esSearch: async () => [],
+    rewriteQuery: async (q) => q,
+  };
+}
+
 describe("Phase 1 regression #4: delete document → no citation on same question", () => {
   const documentId = "33333333-3333-4333-8333-333333333333";
   const query = "请详细介绍一下已删除文档中的项目背景与经历";
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.ENABLE_RERANKER = "false";
     searchMock.mockResolvedValue([]);
     deleteByDocumentMock.mockResolvedValue(undefined);
+    deleteByDocumentIdMock.mockResolvedValue(undefined);
 
     const docRepo = {
       findOne: vi.fn().mockResolvedValue({
@@ -65,8 +88,11 @@ describe("Phase 1 regression #4: delete document → no citation on same questio
     const deleted = await deleteDocument(documentId);
     expect(deleted).toBe(true);
     expect(deleteByDocumentMock).toHaveBeenCalledWith(expect.any(String), documentId);
+    expect(deleteByDocumentIdMock).toHaveBeenCalled();
 
-    const result = await getRelevantContext(query, "reg-4");
+    const result = await getRelevantContext(query, "reg-4", undefined, {
+      hybridDeps: hybridDeps(),
+    });
     expect(result.kind).toBe("no-docs");
     if (result.kind === "ok") {
       expect(result.citations.length).toBe(0);

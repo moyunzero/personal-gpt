@@ -4,6 +4,7 @@
  */
 import {
   deleteByDocumentId,
+  ensureEsIndexes,
   indexChunks,
   resolveCorpusTargets,
   type Corpus,
@@ -18,6 +19,7 @@ export async function upsertChunksToEs(
   if (chunks.length === 0) return;
 
   const { esIndex } = resolveCorpusTargets(corpus);
+  await ensureEsIndexes([esIndex]);
   const workspaceId = chunks[0]!.workspaceId;
   const documentIds = [...new Set(chunks.map((c) => c.documentId))];
 

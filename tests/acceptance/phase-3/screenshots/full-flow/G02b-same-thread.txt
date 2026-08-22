@@ -1,0 +1,30 @@
+data: {"type":"start","messageId":"agent-fullflow-cp-1787372160"}
+
+data: {"type":"data-todo-update","id":"todo-fullflow-cp-1787372160","data":{"todos":[{"id":"todo-retrieve","label":"检索知识库","status":"pending"},{"id":"todo-research","label":"联网补充（如需）","status":"pending"},{"id":"todo-analyze","label":"分析整理","status":"pending"},{"id":"todo-report","label":"撰写报告","status":"pending"}]}}
+
+data: {"type":"data-agent-step","id":"step-supervisor","data":{"id":"step-supervisor","agent":"Supervisor","title":"调度专科助手","status":"active","summary":"按任务分派 Retriever / Researcher / Analyst / Editor"}}
+
+data: {"type":"start-step"}
+
+data: {"type":"data-todo-update","id":"todo-fullflow-cp-1787372160","data":{"todos":[{"id":"todo-retrieve","label":"检索知识库","status":"pending"},{"id":"todo-research","label":"联网补充（如需）","status":"pending"},{"id":"todo-analyze","label":"分析整理","status":"pending"},{"id":"todo-report","label":"撰写报告","status":"pending"}]}}
+
+data: {"type":"data-agent-step","id":"step-supervisor","data":{"id":"step-supervisor","agent":"Supervisor","title":"调度专科助手","status":"active","summary":"按任务分派 Retriever / Researcher / Analyst / Editor"}}
+
+data: {"type":"text-start","id":"chatcmpl-2cdaefa2-9b20-4e16-9fad-8781d597b124"}
+
+data: {"type":"text-delta","id":"chatcmpl-2cdaefa2-9b20-4e16-9fad-8781d597b124","delta":"您的暗号是 **蓝莓松饼**。"}
+
+data: {"type":"text-end","id":"chatcmpl-2cdaefa2-9b20-4e16-9fad-8781d597b124"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"finish"}
+
+data: {"type":"data-todo-update","id":"todo-fullflow-cp-1787372160","data":{"todos":[]}}
+
+data: {"type":"data-agent-step","id":"step-supervisor","data":{"id":"step-supervisor","agent":"Supervisor","title":"直接作答","status":"completed","summary":"未调度专科助手 · 由 Supervisor 直接回复"}}
+
+data: {"type":"data-agent-trace","id":"trace-fullflow-cp-1787372160","data":{"threadId":"fullflow-cp-1787372160","startedAt":"2026-08-22T04:16:12.151Z","endedAt":"2026-08-22T04:16:12.796Z","userText":"我的暗号是什么？","intent":{"route":"supervisor","requiredSpecialists":[]},"plan":[],"events":[{"ts":"2026-08-22T04:16:12.151Z","kind":"intent","summary":"路由=supervisor；强制专科=[无]","name":"intent","detail":"我的暗号是什么？"},{"ts":"2026-08-22T04:16:12.151Z","kind":"plan","summary":"待办 4 项：检索知识库 → 联网补充（如需） → 分析整理 → 撰写报告","name":"plan"},{"ts":"2026-08-22T04:16:12.787Z","kind":"plan","summary":"待办 0 项：(空)","name":"plan"},{"ts":"2026-08-22T04:16:12.796Z","kind":"final","summary":"终稿 15 字（可截断）","name":"final","detail":"您的暗号是 **蓝莓松饼**。"}],"citations":[],"finalText":"您的暗号是 **蓝莓松饼**。","meta":{"langsmithProject":"personal-gpt-gemini","persisted":false}}}
+
+data: [DONE]
+

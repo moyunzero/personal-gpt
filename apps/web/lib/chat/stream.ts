@@ -4,7 +4,7 @@ import { streamText, createUIMessageStream } from "ai";
 
 import { logger } from "@/lib/logger";
 
-import type { GraphPathDisplay } from "@/app/components/GraphPathCards";
+import type { GraphPathDisplay } from "@/lib/chat/graph-path-display";
 
 import type { FormattedMessage } from "./messages";
 import { ThinkStripFilter } from "./think-strip";

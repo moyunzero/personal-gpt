@@ -3,7 +3,6 @@ import { l1SuggestsGeneral, l1SuggestsKbDoc } from "./l1-signals";
 import type {
   IntentPlan,
   L0Hit,
-  L1Signals,
   PrimaryIntent,
   RetrievalChannel,
   SpecialistName,
@@ -126,6 +125,13 @@ function isAmbiguous(input: SynthesizeInput, primary: PrimaryIntent): boolean {
   return Boolean(l1.kbGray);
 }
 
+function looksLikeKbContentQuery(query: string): boolean {
+  const q = query.trim();
+  return /知识库|企业.?库|内部.?文档|我上传|文档里|资料里|有哪些内容|什么内容|包含哪些|整理给我|整理成/i.test(
+    q,
+  );
+}
+
 export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
   const neo4jOk = input.neo4jOk !== false;
   const cfg = input.config ?? readIntentRouterConfig();
@@ -139,10 +145,9 @@ export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
   );
   const primary = pickPrimary(input);
   const specialists = specialistsFor(input, primary);
-  const retrieverTools =
-    input.l0?.retrieverTools?.length
-      ? [...input.l0.retrieverTools]
-      : retrieverToolsFor(primary, graphSignal);
+  const retrieverTools = input.l0?.retrieverTools?.length
+    ? [...input.l0.retrieverTools]
+    : retrieverToolsFor(primary, graphSignal);
 
   const plan: IntentPlan = {
     primary,
@@ -150,11 +155,7 @@ export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
     specialists,
     retrieverTools,
     fallbackChain: buildFallbackChain(primary, graphSignal, neo4jOk, input.l0),
-    reason:
-      input.l0?.reason ??
-      input.l1?.reason ??
-      input.l2Hint?.reason ??
-      "l3:default",
+    reason: input.l0?.reason ?? input.l1?.reason ?? input.l2Hint?.reason ?? "l3:default",
     confidence: input.l2Hint?.confidence ?? (input.l0 ? 0.95 : input.l1?.kbHigh ? 0.85 : 0.65),
     graphSignal: graphSignal || undefined,
   };
@@ -173,5 +174,21 @@ export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
   }
 
   void cfg;
+
+  if (
+    plan.primary === "general" &&
+    !graphSignal &&
+    plan.specialists.length === 0 &&
+    looksLikeKbContentQuery(input.query)
+  ) {
+    plan.primary = "kb_doc";
+    plan.channels = "kb";
+    plan.specialists = ["retriever"];
+    plan.retrieverTools = ["kb_search"];
+    plan.fallbackChain = buildFallbackChain("kb_doc", graphSignal, neo4jOk, input.l0);
+    plan.reason = `${plan.reason};l3:content_query_kb`;
+    plan.ambiguous = false;
+  }
+
   return plan;
 }

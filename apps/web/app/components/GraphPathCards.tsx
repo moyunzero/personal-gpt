@@ -2,26 +2,9 @@
 
 import { useState } from "react";
 
-export type GraphPathDisplay = {
-  nodes: string[];
-  relationships: string[];
-};
+import type { GraphPathDisplay } from "@/lib/chat/graph-path-display";
 
-export function graphPathsToDisplay(
-  paths: Array<{ nodes: Array<{ labels: string[]; id: string; properties: Record<string, unknown> }>; relationships: Array<{ type: string }> }>,
-): GraphPathDisplay[] {
-  return paths.map((path) => ({
-    nodes: path.nodes.map((n) => {
-      const label = n.labels[0] ?? "Node";
-      const name =
-        typeof n.properties.name === "string" && n.properties.name.trim()
-          ? n.properties.name
-          : n.id;
-      return `${label}:${name}`;
-    }),
-    relationships: path.relationships.map((r) => r.type),
-  }));
-}
+export type { GraphPathDisplay };
 
 interface GraphPathCardsProps {
   paths: GraphPathDisplay[];
@@ -44,9 +27,7 @@ function GraphPathCard({ path, index }: { path: GraphPathDisplay; index: number 
       >
         <span className="citation-card-title">{pathSummary}</span>
         <span className="citation-card-meta">
-          {relSummary ? (
-            <span className="citation-card-similarity">{relSummary}</span>
-          ) : null}
+          {relSummary ? <span className="citation-card-similarity">{relSummary}</span> : null}
           <svg
             className={`citation-card-chevron${expanded ? " citation-card-chevron-open" : ""}`}
             viewBox="0 0 16 16"
@@ -66,9 +47,7 @@ function GraphPathCard({ path, index }: { path: GraphPathDisplay; index: number 
       {expanded ? (
         <div id={`${cardId}-detail`} className="citation-card-snippet">
           <p>节点：{path.nodes.join(" → ")}</p>
-          {path.relationships.length > 0 ? (
-            <p>关系：{path.relationships.join(" → ")}</p>
-          ) : null}
+          {path.relationships.length > 0 ? <p>关系：{path.relationships.join(" → ")}</p> : null}
         </div>
       ) : null}
     </article>

@@ -15,6 +15,13 @@ export const ROUTE_CORPUS_FILTER = {
   ],
 } as const;
 
+export function routePrecheckFilter(corpus: Corpus) {
+  if (corpus === "seed") {
+    return ROUTE_CORPUS_FILTER;
+  }
+  return { documentId: { $exists: true } } as const;
+}
+
 /** Untrusted request field → corpus; anything other than "seed" → user. */
 export function parseCorpus(raw: unknown): Corpus {
   return raw === "seed" ? "seed" : "user";
