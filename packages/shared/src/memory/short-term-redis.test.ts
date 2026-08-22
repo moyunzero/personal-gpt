@@ -3,7 +3,12 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ShortTermRedisMemory, type MemoryTurn, type RedisLike } from "./short-term-redis.js";
+import {
+  ShortTermRedisMemory,
+  type MemoryTurn,
+  type RedisLike,
+  type ShortTermPayload,
+} from "./short-term-redis.js";
 
 /** Minimal in-memory Redis fake (no ioredis-mock dependency). */
 class FakeRedis implements RedisLike {
@@ -19,6 +24,42 @@ class FakeRedis implements RedisLike {
     if (this.failNext) throw new Error("redis down");
     this.store.set(key, value);
     return "OK";
+  }
+
+  /** Simulates Lua atomic append/summary for tests (WR-X-04). */
+  async eval(
+    script: string,
+    _numKeys: number,
+    key: string,
+    ...args: (string | number)[]
+  ): Promise<number> {
+    if (this.failNext) throw new Error("redis down");
+    const raw = this.store.get(key);
+    const payload: ShortTermPayload = raw
+      ? (JSON.parse(raw) as ShortTermPayload)
+      : { turns: [], summary: "" };
+
+    if (script.includes("table.insert(payload.turns")) {
+      const role = String(args[0]);
+      const content = String(args[1]);
+      const maxN = Number(args[2]);
+      payload.turns.push({
+        role: role as MemoryTurn["role"],
+        content,
+      });
+      if (payload.turns.length > maxN) {
+        payload.turns = payload.turns.slice(-maxN);
+      }
+    } else if (script.includes("payload.summary = summary")) {
+      payload.summary = String(args[0]).trim();
+      const maxN = Number(args[1]);
+      if (payload.turns.length > maxN) {
+        payload.turns = payload.turns.slice(-maxN);
+      }
+    }
+
+    this.store.set(key, JSON.stringify(payload));
+    return 1;
   }
 }
 

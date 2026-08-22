@@ -30,4 +30,14 @@ describe("assertAllowlistedCypher", () => {
     expect(() => assertAllowlistedCypher("RETURN 1")).toThrow(/MATCH/);
     expect(() => assertAllowlistedCypher("MATCH (n)")).toThrow(/RETURN/);
   });
+
+  it("rejects unlabeled nodes and non-allowlisted labels/rels (WR-X-05)", () => {
+    expect(() => assertAllowlistedCypher("MATCH (n) RETURN n")).toThrow(
+      /no allowlisted node labels/,
+    );
+    expect(() => assertAllowlistedCypher("MATCH (x:Evil) RETURN x")).toThrow(/not allowlisted/);
+    expect(() => assertAllowlistedCypher("MATCH (a:Product)-[:HACK]->(b) RETURN a")).toThrow(
+      /relationship type not allowlisted/,
+    );
+  });
 });

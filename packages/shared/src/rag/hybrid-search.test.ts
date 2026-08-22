@@ -129,4 +129,30 @@ describe("hybridSearch", () => {
     expect(search).toHaveBeenCalledTimes(2);
     expect(result[0]?.documentId).toBe("doc-strong");
   });
+
+  it("uses embedQuery for vector and query for BM25 when HyDE splits channels (WR-X-01)", async () => {
+    process.env.ENABLE_RERANKER = "false";
+    process.env.CORRECTIVE_MIN_SCORE = "0";
+
+    const embed = vi.fn(async () => [0.1, 0.2]);
+    const esSearch = vi.fn(async () => [] as RetrievedChunk[]);
+    const store = mockStore(vectorHits);
+
+    await hybridSearch(
+      {
+        query: "用户原始问题",
+        embedQuery: "假设性 HyDE 段落",
+        workspaceId: "ws-1",
+        corpus: "user",
+      },
+      {
+        embed,
+        getStore: () => store,
+        esSearch,
+      },
+    );
+
+    expect(embed).toHaveBeenCalledWith("假设性 HyDE 段落");
+    expect(esSearch).toHaveBeenCalledWith(expect.objectContaining({ query: "用户原始问题" }));
+  });
 });

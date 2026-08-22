@@ -278,6 +278,7 @@ const loadPsychologyData = async () => {
           source: "psychology-qa",
           question: mapping.qa.input,
           category: "psychology",
+          documentId: mapping.qaId,
           chunkIndex: mapping.chunkIndex, // 添加块索引
           qaId: mapping.qaId,
           // fullAnswer 只在第一个块存储，其他块不存储

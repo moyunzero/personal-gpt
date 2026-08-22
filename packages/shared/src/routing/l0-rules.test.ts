@@ -54,4 +54,14 @@ describe("orderSpecialistsByKeywordAppearance (D-12)", () => {
     expect(order.length).toBeGreaterThanOrEqual(2);
     expect(order[0]).toBe("retriever");
   });
+
+  it("「在知识库搜索珍珠奶茶原料」→ not web researcher (WR-B-07)", () => {
+    const order = orderSpecialistsByKeywordAppearance("在知识库搜索珍珠奶茶原料");
+    expect(order).not.toContain("researcher");
+  });
+
+  it("「联网调研…再写报告」→ researcher (WR-B-07 web cues)", () => {
+    const order = orderSpecialistsByKeywordAppearance("联网调研珍珠奶茶竞品再写报告");
+    expect(order).toContain("researcher");
+  });
 });

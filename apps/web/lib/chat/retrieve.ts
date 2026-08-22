@@ -186,7 +186,8 @@ export async function getRelevantContext(
           const hits = await traceRetrieveStep("search", traceCtx, () =>
             hybridSearch(
               {
-                query: embeddingInput,
+                query: searchQuery,
+                ...(embeddingInput !== searchQuery ? { embedQuery: embeddingInput } : {}),
                 workspaceId,
                 corpus,
                 limit: RETRIEVAL_LIMIT,

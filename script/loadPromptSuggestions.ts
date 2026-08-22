@@ -388,6 +388,7 @@ const loadPromptSuggestions = async () => {
         category: doc.category,
         title: doc.title,
         fileName: doc.fileName,
+        documentId: docId,
         chunkIndex,
         totalChunks: chunks.length,
         keywords: doc.keywords,

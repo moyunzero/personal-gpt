@@ -44,4 +44,34 @@ export function assertAllowlistedCypher(cypher: string): void {
   if (normalized.includes(";") && !/;\s*$/.test(normalized)) {
     throw new CypherAllowlistError("Cypher rejected: multiple statements not allowed");
   }
+
+  const allowedLabels = new Set<string>(ALLOWED_LABELS);
+  const allowedRels = new Set<string>(ALLOWED_REL_TYPES);
+
+  const nodeLabels: string[] = [];
+  const nodeLabelRe = /\(\s*(?:\w+\s*)?:([A-Za-z]\w*)/g;
+  let labelMatch: RegExpExecArray | null;
+  while ((labelMatch = nodeLabelRe.exec(normalized)) !== null) {
+    nodeLabels.push(labelMatch[1]!);
+  }
+  if (nodeLabels.length === 0) {
+    throw new CypherAllowlistError("Cypher rejected: no allowlisted node labels in MATCH");
+  }
+  for (const label of nodeLabels) {
+    if (!allowedLabels.has(label)) {
+      throw new CypherAllowlistError(`Cypher rejected: node label not allowlisted: ${label}`);
+    }
+  }
+
+  const relTypes: string[] = [];
+  const relTypeRe = /\[\s*(?:\w+\s*)?:([A-Za-z]\w*)\s*(?:\||\]|->)/g;
+  let relMatch: RegExpExecArray | null;
+  while ((relMatch = relTypeRe.exec(normalized)) !== null) {
+    relTypes.push(relMatch[1]!);
+  }
+  for (const rel of relTypes) {
+    if (!allowedRels.has(rel)) {
+      throw new CypherAllowlistError(`Cypher rejected: relationship type not allowlisted: ${rel}`);
+    }
+  }
 }

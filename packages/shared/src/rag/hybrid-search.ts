@@ -8,7 +8,10 @@ import { reciprocalRankFusion } from "./rrf";
 import { rerankDedicated } from "./rerank";
 
 export type HybridSearchParams = {
+  /** BM25 / rerank / Corrective rewrite text (user query). */
   query: string;
+  /** Vector embed text; defaults to `query`. HyDE uses hypothetical answer here only (WR-X-01). */
+  embedQuery?: string;
   workspaceId: string;
   /** Default "user" (D-27) — seed must be explicit */
   corpus?: Corpus;
@@ -54,7 +57,8 @@ async function hybridSearchOnce(
       console.warn(`[hybridSearch] ${message}`, meta ?? {});
     });
 
-  const vector = await embed(params.query);
+  const embedQuery = params.embedQuery?.trim() || params.query;
+  const vector = await embed(embedQuery);
 
   const vectorPromise = getStore(corpus).search({
     workspaceId: params.workspaceId,
@@ -103,6 +107,7 @@ export async function hybridSearch(
 
   return maybeCorrective(params, fused, {
     rewrite: deps.rewriteQuery,
-    reSearch: (query) => hybridSearch({ ...params, query }, { ...deps, skipCorrective: true }),
+    reSearch: (query) =>
+      hybridSearch({ ...params, query, embedQuery: query }, { ...deps, skipCorrective: true }),
   });
 }

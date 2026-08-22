@@ -45,7 +45,8 @@ export function isGreetingOnly(text: string): boolean {
 export const GRAPH_RELATION_RE = /原料|配料|工艺|用了什么|关系|关联/i;
 
 export const KB_RE = /知识库|企业.?库|内部.?文档|kb\b|引用/i;
-const WEB_RE = /联网|搜索|web|网页|优缺点|外部.?资料|调研/i;
+/** WR-B-07: exclude standalone 「搜索」 — KB listing uses KB_RE, not web research */
+const WEB_RE = /联网|网络搜索|网页搜索|网页|web\b|优缺点|外部.?资料|调研/i;
 export const REPORT_RE = /报告|markdown|简报|编辑|定稿|整理成|写成/i;
 
 /** Whether query has graph-relation cues (not generic KB listing phrases alone). */

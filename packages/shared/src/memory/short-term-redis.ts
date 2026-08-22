@@ -17,6 +17,8 @@ export type ShortTermPayload = {
 export type RedisLike = {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, ...args: unknown[]): Promise<unknown>;
+  /** Lua eval for atomic read-modify-write (WR-X-04). */
+  eval?(script: string, numKeys: number, ...args: (string | number)[]): Promise<unknown>;
 };
 
 export type ShortTermRedisMemoryOptions = {
@@ -30,6 +32,46 @@ export type ShortTermRedisMemoryOptions = {
 const DEFAULT_PREFIX = "pgpt:short_memory";
 const DEFAULT_N = 10;
 const DEFAULT_TTL = 60 * 60 * 24; // 24h
+
+/** Atomic append via Lua (requires Redis cjson). */
+const APPEND_TURN_LUA = `
+local key = KEYS[1]
+local role = ARGV[1]
+local content = ARGV[2]
+local maxN = tonumber(ARGV[3])
+local ttl = tonumber(ARGV[4])
+local raw = redis.call('GET', key)
+local payload = raw and cjson.decode(raw) or { turns = {}, summary = "" }
+if not payload.turns then payload.turns = {} end
+table.insert(payload.turns, { role = role, content = content })
+local n = #payload.turns
+if n > maxN then
+  local trimmed = {}
+  for i = n - maxN + 1, n do trimmed[#trimmed + 1] = payload.turns[i] end
+  payload.turns = trimmed
+end
+redis.call('SET', key, cjson.encode(payload), 'EX', ttl)
+return 1
+`;
+
+const UPDATE_SUMMARY_LUA = `
+local key = KEYS[1]
+local summary = ARGV[1]
+local maxN = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
+local raw = redis.call('GET', key)
+local payload = raw and cjson.decode(raw) or { turns = {}, summary = "" }
+if not payload.turns then payload.turns = {} end
+payload.summary = summary
+local n = #payload.turns
+if n > maxN then
+  local trimmed = {}
+  for i = n - maxN + 1, n do trimmed[#trimmed + 1] = payload.turns[i] end
+  payload.turns = trimmed
+end
+redis.call('SET', key, cjson.encode(payload), 'EX', ttl)
+return 1
+`;
 
 function parsePayload(raw: string | null): ShortTermPayload {
   if (!raw) return { turns: [], summary: "" };
@@ -69,6 +111,24 @@ export class ShortTermRedisMemory {
     return `${this.keyPrefix}:${workspaceId}:${userKey}`;
   }
 
+  private async appendTurnFallback(key: string, turn: MemoryTurn): Promise<void> {
+    const current = parsePayload(await this.redis!.get(key));
+    current.turns.push(turn);
+    if (current.turns.length > this.n) {
+      current.turns = current.turns.slice(-this.n);
+    }
+    await this.redis!.set(key, JSON.stringify(current), "EX", this.ttlSeconds);
+  }
+
+  private async updateSummaryFallback(key: string, summary: string): Promise<void> {
+    const current = parsePayload(await this.redis!.get(key));
+    current.summary = summary.trim();
+    if (current.turns.length > this.n) {
+      current.turns = current.turns.slice(-this.n);
+    }
+    await this.redis!.set(key, JSON.stringify(current), "EX", this.ttlSeconds);
+  }
+
   async appendTurn(workspaceId: string, userKey: string, turn: MemoryTurn): Promise<void> {
     if (!this.redis) {
       this.log("skip appendTurn: redis unavailable");
@@ -76,12 +136,19 @@ export class ShortTermRedisMemory {
     }
     try {
       const key = this.memoryKey(workspaceId, userKey);
-      const current = parsePayload(await this.redis.get(key));
-      current.turns.push(turn);
-      if (current.turns.length > this.n) {
-        current.turns = current.turns.slice(-this.n);
+      if (this.redis.eval) {
+        await this.redis.eval(
+          APPEND_TURN_LUA,
+          1,
+          key,
+          turn.role,
+          turn.content,
+          this.n,
+          this.ttlSeconds,
+        );
+      } else {
+        await this.appendTurnFallback(key, turn);
       }
-      await this.redis.set(key, JSON.stringify(current), "EX", this.ttlSeconds);
     } catch (err) {
       this.log("appendTurn failed (fail-open)", err);
     }
@@ -94,12 +161,11 @@ export class ShortTermRedisMemory {
     }
     try {
       const key = this.memoryKey(workspaceId, userKey);
-      const current = parsePayload(await this.redis.get(key));
-      current.summary = summary.trim();
-      if (current.turns.length > this.n) {
-        current.turns = current.turns.slice(-this.n);
+      if (this.redis.eval) {
+        await this.redis.eval(UPDATE_SUMMARY_LUA, 1, key, summary.trim(), this.n, this.ttlSeconds);
+      } else {
+        await this.updateSummaryFallback(key, summary);
       }
-      await this.redis.set(key, JSON.stringify(current), "EX", this.ttlSeconds);
     } catch (err) {
       this.log("maybeUpdateSummary failed (fail-open)", err);
     }
@@ -169,7 +235,7 @@ export async function getShortTermRedisMemory(): Promise<ShortTermRedisMemory> {
       // ioredis 某些版本 connect 已自动；忽略
     }
     singleton = new ShortTermRedisMemory({
-      redis: client,
+      redis: client as RedisLike,
       keyPrefix,
       n,
     });
