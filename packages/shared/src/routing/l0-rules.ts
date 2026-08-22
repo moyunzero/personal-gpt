@@ -41,26 +41,33 @@ export function isGreetingOnly(text: string): boolean {
   return GREETING_PHRASES.has(core);
 }
 
-/** D-06: entity relation patterns + seed entities → terminal graph_relation */
-export const GRAPH_RELATION_RE = /原料|配料|工艺|路径|关联|包含|用了什么|有哪些/i;
+/** D-06: relation lexicon — excludes standalone 「有哪些」/「包含」/「路径」 (WR-02) */
+export const GRAPH_RELATION_RE = /原料|配料|工艺|用了什么|关系|关联/i;
+
+export const KB_RE = /知识库|企业.?库|内部.?文档|kb\b|引用/i;
+const WEB_RE = /联网|搜索|web|网页|优缺点|外部.?资料|调研/i;
+export const REPORT_RE = /报告|markdown|简报|编辑|定稿|整理成|写成/i;
+
+/** Whether query has graph-relation cues (not generic KB listing phrases alone). */
+export function hasGraphRelationCue(query: string): boolean {
+  return GRAPH_RELATION_RE.test(query);
+}
 
 export function matchGraphRelationL0(query: string): L0Hit | null {
-  if (!GRAPH_RELATION_RE.test(query)) return null;
+  if (!hasGraphRelationCue(query)) return null;
   if (!hasSeedGraphEntity(query)) return null;
+  const mixed = KB_RE.test(query) || REPORT_RE.test(query) || WEB_RE.test(query);
   return {
     primary: "graph_relation",
     channels: "graph",
     specialists: ["retriever"],
     retrieverTools: ["graph_search"],
     reason: "l0:graph_relation:seed_entity",
-    terminal: true,
+    terminal: !mixed,
     graphSignal: true,
   };
 }
 
-const KB_RE = /知识库|企业.?库|内部.?文档|kb\b|引用/i;
-const WEB_RE = /联网|搜索|web|网页|优缺点|外部.?资料|调研/i;
-const REPORT_RE = /报告|markdown|简报|编辑|定稿|整理成|写成/i;
 const ANALYST_RE = /数值对比|定量分析|用计算器|算一下|calculator/i;
 const REFUSES_WEB_RE =
   /不要使用联网搜索|不要用网络搜索|禁止访问互联网|不要联网|无需联网|不用联网|禁止联网|别联网|不要进行网络搜索|请勿访问外网|仅使用知识库/i;
@@ -90,7 +97,8 @@ export function orderSpecialistsByKeywordAppearance(query: string): SpecialistNa
   const wantsReport = REPORT_RE.test(t);
   const wantsAnalyst = ANALYST_RE.test(t);
   const seedProduct = resolveSeedProductName(t);
-  const wantsGraph = GRAPH_KB_RE.test(t) || (GRAPH_RELATION_RE.test(t) && seedProduct !== null);
+  const wantsGraph =
+    GRAPH_KB_RE.test(t) || (hasGraphRelationCue(t) && seedProduct !== null);
 
   const need: SpecialistNeed[] = [];
   if (wantsGraph) {
@@ -120,7 +128,7 @@ export function matchMultiStepL0(query: string): L0Hit | null {
   const specialists = orderSpecialistsByKeywordAppearance(query);
   if (specialists.length < 2) return null;
 
-  const hasGraph = GRAPH_RELATION_RE.test(query) && hasSeedGraphEntity(query);
+  const hasGraph = hasGraphRelationCue(query) && hasSeedGraphEntity(query);
   const hasKb = KB_RE.test(query);
   const hasWeb = WEB_RE.test(query) && !REFUSES_WEB_RE.test(query);
 
@@ -180,10 +188,10 @@ function matchChitchatL0(query: string): L0Hit | null {
   return null;
 }
 
-/** Run all L0 matchers — graph before multi_step to preserve H-04 terminal hit */
+/** Run all L0 matchers — multi_step before graph so mixed queries win (CR-02) */
 export function matchL0Rules(query: string): L0Hit | null {
   const q = query.trim();
-  return matchChitchatL0(q) ?? matchGraphRelationL0(q) ?? matchMultiStepL0(q) ?? null;
+  return matchChitchatL0(q) ?? matchMultiStepL0(q) ?? matchGraphRelationL0(q) ?? null;
 }
 
 /** Whether L0 hit used graph-only retriever tools for a step */

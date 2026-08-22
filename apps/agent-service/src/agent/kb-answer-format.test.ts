@@ -11,7 +11,10 @@ describe("isKbSearchToolOutput", () => {
     expect(isKbSearchToolOutput("KB_SEARCH_STATUS: HIT\n[citation 1]")).toBe(true);
     expect(
       isKbSearchToolOutput("知识库未找到足够相关依据。\nKB_SEARCH_STATUS: NO_RELEVANT_HIT"),
-    ).toBe(false);
+    ).toBe(true);
+    expect(
+      isKbSearchToolOutput("【知识库预检索·工具结果·可信】\nKB_SEARCH_STATUS: NO_RELEVANT_HIT"),
+    ).toBe(true);
   });
 });
 

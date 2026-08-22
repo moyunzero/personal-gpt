@@ -16,21 +16,28 @@ import { extractKbSearchQuery } from "../tools/extract-kb-query";
 import { invokeKbSearch } from "../tools/kb-search.tool";
 
 let neo4jOkCache: boolean | null = null;
+let neo4jOkCachedAt = 0;
+const NEO4J_PROBE_TTL_MS = 30_000;
 
-/** Cached Neo4j probe — fail-open degrade per D-10 */
+/** Cached Neo4j probe — fail-open degrade per D-10; TTL re-probe (WR-05) */
 export async function probeNeo4jAvailable(): Promise<boolean> {
-  if (neo4jOkCache !== null) return neo4jOkCache;
+  if (neo4jOkCache !== null && Date.now() - neo4jOkCachedAt < NEO4J_PROBE_TTL_MS) {
+    return neo4jOkCache;
+  }
   try {
     const driver = getNeo4jDriverFromEnv();
     if (!driver) {
       neo4jOkCache = false;
+      neo4jOkCachedAt = Date.now();
       return false;
     }
     await driver.verifyConnectivity();
     neo4jOkCache = true;
+    neo4jOkCachedAt = Date.now();
     return true;
   } catch {
     neo4jOkCache = false;
+    neo4jOkCachedAt = Date.now();
     return false;
   }
 }
@@ -38,6 +45,7 @@ export async function probeNeo4jAvailable(): Promise<boolean> {
 /** Test hook */
 export function resetNeo4jAvailabilityCacheForTests(): void {
   neo4jOkCache = null;
+  neo4jOkCachedAt = 0;
 }
 
 function parseKbProbeFromToolOutput(text: string | undefined): KbProbeResult {

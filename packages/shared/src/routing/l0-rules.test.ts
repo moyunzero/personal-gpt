@@ -23,6 +23,11 @@ describe("matchGraphRelationL0 (D-06 / H-04)", () => {
     expect(hit?.primary).toBe("graph_relation");
     expect(hit?.retrieverTools).toEqual(["graph_search"]);
   });
+
+  it("「珍珠奶茶有哪些优惠」→ not graph_relation (WR-02)", () => {
+    expect(matchGraphRelationL0("珍珠奶茶有哪些优惠活动")).toBeNull();
+    expect(matchL0Rules("珍珠奶茶有哪些优惠活动")).toBeNull();
+  });
 });
 
 describe("chitchat L0 (D-03)", () => {

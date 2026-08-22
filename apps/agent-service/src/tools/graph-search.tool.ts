@@ -31,11 +31,7 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
       executor: input.executor,
     });
     if (!result.paths.length) {
-      return [
-        "GRAPH_SEARCH_STATUS: NO_PATH",
-        "图谱未找到可追溯路径。",
-        `cypher: ${result.cypher}`,
-      ].join("\n");
+      return ["GRAPH_SEARCH_STATUS: NO_PATH", "图谱未找到可追溯路径。"].join("\n");
     }
 
     const pathBlocks = result.paths.map((p, i) => {
@@ -54,7 +50,6 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
     return [
       "GRAPH_SEARCH_STATUS: HIT",
       result.summary,
-      `cypher: ${result.cypher}`,
       ...pathBlocks,
       "",
       "注意：只能引用以上 path 中的 node id / relationship type；不可编造未列出的实体。",

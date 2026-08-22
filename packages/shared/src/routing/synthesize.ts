@@ -52,12 +52,14 @@ function buildFallbackChain(
   graphSignal: boolean,
   neo4jOk: boolean,
   l0?: L0Hit | null,
+  enableKbGraphFallback = true,
 ): string[] {
   if (!neo4jOk) return primary === "graph_relation" ? ["kb_search"] : [];
 
   if (primary === "graph_relation") return ["kb_search"];
 
   if (primary === "kb_doc" || primary === "kb_graph_hybrid") {
+    if (!enableKbGraphFallback) return [];
     const hasGraphHint =
       graphSignal ||
       l0?.graphSignal === true ||
@@ -69,7 +71,7 @@ function buildFallbackChain(
   return [];
 }
 
-function finalizeFromL0(hit: L0Hit, neo4jOk: boolean): IntentPlan {
+function finalizeFromL0(hit: L0Hit, neo4jOk: boolean, enableKbGraphFallback = true): IntentPlan {
   if (!neo4jOk && hit.primary === "graph_relation") {
     return {
       primary: "kb_doc",
@@ -88,7 +90,13 @@ function finalizeFromL0(hit: L0Hit, neo4jOk: boolean): IntentPlan {
     channels: hit.channels ?? channelsFor(hit.primary),
     specialists: [...hit.specialists],
     retrieverTools: [...hit.retrieverTools],
-    fallbackChain: buildFallbackChain(hit.primary, hit.graphSignal ?? false, neo4jOk, hit),
+    fallbackChain: buildFallbackChain(
+      hit.primary,
+      hit.graphSignal ?? false,
+      neo4jOk,
+      hit,
+      enableKbGraphFallback,
+    ),
     reason: hit.reason,
     confidence: 0.95,
     graphSignal: hit.graphSignal,
@@ -135,9 +143,10 @@ function looksLikeKbContentQuery(query: string): boolean {
 export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
   const neo4jOk = input.neo4jOk !== false;
   const cfg = input.config ?? readIntentRouterConfig();
+  const enableKbGraphFallback = cfg.enableKbGraphFallback;
 
   if (input.l0?.terminal) {
-    return finalizeFromL0(input.l0, neo4jOk);
+    return finalizeFromL0(input.l0, neo4jOk, enableKbGraphFallback);
   }
 
   const graphSignal = Boolean(
@@ -154,7 +163,13 @@ export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
     channels: channelsFor(primary),
     specialists,
     retrieverTools,
-    fallbackChain: buildFallbackChain(primary, graphSignal, neo4jOk, input.l0),
+    fallbackChain: buildFallbackChain(
+      primary,
+      graphSignal,
+      neo4jOk,
+      input.l0,
+      enableKbGraphFallback,
+    ),
     reason: input.l0?.reason ?? input.l1?.reason ?? input.l2Hint?.reason ?? "l3:default",
     confidence: input.l2Hint?.confidence ?? (input.l0 ? 0.95 : input.l1?.kbHigh ? 0.85 : 0.65),
     graphSignal: graphSignal || undefined,
@@ -167,13 +182,19 @@ export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
       plan.channels = "kb";
       plan.specialists = ["retriever"];
       plan.retrieverTools = ["kb_search"];
-      plan.fallbackChain = buildFallbackChain("kb_doc", graphSignal, neo4jOk, input.l0);
+      plan.fallbackChain = buildFallbackChain(
+        "kb_doc",
+        graphSignal,
+        neo4jOk,
+        input.l0,
+        enableKbGraphFallback,
+      );
       plan.reason = `${input.l1?.reason ?? "l3:gray"};retrieve_safe`;
       plan.ambiguous = false;
     }
   }
 
-  void cfg;
+  void cfg.enableL2IntentClassifier;
 
   if (
     plan.primary === "general" &&
@@ -185,7 +206,13 @@ export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
     plan.channels = "kb";
     plan.specialists = ["retriever"];
     plan.retrieverTools = ["kb_search"];
-    plan.fallbackChain = buildFallbackChain("kb_doc", graphSignal, neo4jOk, input.l0);
+    plan.fallbackChain = buildFallbackChain(
+      "kb_doc",
+      graphSignal,
+      neo4jOk,
+      input.l0,
+      enableKbGraphFallback,
+    );
     plan.reason = `${plan.reason};l3:content_query_kb`;
     plan.ambiguous = false;
   }

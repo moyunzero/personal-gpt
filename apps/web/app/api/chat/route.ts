@@ -179,7 +179,9 @@ export async function POST(req: Request) {
     });
 
     let contextResult: VectorSearchResult = { kind: "no-docs" };
-    if (routeDecision.route === "retrieve") {
+    const graphOnlyRetrieve =
+      routeDecision.intentPrimary === "graph_relation" && routeDecision.needsGraphContext;
+    if (routeDecision.route === "retrieve" && !graphOnlyRetrieve) {
       contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID, {
         corpus,
       });

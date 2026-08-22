@@ -230,6 +230,8 @@ async function defaultExecutor(
 /**
  * Narrow Graph RAG entry: entity-relation questions over seeded subgraph.
  * Always allowlists Cypher before execution.
+ *
+ * Tenancy: demo seed subgraph is global (no workspaceId filter) until Phase 4 GRAPH-01.
  */
 export async function graphRagQuery(options: GraphRagQueryOptions): Promise<GraphRagResult> {
   const productName = options.productName ?? resolveProductName(options.question);

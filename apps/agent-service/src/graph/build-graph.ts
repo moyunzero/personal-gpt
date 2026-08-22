@@ -13,7 +13,7 @@ import type { LanguageModelLike } from "@langchain/core/language_models/base";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { createSupervisor } from "@langchain/langgraph-supervisor";
-import { isPlanAmbiguous, type IntentPlan } from "@personal-gpt/shared/routing";
+import { isPlanAmbiguous, readIntentRouterConfig, type IntentPlan } from "@personal-gpt/shared/routing";
 
 import { isRetrieverSynthesisPlan } from "../agent/agent-synthesis";
 import { createAnalystAgent } from "../agents/analyst.agent";
@@ -377,14 +377,35 @@ function buildPrefetchNode(plan: IntentPlan) {
   ): Promise<{ messages: BaseMessage[] } | Record<string, never>> => {
     const text = lastUserText(state.messages);
     const workspaceId = String(config?.configurable?.workspaceId ?? "default");
+    const { enableKbGraphFallback } = readIntentRouterConfig();
     const blocks: string[] = [];
     const graphOnly =
       plan.retrieverTools.includes("graph_search") && !plan.retrieverTools.includes("kb_search");
 
+    const allowGraphFallback =
+      enableKbGraphFallback &&
+      (plan.fallbackChain.includes("graph_search") || plan.graphSignal === true);
+
     if (graphOnly) {
       const graphOut = await invokeGraphSearch({ question: text });
-      blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+      if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
+        blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+      } else if (plan.fallbackChain.includes("kb_search")) {
+        const kbOut = await invokeKbSearch({
+          query: extractKbSearchQuery(text),
+          userText: text,
+          workspaceId,
+        });
+        if (kbOut) {
+          blocks.push(`【知识库回退检索·工具结果·可信】\n${graphOut}\n\n${kbOut}`);
+        } else {
+          blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+        }
+      } else {
+        blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+      }
     } else if (plan.retrieverTools.includes("kb_search")) {
+      let graphInjected = false;
       const kbOut = await invokeKbSearch({
         query: extractKbSearchQuery(text),
         userText: text,
@@ -392,12 +413,13 @@ function buildPrefetchNode(plan: IntentPlan) {
       });
       if (kbOut) {
         const kbMiss = /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut);
-        if (kbMiss && plan.fallbackChain.includes("graph_search")) {
+        if (kbMiss && allowGraphFallback) {
           const graphOut = await invokeGraphSearch({ question: text });
           if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
             blocks.push(
               `【图谱回退检索·工具结果·可信】\nKB 未命中后按 fallbackChain 触发 graph_search；必须采信。\n${graphOut}`,
             );
+            graphInjected = true;
           } else {
             blocks.push(`【知识库预检索·工具结果·可信】\n${kbOut}`);
           }
@@ -405,7 +427,11 @@ function buildPrefetchNode(plan: IntentPlan) {
           blocks.push(`【知识库预检索·工具结果·可信】\n${kbOut}`);
         }
       }
-      if (plan.primary === "kb_graph_hybrid" && plan.retrieverTools.includes("graph_search")) {
+      if (
+        plan.primary === "kb_graph_hybrid" &&
+        plan.retrieverTools.includes("graph_search") &&
+        !graphInjected
+      ) {
         const graphOut = await invokeGraphSearch({ question: text });
         blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
       }

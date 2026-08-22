@@ -7,10 +7,10 @@ import type { Citation } from "@personal-gpt/shared";
 const SNIPPET_MAX = 600;
 const KB_MISS_RE = /知识库未找到足够(?:相关)?依据/;
 
-/** 是否为 kb_search 工具原文（非 Retriever 复述） */
+/** 是否为 kb_search 工具原文（含 synthesizer prefetch 包装） */
 export function isKbSearchToolOutput(content: string): boolean {
+  if (/KB_SEARCH_STATUS:/i.test(content)) return true;
   const trimmed = content.trim();
-  if (/^KB_SEARCH_STATUS:/i.test(trimmed)) return true;
   return (
     trimmed.includes("[citation") && trimmed.includes("documentId:") && trimmed.includes("snippet:")
   );

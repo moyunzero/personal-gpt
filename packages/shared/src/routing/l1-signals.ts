@@ -1,4 +1,4 @@
-import { GRAPH_RELATION_RE } from "./l0-rules";
+import { hasGraphRelationCue } from "./l0-rules";
 import { hasSeedGraphEntity } from "./graph-entities";
 import type { KbProbeResult, L1Signals } from "./types";
 
@@ -9,7 +9,7 @@ export interface CollectL1SignalsDeps {
 }
 
 function detectGraphSignal(query: string): boolean {
-  return GRAPH_RELATION_RE.test(query) && hasSeedGraphEntity(query);
+  return hasGraphRelationCue(query) && hasSeedGraphEntity(query);
 }
 
 export async function collectL1Signals(

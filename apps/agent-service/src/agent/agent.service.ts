@@ -140,15 +140,14 @@ function collectCitationsFromUpdate(
       }
       if (trace) {
         // 仅认「工具原文」形态，避免专科复述被当成重复 tool 事件
-        const trimmed = content.trim();
-        if (/^KB_SEARCH_STATUS:/i.test(trimmed) || trimmed.includes("[citation")) {
+        if (/KB_SEARCH_STATUS:/i.test(content) || content.includes("[citation")) {
           trace.recordTool({
             name: "kb_search",
             agent: nodeName,
             summary: summarizeKbToolOutput(content),
             detail: content,
           });
-        } else if (/GRAPH_SEARCH_STATUS:/i.test(trimmed)) {
+        } else if (/GRAPH_SEARCH_STATUS:/i.test(content)) {
           trace.recordTool({
             name: "graph_search",
             agent: nodeName,
@@ -652,12 +651,13 @@ function applyNodeUpdate(
   if (key === "prefetch") {
     tracker.sawSpecialist = true;
     tracker.directAnswerMarked = false;
+    const existing = tracker.stepsById.get("step-prefetch");
     tracker.stepsById.set("step-prefetch", {
       id: "step-prefetch",
       agent: "System",
-      title: "预检索",
+      title: existing?.title ?? "预检索",
       status: "completed",
-      summary: "服务端工具预取（D-11）",
+      summary: existing?.summary ?? "服务端工具预取（D-11）",
     });
     tracker.onChange();
     return;
@@ -1578,7 +1578,10 @@ export class AgentService {
 
               await drainGraphStream({ messages: seededMessages });
 
-              const hasSubstantiveGraphAnswer = /[\u4e00-\u9fff]{10,}/.test(finalBuf);
+              const kbMissDominates =
+                /知识库未找到足够|KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(finalBuf);
+              const hasSubstantiveGraphAnswer =
+                !kbMissDominates && /[\u4e00-\u9fff]{10,}/.test(finalBuf);
               if (
                 tracker.graphSearchHit &&
                 !hasSubstantiveGraphAnswer &&
