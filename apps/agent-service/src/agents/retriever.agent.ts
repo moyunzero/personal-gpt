@@ -8,20 +8,36 @@ import { createAgent } from "langchain";
 import { KB_CITATION_RULES, TOOL_RESULT_SAFETY } from "../prompts/fragments/kb-citation-rules";
 import { graphSearchTool } from "../tools/graph-search.tool";
 import { kbSearchTool } from "../tools/kb-search.tool";
-import { AGENT_TOOL_CAPS } from "./caps";
 
 export type AgentSkillOptions = {
   /** 已格式化的 Skill 文本块；追加到 systemPrompt，非 Agent 名 */
   skillPrompt?: string;
+  /** D-02: hard whitelist — only bind listed tools */
+  allowedTools?: string[];
 };
 
+const TOOL_BY_NAME = {
+  kb_search: kbSearchTool,
+  graph_search: graphSearchTool,
+} as const;
+
 export function createRetrieverAgent(model: LanguageModelLike, options: AgentSkillOptions = {}) {
+  const allowed = options.allowedTools ?? ["kb_search", "graph_search"];
+  if (allowed.length === 0) {
+    throw new Error("createRetrieverAgent: allowedTools must not be empty (D-02)");
+  }
+  const tools = allowed.map((name) => {
+    const tool = TOOL_BY_NAME[name as keyof typeof TOOL_BY_NAME];
+    if (!tool) throw new Error(`createRetrieverAgent: unknown tool "${name}"`);
+    return tool;
+  });
+  const allowedList = allowed.join(", ");
   const skill = options.skillPrompt?.trim() ? `\n\n${options.skillPrompt.trim()}` : "";
   return createAgent({
     name: "retriever",
     description: "企业内部知识库检索与引用；回答需可溯源。",
     model,
-    tools: [kbSearchTool, graphSearchTool],
+    tools,
     systemPrompt: `你是 Retriever。职责边界：仅处理知识库（KB）检索与引用。
 
 规则：
@@ -32,7 +48,7 @@ export function createRetrieverAgent(model: LanguageModelLike, options: AgentSki
   - 禁止代码块、禁止任务规划、禁止表格、禁止列举假文档 / DOC-*、禁止假装命中。
   - 不要向用户解释工具协议；终稿由 Editor 撰写。
 - **有命中**：若上下文已有【知识库预检索】且为 \`KB_SEARCH_STATUS: HIT\`，直接复述其中 title / source / documentId / snippet，禁止改口称未命中；否则先调用 kb_search 再复述工具结果。
-- 允许工具：${AGENT_TOOL_CAPS.retriever.join(", ")}。
+- 允许工具：${allowedList}（硬白名单，禁止调用列表外工具）。
 - 混库召回边界（ISSUE-001）仍存在；低相关片段已被工具过滤。
 
 ${KB_CITATION_RULES}${skill}`,

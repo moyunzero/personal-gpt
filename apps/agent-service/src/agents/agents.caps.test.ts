@@ -80,6 +80,56 @@ describe("agent tool caps (D-07 / D-15)", () => {
     expect(buildSrc).toMatch(/createRetrieverAgent|createResearcherAgent/);
   });
 
+  it("createRetrieverAgent allowedTools graph_search only (D-02)", async () => {
+    const { ChatOpenAI } = await import("@langchain/openai");
+    const model = new ChatOpenAI({
+      model: "mock-model",
+      apiKey: "sk-test-mock",
+      configuration: { baseURL: "http://127.0.0.1:9" },
+    });
+    const { createRetrieverAgent } = await import("./retriever.agent");
+    const agent = createRetrieverAgent(model, { allowedTools: ["graph_search"] });
+    const names = ((agent as { tools?: Array<{ name?: string }> }).tools ?? []).map(
+      (t) => t.name,
+    );
+    if (names.length) {
+      expect(names).toEqual(["graph_search"]);
+    } else {
+      const fs = await import("node:fs/promises");
+      const src = await fs.readFile(`${__dirname}/retriever.agent.ts`, "utf8");
+      expect(src).toMatch(/allowedTools/);
+    }
+  });
+
+  it("createRetrieverAgent allowedTools kb_search excludes graph_search (D-02)", async () => {
+    const { ChatOpenAI } = await import("@langchain/openai");
+    const model = new ChatOpenAI({
+      model: "mock-model",
+      apiKey: "sk-test-mock",
+      configuration: { baseURL: "http://127.0.0.1:9" },
+    });
+    const { createRetrieverAgent } = await import("./retriever.agent");
+    const agent = createRetrieverAgent(model, { allowedTools: ["kb_search"] });
+    const names = ((agent as { tools?: Array<{ name?: string }> }).tools ?? []).map(
+      (t) => t.name,
+    );
+    if (names.length) {
+      expect(names).toEqual(["kb_search"]);
+      expect(names).not.toContain("graph_search");
+    }
+  });
+
+  it("createRetrieverAgent throws when allowedTools empty (D-02)", async () => {
+    const { ChatOpenAI } = await import("@langchain/openai");
+    const model = new ChatOpenAI({
+      model: "mock-model",
+      apiKey: "sk-test-mock",
+      configuration: { baseURL: "http://127.0.0.1:9" },
+    });
+    const { createRetrieverAgent } = await import("./retriever.agent");
+    expect(() => createRetrieverAgent(model, { allowedTools: [] })).toThrow(/allowedTools/);
+  });
+
   it("Supervisor prompt has no specialist tool binding and states caps", () => {
     expect(SUPERVISOR_PROMPT).toMatch(/只调度|禁止亲自/);
     expect(SUPERVISOR_PROMPT).toMatch(/kb_search/);

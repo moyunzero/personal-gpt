@@ -8,10 +8,12 @@
  */
 
 import type { BaseMessage } from "@langchain/core/messages";
+import { SystemMessage } from "@langchain/core/messages";
 import type { LanguageModelLike } from "@langchain/core/language_models/base";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { createSupervisor } from "@langchain/langgraph-supervisor";
+import { isPlanAmbiguous, type IntentPlan } from "@personal-gpt/shared/routing";
 
 import { createAnalystAgent } from "../agents/analyst.agent";
 import { createEditorAgent } from "../agents/editor.agent";
@@ -29,10 +31,19 @@ import {
   formatSkillsOverview,
   loadEnabledSkills,
 } from "../skills/load-skills";
+import { extractKbSearchQuery } from "../tools/extract-kb-query";
+import { invokeGraphSearch } from "../tools/graph-search.tool";
+import { invokeKbSearch } from "../tools/kb-search.tool";
 import { buildShortReplyMessages, isAgentChitchat } from "./short-circuit";
 import { AgentState, type AgentStateType } from "./state";
 
 export type AgentRoute = "short" | "supervisor";
+
+/** D-04: plan-driven execution modes */
+export type ExecutionMode = "short" | "sequential" | "single_specialist" | "supervisor";
+
+/** D-11: prefetch node id — tested for single_specialist wiring */
+export const SINGLE_SPECIALIST_PREFETCH_NODE = "prefetch";
 
 export type BuildAgentGraphOptions = {
   /** 注入模型（测试用 mock）；缺省 createChatModel() */
@@ -89,6 +100,18 @@ export function lastUserText(messages: BaseMessage[] | undefined): string {
 /** 纯函数路由：可单测（闲聊 → short，否则 supervisor） */
 export function resolveAgentRoute(text: string): AgentRoute {
   return isAgentChitchat(text) ? "short" : "supervisor";
+}
+
+/**
+ * D-04/D-16: IntentPlan → execution mode.
+ * chitchat → short; ambiguous → supervisor; ≥2 specialists → sequential; 1 → single_specialist.
+ */
+export function resolveExecutionMode(plan: IntentPlan): ExecutionMode {
+  if (plan.primary === "chitchat") return "short";
+  if (isPlanAmbiguous(plan)) return "supervisor";
+  if (plan.specialists.length >= 2) return "sequential";
+  if (plan.specialists.length === 1) return "single_specialist";
+  return "supervisor";
 }
 
 /**
@@ -238,12 +261,20 @@ type SpecialistBundle = {
   editor: ReturnType<typeof createEditorAgent>;
 };
 
-/** 创建四专科 Agent（Supervisor / Sequential 共用） */
-function createSpecialistAgents(model: LanguageModelLike): SpecialistBundle {
+/** 创建四专科 Agent（Supervisor / Sequential / single_specialist 共用） */
+function createSpecialistAgents(
+  model: LanguageModelLike,
+  retrieverTools?: string[],
+): SpecialistBundle {
   const skills = loadEnabledSkills();
+  const retrieverAllowed =
+    retrieverTools && retrieverTools.length > 0
+      ? retrieverTools
+      : (["kb_search", "graph_search"] as string[]);
   return {
     retriever: createRetrieverAgent(model, {
       skillPrompt: formatSkillForPrompt(findSkill(skills, "kb-retrieval")),
+      allowedTools: retrieverAllowed,
     }),
     researcher: createResearcherAgent(model, {
       skillPrompt: formatSkillForPrompt(findSkill(skills, "web-research")),
@@ -281,12 +312,13 @@ export function ensureTerminalEditor(pipeline: SpecialistName[]): SpecialistName
 export function createSequentialPipelineWorkflow(
   model: LanguageModelLike,
   pipeline: SpecialistName[],
+  retrieverTools?: string[],
 ) {
   if (pipeline.length === 0) {
     throw new Error("sequential pipeline requires at least one specialist");
   }
   const ordered = ensureTerminalEditor(pipeline);
-  const agents = createSpecialistAgents(model);
+  const agents = createSpecialistAgents(model, retrieverTools);
   // 动态节点名：用宽松 builder；AgentState 含 todos/citations（D-22）
   let g: any = new StateGraph(AgentState);
   for (const name of ordered) {
@@ -305,9 +337,10 @@ function createSupervisorWorkflow(
   model: LanguageModelLike,
   userText: string,
   memoryContextBlock?: string,
+  retrieverTools?: string[],
 ) {
   const skills = loadEnabledSkills();
-  const agents = createSpecialistAgents(model);
+  const agents = createSpecialistAgents(model, retrieverTools);
   const basePrompt = buildSupervisorPrompt(formatSkillsOverview(skills), userText);
   const prompt = memoryContextBlock?.trim()
     ? `${basePrompt}\n\n${memoryContextBlock.trim()}`
@@ -325,6 +358,115 @@ function createSupervisorWorkflow(
     // D-22：与外层一致，checkpoint 含 messages + todos + citations
     stateSchema: AgentState,
   });
+}
+
+/** D-11: server-side prefetch before Retriever LLM in single_specialist path */
+function buildPrefetchNode(plan: IntentPlan) {
+  return async (
+    state: AgentStateType,
+    config?: { configurable?: Record<string, unknown> },
+  ): Promise<{ messages: BaseMessage[] } | Record<string, never>> => {
+    const text = lastUserText(state.messages);
+    const workspaceId = String(config?.configurable?.workspaceId ?? "default");
+    const blocks: string[] = [];
+
+    if (plan.retrieverTools.includes("graph_search")) {
+      const graphOut = await invokeGraphSearch({ question: text });
+      blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+    }
+    if (plan.retrieverTools.includes("kb_search")) {
+      const kbOut = await invokeKbSearch({
+        query: extractKbSearchQuery(text),
+        userText: text,
+        workspaceId,
+      });
+      if (kbOut) {
+        blocks.push(`【知识库预检索·工具结果·可信】\n${kbOut}`);
+      }
+    }
+
+    if (blocks.length === 0) return {};
+    return {
+      messages: [
+        new SystemMessage(
+          [
+            "以下由服务端在 Retriever 运行前直接调用工具得到；子 Agent 必须采信，禁止编造相反结论。",
+            ...blocks,
+          ].join("\n\n"),
+        ),
+        ...state.messages,
+      ],
+    };
+  };
+}
+
+/**
+ * D-11: single specialist — START → prefetch (optional) → specialist → END.
+ * Retriever synthesizes answer; prefetch injects tool output as SystemMessage.
+ */
+export function createSingleSpecialistWorkflow(
+  model: LanguageModelLike,
+  plan: IntentPlan,
+  specialistName: SpecialistName,
+) {
+  const agents = createSpecialistAgents(model, plan.retrieverTools);
+  const specialist = agents[specialistName];
+  if (!specialist) {
+    throw new Error(`createSingleSpecialistWorkflow: unknown specialist ${specialistName}`);
+  }
+
+  const needsPrefetch = specialistName === "retriever" && plan.retrieverTools.length > 0;
+  let g: any = new StateGraph(AgentState).addNode(specialistName, specialist.graph);
+
+  if (needsPrefetch) {
+    g = g
+      .addNode(SINGLE_SPECIALIST_PREFETCH_NODE, buildPrefetchNode(plan))
+      .addEdge(START, SINGLE_SPECIALIST_PREFETCH_NODE)
+      .addEdge(SINGLE_SPECIALIST_PREFETCH_NODE, specialistName);
+  } else {
+    g = g.addEdge(START, specialistName);
+  }
+  g = g.addEdge(specialistName, END);
+  return g;
+}
+
+export type BuildExecutionGraphOptions = BuildAgentGraphOptions & {
+  plan: IntentPlan;
+};
+
+/**
+ * D-04: plan-driven subgraph selection — replaces unconditional buildSupervisorGraph when router on.
+ */
+export async function buildExecutionGraph(options: BuildExecutionGraphOptions) {
+  const model = options.model ?? createChatModel();
+  const checkpointer = await resolveCheckpointer(options.checkpointer);
+  const userText = options.userText ?? "";
+  const memoryContextBlock = options.memoryContextBlock;
+  const mode = resolveExecutionMode(options.plan);
+
+  let inner: ReturnType<typeof createSequentialPipelineWorkflow>;
+  if (mode === "sequential") {
+    inner = createSequentialPipelineWorkflow(
+      model,
+      options.plan.specialists as SpecialistName[],
+      options.plan.retrieverTools,
+    );
+  } else if (mode === "single_specialist") {
+    inner = createSingleSpecialistWorkflow(
+      model,
+      options.plan,
+      options.plan.specialists[0] as SpecialistName,
+    );
+  } else {
+    inner = createSupervisorWorkflow(
+      model,
+      userText,
+      memoryContextBlock,
+      options.plan.retrieverTools,
+    );
+  }
+
+  return inner.compile({ checkpointer });
 }
 
 /**

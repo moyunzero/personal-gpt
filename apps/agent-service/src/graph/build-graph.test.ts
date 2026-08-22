@@ -8,11 +8,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildAgentGraph,
+  createSingleSpecialistWorkflow,
   ensureCheckpointerSetup,
   getAgentRunConfig,
   resetCheckpointerSingletonsForTests,
   resolveAgentRoute,
   resolveCheckpointer,
+  resolveExecutionMode,
+  SINGLE_SPECIALIST_PREFETCH_NODE,
 } from "./build-graph";
 
 function mockChatModel() {
@@ -22,6 +25,78 @@ function mockChatModel() {
     configuration: { baseURL: "http://127.0.0.1:9" },
   });
 }
+
+describe("resolveExecutionMode (D-04/D-12/D-16)", () => {
+  const graphPlan = {
+    primary: "graph_relation" as const,
+    channels: "graph" as const,
+    specialists: ["retriever"],
+    retrieverTools: ["graph_search"],
+    fallbackChain: ["kb_search"],
+    reason: "l0:graph_relation",
+    confidence: 0.95,
+    graphSignal: true,
+  };
+
+  it("graph_relation one specialist → single_specialist not supervisor (D-04, D-16)", () => {
+    expect(resolveExecutionMode(graphPlan)).toBe("single_specialist");
+  });
+
+  it("chitchat → short (D-04)", () => {
+    expect(
+      resolveExecutionMode({
+        ...graphPlan,
+        primary: "chitchat",
+        channels: "none",
+        specialists: [],
+        retrieverTools: [],
+        fallbackChain: [],
+        reason: "l0:chitchat",
+      }),
+    ).toBe("short");
+  });
+
+  it("≥2 specialists in plan order → sequential (D-12)", () => {
+    expect(
+      resolveExecutionMode({
+        ...graphPlan,
+        primary: "multi_step",
+        channels: "kb",
+        specialists: ["researcher", "retriever", "editor"],
+        retrieverTools: ["kb_search"],
+        fallbackChain: [],
+        reason: "l0:multi_step",
+      }),
+    ).toBe("sequential");
+  });
+
+  it("ambiguous plan → supervisor only (D-16)", () => {
+    expect(
+      resolveExecutionMode({
+        ...graphPlan,
+        ambiguous: true,
+      }),
+    ).toBe("supervisor");
+  });
+});
+
+describe("createSingleSpecialistWorkflow (D-11)", () => {
+  it("includes prefetch node before retriever when retrieverTools set", () => {
+    const plan = {
+      primary: "graph_relation" as const,
+      channels: "graph" as const,
+      specialists: ["retriever"],
+      retrieverTools: ["graph_search"],
+      fallbackChain: ["kb_search"],
+      reason: "test",
+      confidence: 1,
+    };
+    const wf = createSingleSpecialistWorkflow(mockChatModel(), plan, "retriever");
+    const nodes = (wf as { nodes?: Record<string, unknown> }).nodes ?? {};
+    expect(Object.keys(nodes)).toContain(SINGLE_SPECIALIST_PREFETCH_NODE);
+    expect(Object.keys(nodes)).toContain("retriever");
+  });
+});
 
 describe("resolveAgentRoute", () => {
   it("routes greetings to short", () => {
