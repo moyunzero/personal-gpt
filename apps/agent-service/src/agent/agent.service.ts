@@ -15,11 +15,14 @@ import { loadMemoryContextBlock, persistTurnMemory } from "@personal-gpt/shared"
 import { z } from "zod";
 
 import {
+  buildExecutionGraph,
   buildSupervisorGraph,
   getAgentRunConfig,
   lastUserText,
   resolveAgentRoute,
+  resolveExecutionMode,
   shouldUseSequentialPipeline,
+  type ExecutionMode,
 } from "../graph/build-graph";
 import { buildShortReplyMessages } from "../graph/short-circuit";
 import { resolveKbMinSimilarity, resolveWorkspaceId } from "../rag/retrieve";
@@ -30,7 +33,7 @@ import {
   missingRequiredSpecialists,
   nextRequiredSpecialist,
 } from "../agents/pipeline-enforce";
-import { inferRequiredSpecialists } from "../agents/supervisor.prompt";
+import { inferRequiredSpecialists, type SpecialistName } from "../agents/supervisor.prompt";
 import { ensureAgentLangSmithEnv } from "../observability/langsmith";
 import {
   createAgentTraceCollector,
@@ -45,6 +48,11 @@ import {
 } from "../tools/kb-search-context";
 import { extractKbSearchQuery } from "../tools/extract-kb-query";
 import { invokeKbSearch } from "../tools/kb-search.tool";
+import { invokeGraphSearch } from "../tools/graph-search.tool";
+import { resolveIntentPlanForAgent } from "../routing/intent-plan";
+import { readIntentRouterConfig } from "@personal-gpt/shared/routing";
+import type { IntentPlan, RouterLayer } from "@personal-gpt/shared/routing";
+import type { AgentExecutionRoute } from "@personal-gpt/shared";
 import {
   clearWebSearchCallCount,
   formatWebReferencesMarkdown,
@@ -390,6 +398,65 @@ const SPECIALIST_META: Record<
   },
 };
 
+function shouldGraphFallbackAfterKbMiss(plan: IntentPlan, enableFallback: boolean): boolean {
+  if (!enableFallback) return false;
+  return plan.fallbackChain.includes("graph_search") || plan.graphSignal === true;
+}
+
+async function prefetchForSingleSpecialist(input: {
+  plan: IntentPlan;
+  userText: string;
+  workspaceId: string;
+  trace: AgentTraceCollector;
+}): Promise<SystemMessage[]> {
+  const seeds: SystemMessage[] = [];
+  if (input.plan.retrieverTools.includes("graph_search")) {
+    const graphOut = await invokeGraphSearch({ question: input.userText });
+    input.trace.recordTool({
+      name: "graph_search",
+      agent: "system",
+      summary: summarizeGraphToolOutput(graphOut),
+      detail: graphOut,
+    });
+    if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
+      seeds.push(
+        new SystemMessage(
+          [
+            "【图谱预检索·工具结果·可信】",
+            "以下由服务端在 Retriever 运行前直接调用 graph_search 得到；必须采信。",
+            graphOut,
+          ].join("\n"),
+        ),
+      );
+    }
+  }
+  if (input.plan.retrieverTools.includes("kb_search")) {
+    const kbOut = await invokeKbSearch({
+      query: extractKbSearchQuery(input.userText),
+      userText: input.userText,
+      workspaceId: input.workspaceId,
+    });
+    if (kbOut) {
+      input.trace.recordTool({
+        name: "kb_search",
+        agent: "system",
+        summary: `预检索 · ${summarizeKbToolOutput(kbOut)}`,
+        detail: kbOut,
+      });
+      seeds.push(
+        new SystemMessage(
+          [
+            "【知识库预检索·工具结果·可信】",
+            "以下由服务端在 Retriever 运行前直接调用 kb_search 得到；必须采信。",
+            kbOut,
+          ].join("\n"),
+        ),
+      );
+    }
+  }
+  return seeds;
+}
+
 function writeProgress(
   writer: { write: (chunk: any) => void },
   threadId: string,
@@ -495,8 +562,26 @@ function markSupervisorDirectAnswer(tracker: ProgressTracker): void {
   tracker.onChange();
 }
 
-function applyNodeUpdate(tracker: ProgressTracker, nodeName: string): void {
+function applyNodeUpdate(
+  tracker: ProgressTracker,
+  nodeName: string,
+  executionMode?: ExecutionMode,
+): void {
   const key = nodeName.toLowerCase();
+
+  if (key === "prefetch") {
+    tracker.sawSpecialist = true;
+    tracker.directAnswerMarked = false;
+    tracker.stepsById.set("step-prefetch", {
+      id: "step-prefetch",
+      agent: "System",
+      title: "预检索",
+      status: "completed",
+      summary: "服务端工具预取（D-11）",
+    });
+    tracker.onChange();
+    return;
+  }
 
   if (key === "supervisor") {
     const existing = tracker.stepsById.get("step-supervisor");
@@ -597,7 +682,32 @@ function applyNodeUpdate(tracker: ProgressTracker, nodeName: string): void {
   tracker.onChange();
 }
 
-function finalizeProgress(tracker: ProgressTracker): void {
+function finalizeProgress(tracker: ProgressTracker, executionMode?: ExecutionMode): void {
+  if (executionMode === "single_specialist" || executionMode === "sequential") {
+    for (const name of tracker.ranSpecialists) {
+      const meta = SPECIALIST_META[name];
+      if (!meta) continue;
+      tracker.todos = tracker.todos.map((t) =>
+        t.id === meta.todoId ? { ...t, status: "completed" as const } : t,
+      );
+      const step = tracker.stepsById.get(meta.stepId);
+      if (step && step.status !== "completed") {
+        tracker.stepsById.set(meta.stepId, { ...step, status: "completed" });
+      }
+    }
+    tracker.todos = tracker.todos.map((t) =>
+      t.status === "active" ? { ...t, status: "completed" as const } : t,
+    );
+    for (const [id, step] of tracker.stepsById) {
+      if (step.status === "active") {
+        tracker.stepsById.set(id, { ...step, status: "completed" });
+      }
+    }
+    tracker.activeSpecialist = null;
+    tracker.onChange();
+    return;
+  }
+
   if (!tracker.sawSpecialist) {
     markSupervisorDirectAnswer(tracker);
     const step = tracker.stepsById.get("step-supervisor");
@@ -636,8 +746,9 @@ function finalizeProgress(tracker: ProgressTracker): void {
 }
 
 function buildInitialProgress(
-  route: "short" | "supervisor",
+  route: AgentExecutionRoute,
   userText = "",
+  plan?: IntentPlan,
 ): {
   todos: TodoItem[];
   steps: AgentStepPayload[];
@@ -657,10 +768,68 @@ function buildInitialProgress(
     };
   }
 
-  const required = inferRequiredSpecialists(userText);
+  if (route === "single_specialist" && plan?.specialists.length === 1) {
+    const name = plan.specialists[0]!;
+    const meta = SPECIALIST_META[name];
+    const toolHint = plan.retrieverTools.includes("graph_search")
+      ? "graph_search"
+      : plan.retrieverTools.includes("kb_search")
+        ? "kb_search"
+        : "";
+    return {
+      todos: meta
+        ? [{ id: meta.todoId, label: meta.title, status: "pending" as const }]
+        : [],
+      steps: [
+        {
+          id: "step-prefetch",
+          agent: "System",
+          title: toolHint === "graph_search" ? "图谱检索" : "知识库检索",
+          status: "active",
+          summary: `single_specialist · ${toolHint || name} 预检索 + LLM 复述`,
+        },
+        ...(meta
+          ? [
+              {
+                id: meta.stepId,
+                agent: meta.agent,
+                title: meta.title,
+                status: "pending" as const,
+                summary: meta.summary,
+              },
+            ]
+          : []),
+      ],
+    };
+  }
+
+  if (route === "sequential" && plan && plan.specialists.length >= 2) {
+    const pipeline = plan.specialists;
+    return {
+      todos: pipeline.map((name: string) => {
+        const meta = SPECIALIST_META[name]!;
+        return {
+          id: meta.todoId,
+          label: meta.title,
+          status: "pending" as const,
+        };
+      }),
+      steps: [
+        {
+          id: "step-supervisor",
+          agent: "System",
+          title: "顺序流水线",
+          status: "active",
+          summary: `确定性边：${pipeline.join(" → ")}`,
+        },
+      ],
+    };
+  }
+
+  const required = plan?.specialists ?? inferRequiredSpecialists(userText);
   const todos: TodoItem[] =
     required.length >= 2
-      ? required.map((name) => {
+      ? required.map((name: string) => {
           const meta = SPECIALIST_META[name]!;
           return {
             id: meta.todoId,
@@ -868,7 +1037,25 @@ export class AgentService {
     const parsed = parseAgentChatBody(body);
     const lcMessages = await toBaseMessages(parsed.messages);
     const userText = lastUserText(lcMessages);
-    const route = resolveAgentRoute(userText);
+    const routerConfig = readIntentRouterConfig();
+    let intentPlan: IntentPlan | undefined;
+    let routerLayers: RouterLayer[] = [];
+    let executionMode: ExecutionMode;
+
+    if (routerConfig.enableIntentRouter) {
+      const resolved = await resolveIntentPlanForAgent({
+        query: userText,
+        workspaceId: parsed.workspaceId,
+      });
+      intentPlan = resolved.plan;
+      routerLayers = resolved.layers;
+      executionMode = resolveExecutionMode(intentPlan);
+    } else {
+      executionMode = resolveAgentRoute(userText) === "short" ? "short" : "supervisor";
+    }
+
+    const executionRoute = executionMode as AgentExecutionRoute;
+    const requiredEarly = intentPlan?.specialists ?? inferRequiredSpecialists(userText);
     const runConfig = getAgentRunConfig(parsed.threadId);
     const abortSignal = attachResponseAbortSignal(res);
     // 请求级 runId：避免同 thread 并发互相覆盖 KB/web 配额状态
@@ -887,17 +1074,18 @@ export class AgentService {
         resetWebSearchCallCount(runId);
         let assistantForMemory = "";
         try {
-          const requiredEarly = inferRequiredSpecialists(userText);
           const trace = createAgentTraceCollector({
             threadId: parsed.threadId,
             userText,
             intent: {
-              route,
+              route: executionRoute,
               requiredSpecialists: requiredEarly,
+              plan: intentPlan,
+              routerLayers: routerLayers.length ? routerLayers : undefined,
             },
             langsmithProject: process.env.LANGSMITH_PROJECT?.trim(),
           });
-          const { todos, steps } = buildInitialProgress(route, userText);
+          const { todos, steps } = buildInitialProgress(executionRoute, userText, intentPlan);
           trace.recordPlan(
             todos.map((t) => ({
               id: t.id,
@@ -924,7 +1112,7 @@ export class AgentService {
           };
 
           try {
-            if (route === "short") {
+            if (executionMode === "short") {
               // 直接写出短路正文：外层图 AIMessage 经 toUIMessageStream 不会产生 text-delta
               const shortMsgs = buildShortReplyMessages(userText);
               let shortText = shortMsgs
@@ -944,12 +1132,20 @@ export class AgentService {
               trace.recordSpecialist("System", "闲聊短路 · 未进入 Supervisor 多 Agent");
               emitTrace();
             } else {
-              const required = requiredEarly;
-              const hideUntilEditor = required.includes("editor");
-              const supervisorGraph = await buildSupervisorGraph({
-                userText,
-                memoryContextBlock: memoryBlock || undefined,
-              });
+              const required = requiredEarly as SpecialistName[];
+              const hideUntilEditor =
+                executionMode !== "single_specialist" && required.includes("editor");
+              const executionGraph =
+                routerConfig.enableIntentRouter && intentPlan
+                  ? await buildExecutionGraph({
+                      plan: intentPlan,
+                      userText,
+                      memoryContextBlock: memoryBlock || undefined,
+                    })
+                  : await buildSupervisorGraph({
+                      userText,
+                      memoryContextBlock: memoryBlock || undefined,
+                    });
               const tracker = createProgressTracker(todos, steps, () => {
                 emitTracker(tracker, writer, parsed.threadId);
               });
@@ -969,18 +1165,31 @@ export class AgentService {
               const textGate = { open: !hideUntilEditor };
               let visibleReportChars = 0;
               let finalBuf = "";
-              const sequential = shouldUseSequentialPipeline(required);
+              const sequential =
+                executionMode === "sequential" || shouldUseSequentialPipeline(required);
               if (sequential) {
                 trace.recordSpecialist(
                   "System",
                   `确定性流水线 · ${required.join(" → ")}（无 Supervisor handoff）`,
                 );
+              } else if (executionMode === "single_specialist") {
+                trace.recordSpecialist(
+                  "System",
+                  `single_specialist · ${intentPlan?.primary ?? "retriever"} · 预检索 + LLM 复述`,
+                );
               }
 
-              // 按需预检索：清单含 retriever，或用户话术涉及知识库
-              const shouldPrefetchKb =
-                required.includes("retriever") ||
-                /知识库|企业.?库|内部.?文档|\bkb\b|引用/.test(userText);
+              // 按需预检索：plan 驱动或 legacy 启发式
+              const shouldPrefetchKb = intentPlan
+                ? intentPlan.retrieverTools.includes("kb_search") ||
+                  intentPlan.channels === "kb" ||
+                  intentPlan.channels === "kb+graph"
+                : required.includes("retriever") ||
+                  /知识库|企业.?库|内部.?文档|\bkb\b|引用/.test(userText);
+              const skipKbPrefetchForSingleGraph =
+                executionMode === "single_specialist" &&
+                intentPlan?.retrieverTools.includes("graph_search") &&
+                !intentPlan?.retrieverTools.includes("kb_search");
               let seededMessages: Array<SystemMessage | (typeof lcMessages)[number]> = [
                 ...lcMessages,
               ];
@@ -996,7 +1205,7 @@ export class AgentService {
                   ...seededMessages,
                 ];
               }
-              if (shouldPrefetchKb) {
+              if (shouldPrefetchKb && !skipKbPrefetchForSingleGraph) {
                 const KB_PREFETCH_TIMEOUT_MS = 8_000;
                 let timer: ReturnType<typeof setTimeout> | undefined;
                 let onAbort: (() => void) | undefined;
@@ -1038,17 +1247,55 @@ export class AgentService {
                   }
                   if (/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbPrefetch)) {
                     tracker.kbNoRelevantHit = true;
+                    if (
+                      intentPlan &&
+                      shouldGraphFallbackAfterKbMiss(intentPlan, routerConfig.enableKbGraphFallback)
+                    ) {
+                      const graphOut = await invokeGraphSearch({ question: userText });
+                      trace.recordTool({
+                        name: "graph_search",
+                        agent: "system",
+                        summary: summarizeGraphToolOutput(graphOut),
+                        detail: graphOut,
+                      });
+                      if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
+                        seededMessages = [
+                          new SystemMessage(
+                            [
+                              "【图谱回退检索·工具结果·可信】",
+                              "KB 未命中后按 IntentPlan fallbackChain 触发 graph_search；必须采信。",
+                              graphOut,
+                            ].join("\n"),
+                          ),
+                          ...seededMessages,
+                        ];
+                      }
+                    }
                   }
-                  seededMessages = [
-                    new SystemMessage(
-                      [
-                        "【知识库预检索·工具结果·可信】",
-                        "以下由服务端直接调用 kb_search 得到；子 Agent 必须采信，禁止编造相反的命中/未命中结论。",
-                        kbPrefetch,
-                      ].join("\n"),
-                    ),
-                    ...lcMessages,
-                  ];
+                  if (!/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbPrefetch)) {
+                    seededMessages = [
+                      new SystemMessage(
+                        [
+                          "【知识库预检索·工具结果·可信】",
+                          "以下由服务端直接调用 kb_search 得到；子 Agent 必须采信，禁止编造相反的命中/未命中结论。",
+                          kbPrefetch,
+                        ].join("\n"),
+                      ),
+                      ...seededMessages,
+                    ];
+                  }
+                }
+              }
+
+              if (executionMode === "single_specialist" && intentPlan) {
+                const prefetchSeeds = await prefetchForSingleSpecialist({
+                  plan: intentPlan,
+                  userText,
+                  workspaceId: parsed.workspaceId,
+                  trace,
+                });
+                if (prefetchSeeds.length) {
+                  seededMessages = [...prefetchSeeds, ...seededMessages];
                 }
               }
 
@@ -1057,7 +1304,7 @@ export class AgentService {
               }
 
               const drainGraphStream = async (input: { messages: unknown }): Promise<void> => {
-                const lgStream = await supervisorGraph.stream(
+                const lgStream = await executionGraph.stream(
                   input as { messages: typeof lcMessages },
                   streamConfig,
                 );
@@ -1065,7 +1312,7 @@ export class AgentService {
                   collectCitationsFromUpdate(update, citationBag, tracker, trace, webSources);
                   for (const nodeName of Object.keys(update)) {
                     const before = tracker.activeSpecialist;
-                    applyNodeUpdate(tracker, nodeName);
+                    applyNodeUpdate(tracker, nodeName, executionMode);
                     const key = nodeName.toLowerCase();
                     if (SPECIALIST_META[key] && tracker.activeSpecialist === key) {
                       const meta = SPECIALIST_META[key]!;
@@ -1142,8 +1389,8 @@ export class AgentService {
 
               await drainGraphStream({ messages: seededMessages });
 
-              // Supervisor 开放模式才需要 HumanMessage 强制续跑；Sequential 由边保证跑完清单
-              if (!sequential) {
+              // Supervisor 开放模式才需要 HumanMessage 强制续跑；Sequential / single_specialist 由边保证
+              if (!sequential && executionMode !== "single_specialist") {
                 let forceRound = 0;
                 while (
                   !tracker.sawError &&
@@ -1213,7 +1460,7 @@ export class AgentService {
                   finalBuf += refMd;
                   trace.appendFinalText(refMd);
                 }
-                finalizeProgress(tracker);
+                finalizeProgress(tracker, executionMode);
                 trace.recordPlan(
                   tracker.todos.map((t) => ({
                     id: t.id,
@@ -1224,7 +1471,7 @@ export class AgentService {
                 const citations = [...citationBag.values()];
                 // D-22：checkpoint 为真相源；SSE data-* 仅投影
                 try {
-                  await supervisorGraph.updateState(
+                  await executionGraph.updateState(
                     {
                       configurable: {
                         ...runConfig.configurable,
