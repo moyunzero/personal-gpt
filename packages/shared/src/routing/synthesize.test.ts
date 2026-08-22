@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { readIntentRouterConfig } from "./config";
+import { matchL0Rules } from "./l0-rules";
+import { synthesizeIntentPlan } from "./synthesize";
 import { IntentPlanSchema, PrimaryIntentSchema } from "./types";
 
 const PRIMARY_INTENTS = [
@@ -103,5 +105,66 @@ describe("readIntentRouterConfig (D-10/D-14)", () => {
     saved.ENABLE_L2_INTENT_CLASSIFIER = process.env.ENABLE_L2_INTENT_CLASSIFIER;
     process.env.ENABLE_L2_INTENT_CLASSIFIER = "true";
     expect(readIntentRouterConfig().enableL2IntentClassifier).toBe(true);
+  });
+});
+
+describe("synthesizeIntentPlan (D-03/D-13/D-10)", () => {
+  it("L0 terminal graph hit skips L1 kb_doc override (D-03 / Pitfall 3)", () => {
+    const l0 = matchL0Rules("珍珠奶茶有哪些原料，用了什么工艺？")!;
+    const plan = synthesizeIntentPlan({
+      query: "珍珠奶茶有哪些原料，用了什么工艺？",
+      l0,
+      l1: {
+        kbHigh: true,
+        kb: { probed: true, topSimilarity: 0.95, title: "seed doc" },
+        reason: "l1:kb_high:0.950",
+      },
+      neo4jOk: true,
+    });
+    expect(plan.primary).toBe("graph_relation");
+    expect(plan.retrieverTools).toEqual(["graph_search"]);
+  });
+
+  it("neo4jOk=false degrades graph_relation to kb_doc (D-10)", () => {
+    const l0 = matchL0Rules("珍珠奶茶有哪些原料，用了什么工艺？")!;
+    const plan = synthesizeIntentPlan({
+      query: "珍珠奶茶有哪些原料，用了什么工艺？",
+      l0,
+      neo4jOk: false,
+    });
+    expect(plan.primary).toBe("kb_doc");
+    expect(plan.reason).toContain("neo4j_unavailable");
+    expect(plan.retrieverTools).toEqual(["kb_search"]);
+  });
+
+  it("kb_doc with graphSignal true → fallbackChain includes graph_search (D-13)", () => {
+    const plan = synthesizeIntentPlan({
+      query: "奶茶工艺",
+      l1: {
+        kbHigh: true,
+        graphSignal: true,
+        kb: { probed: true, topSimilarity: 0.9 },
+        reason: "l1:kb_high",
+      },
+      neo4jOk: true,
+    });
+    expect(plan.primary).toBe("kb_graph_hybrid");
+    expect(plan.fallbackChain).toContain("graph_search");
+    expect(plan.graphSignal).toBe(true);
+  });
+
+  it("kb_doc without graph signals → no unconditional graph fallback (D-13)", () => {
+    const plan = synthesizeIntentPlan({
+      query: "奥德赛计划书建议",
+      l1: {
+        kbHigh: true,
+        graphSignal: false,
+        kb: { probed: true, topSimilarity: 0.9 },
+        reason: "l1:kb_high",
+      },
+      neo4jOk: true,
+    });
+    expect(plan.primary).toBe("kb_doc");
+    expect(plan.fallbackChain).not.toContain("graph_search");
   });
 });
