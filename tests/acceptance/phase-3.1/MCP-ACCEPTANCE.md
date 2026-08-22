@@ -12,14 +12,14 @@
 
 ## Test 1 — Agent trace / graph_search（H-04 / D-15）
 
-| Step | Action                          | Screenshot                                                       | Result      |
-| ---- | ------------------------------- | ---------------------------------------------------------------- | ----------- |
-| U01  | 打开首页                        | [U01-home.png](./screenshots/U01-home.png)                       | PASS        |
-| U02  | 切 Agent（MCP）                 | [U02-agent-mode.png](./screenshots/U02-agent-mode.png)           | PASS        |
-| M02  | MCP 点 Agent                    | [M02-mcp-agent-mode.png](./screenshots/M02-mcp-agent-mode.png)   | PASS        |
-| API  | `POST /api/agent/chat` 珍珠奶茶 | [A-agent-stream.txt](./A-agent-stream.txt)                       | **PASS**    |
-| 旁证 | IntentPlan + trace 证据板       | [A-agent-trace-board.png](./screenshots/A-agent-trace-board.png) | **PASS**    |
-| UI   | DOM graph_relation + trace      | [A-agent-graph-ui.png](./screenshots/A-agent-graph-ui.png)       | **PASS**    |
+| Step | Action                          | Screenshot                                                       | Result   |
+| ---- | ------------------------------- | ---------------------------------------------------------------- | -------- |
+| U01  | 打开首页                        | [U01-home.png](./screenshots/U01-home.png)                       | PASS     |
+| U02  | 切 Agent（MCP）                 | [U02-agent-mode.png](./screenshots/U02-agent-mode.png)           | PASS     |
+| M02  | MCP 点 Agent                    | [M02-mcp-agent-mode.png](./screenshots/M02-mcp-agent-mode.png)   | PASS     |
+| API  | `POST /api/agent/chat` 珍珠奶茶 | [A-agent-stream.txt](./A-agent-stream.txt)                       | **PASS** |
+| 旁证 | IntentPlan + trace 证据板       | [A-agent-trace-board.png](./screenshots/A-agent-trace-board.png) | **PASS** |
+| UI   | DOM graph_relation + trace      | [A-agent-graph-ui.png](./screenshots/A-agent-graph-ui.png)       | **PASS** |
 
 **API 断言（PASS）：**
 
@@ -74,28 +74,28 @@
 | Chat 图谱路径卡片               | [C-chat-ui-graph-paths.png](./screenshots/C-chat-ui-graph-paths.png) | **PASS** |
 | Agent kb_doc + Citation + Trace | [B-agent-kb-ui.png](./screenshots/B-agent-kb-ui.png)                 | **PASS** |
 | Agent graph_relation + 步骤中文 | [A-agent-graph-ui.png](./screenshots/A-agent-graph-ui.png)           | **PASS** |
-| Send（输入后发送）              | `R02`–`R04` · UI-MCP-RESULT                                        | **PASS** |
+| Send（输入后发送）              | `R02`–`R04` · UI-MCP-RESULT                                          | **PASS** |
 
 ## Test 5 — 全量 Ollama UAT（API + Playwright UI）
 
 **Report:** [FULL-UAT-REPORT.html](./FULL-UAT-REPORT.html) · **11/11 PASS** · 2026-08-22T15:15:13Z
 
-| 环节      | 步骤概要                          | 产物                    |
-| --------- | --------------------------------- | ----------------------- |
-| infra     | Web + Agent health                | —                       |
-| kb-api    | GET `/api/kb/documents`           | —                       |
-| agent-api | graph_relation + kb_doc synthesis | `A/B-*-stream.txt`      |
-| chat-api  | `data-graph-paths`                | `C-chat-stream.txt`     |
-| ui        | 首页 / Chat / Agent / KB 页       | `R01`–`R05.png`         |
+| 环节      | 步骤概要                          | 产物                |
+| --------- | --------------------------------- | ------------------- |
+| infra     | Web + Agent health                | —                   |
+| kb-api    | GET `/api/kb/documents`           | —                   |
+| agent-api | graph_relation + kb_doc synthesis | `A/B-*-stream.txt`  |
+| chat-api  | `data-graph-paths`                | `C-chat-stream.txt` |
+| ui        | 首页 / Chat / Agent / KB 页       | `R01`–`R05.png`     |
 
 ## 总评
 
-| 类别                                   | 结论                                                        |
-| -------------------------------------- | ----------------------------------------------------------- |
-| Agent kb_doc synthesis + citation 一致 | **PASS**（Test 3）                                          |
-| Agent intent routing + graph HIT       | **PASS**（Test 1）                                          |
-| Chat graph path SSE + UI cards         | **PASS**（Test 2）                                          |
-| Browser composer Send                  | **PASS**（输入文字后可发送；空输入 disabled 为预期）        |
-| Cursor Browser MCP UI（Test 4）          | **PASS**                                                    |
-| 全量 Ollama UAT（Test 5）                | **PASS**（11/11）                                           |
-| Phase 3.1 UAT overall                  | **PASS**（API + UI MCP + 全量报告）                         |
+| 类别                                   | 结论                                                 |
+| -------------------------------------- | ---------------------------------------------------- |
+| Agent kb_doc synthesis + citation 一致 | **PASS**（Test 3）                                   |
+| Agent intent routing + graph HIT       | **PASS**（Test 1）                                   |
+| Chat graph path SSE + UI cards         | **PASS**（Test 2）                                   |
+| Browser composer Send                  | **PASS**（输入文字后可发送；空输入 disabled 为预期） |
+| Cursor Browser MCP UI（Test 4）        | **PASS**                                             |
+| 全量 Ollama UAT（Test 5）              | **PASS**（11/11）                                    |
+| Phase 3.1 UAT overall                  | **PASS**（API + UI MCP + 全量报告）                  |

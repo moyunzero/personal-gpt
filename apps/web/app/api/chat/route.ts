@@ -220,11 +220,7 @@ export async function POST(req: Request) {
       }
     }
 
-    if (
-      graphOnlyRetrieve &&
-      graphPathsForUi.length === 0 &&
-      routeDecision.route === "retrieve"
-    ) {
+    if (graphOnlyRetrieve && graphPathsForUi.length === 0 && routeDecision.route === "retrieve") {
       contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID, {
         corpus,
       });

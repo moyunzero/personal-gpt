@@ -358,7 +358,11 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   await Promise.all(tasks);
 
   try {
-    await deleteByDocumentId(resolveCorpusTargets("user").esIndex, DEFAULT_WORKSPACE_ID, documentId);
+    await deleteByDocumentId(
+      resolveCorpusTargets("user").esIndex,
+      DEFAULT_WORKSPACE_ID,
+      documentId,
+    );
   } catch (err) {
     errors.push(err instanceof Error ? err : new Error(String(err)));
   }

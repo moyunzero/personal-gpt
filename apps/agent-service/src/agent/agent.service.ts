@@ -533,10 +533,9 @@ async function prefetchForSingleSpecialist(input: {
 }): Promise<SystemMessage[]> {
   const seeds: SystemMessage[] = [];
   if (input.plan.retrieverTools.includes("graph_search")) {
-    const graphOut = await raceExternalCall(
-      invokeGraphSearch({ question: input.userText }),
-      { signal: input.abortSignal },
-    );
+    const graphOut = await raceExternalCall(invokeGraphSearch({ question: input.userText }), {
+      signal: input.abortSignal,
+    });
     if (input.abortSignal?.aborted) return seeds;
     if (!graphOut) return seeds;
     input.trace.recordTool({

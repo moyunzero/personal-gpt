@@ -199,9 +199,7 @@ export class ShortTermRedisMemory {
         }
       }
       const block = parts.join("\n");
-      return block.length > CONTEXT_BLOCK_MAX
-        ? `${block.slice(0, CONTEXT_BLOCK_MAX)}…`
-        : block;
+      return block.length > CONTEXT_BLOCK_MAX ? `${block.slice(0, CONTEXT_BLOCK_MAX)}…` : block;
     } catch (err) {
       this.log("getContextBlock failed (fail-open)", err);
       return "";

@@ -42,12 +42,12 @@ describe("assertAllowlistedCypher", () => {
   });
 
   it("rejects untyped and multi-type relationship patterns", () => {
-    expect(() =>
-      assertAllowlistedCypher("MATCH (a:Product)-[]->(b:Ingredient) RETURN a"),
-    ).toThrow(/untyped relationship/i);
-    expect(() =>
-      assertAllowlistedCypher("MATCH (a:Product)-[r]->(b:Ingredient) RETURN a"),
-    ).toThrow(/untyped relationship/i);
+    expect(() => assertAllowlistedCypher("MATCH (a:Product)-[]->(b:Ingredient) RETURN a")).toThrow(
+      /untyped relationship/i,
+    );
+    expect(() => assertAllowlistedCypher("MATCH (a:Product)-[r]->(b:Ingredient) RETURN a")).toThrow(
+      /untyped relationship/i,
+    );
     expect(() =>
       assertAllowlistedCypher("MATCH (a:Product)-[:CONTAINS|HACK]->(b:Ingredient) RETURN a"),
     ).toThrow(/multi-type relationship/i);
