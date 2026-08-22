@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "./components/AppHeader";
 import AgentErrorCard from "./components/AgentErrorCard";
 import Bubble from "./components/Bubble";

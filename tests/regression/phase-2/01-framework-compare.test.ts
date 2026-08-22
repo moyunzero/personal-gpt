@@ -13,16 +13,16 @@ const toUIMessageStreamMock = vi.fn();
 const pipeUIMessageStreamToResponseMock = vi.fn();
 const createUIMessageStreamMock = vi.fn();
 
-vi.mock("../../../apps/agent-service/src/graph/build-graph", () => ({
-  buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
-  buildSupervisorGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
-  getAgentRunConfig: (threadId: string) => ({
-    recursionLimit: 40,
-    configurable: { thread_id: threadId },
-  }),
-  resolveAgentRoute: () => "supervisor",
-  lastUserText: () => "对比 LangGraph 与 AutoGen 并写报告",
-}));
+vi.mock("../../../apps/agent-service/src/graph/build-graph", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../apps/agent-service/src/graph/build-graph")>();
+  return {
+    ...actual,
+    buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+    buildSupervisorGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+    buildExecutionGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+  };
+});
 
 vi.mock("@ai-sdk/langchain", () => ({
   toBaseMessages: (...args: unknown[]) => toBaseMessagesMock(...args),
@@ -49,6 +49,7 @@ describe("Phase 2 regression #1: framework compare report", () => {
     createUIMessageStreamMock.mockReset();
 
     process.env.GROQ_API_KEY = "test-groq-key";
+    process.env.ENABLE_INTENT_ROUTER = "false";
     toBaseMessagesMock.mockResolvedValue([{ content: "对比 LangGraph 与 AutoGen" }]);
     streamMock.mockImplementation(() =>
       (async function* () {
