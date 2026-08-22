@@ -1,5 +1,5 @@
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
-import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
+import { createVectorStoreFromEnv } from "@personal-gpt/shared/stores/vector-store.factory";
 
 import { logger } from "@/lib/logger";
 
@@ -34,7 +34,7 @@ export async function probeKbRelevance(
       return { topSimilarity: 0, probed: false };
     }
 
-    const vectorStore = createVectorStore({ corpus });
+    const vectorStore = createVectorStoreFromEnv({ corpus });
     const hits = await vectorStore.search({
       workspaceId,
       vector,
