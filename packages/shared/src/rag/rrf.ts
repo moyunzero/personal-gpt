@@ -9,21 +9,33 @@ export function reciprocalRankFusion(
   k: number = Number(process.env.RRF_K ?? 60),
 ): RetrievedChunk[] {
   const rankConstant = Number.isFinite(k) && k > 0 ? k : 60;
-  const scores = new Map<string, { chunk: RetrievedChunk; score: number }>();
+  const scores = new Map<string, { chunk: RetrievedChunk; score: number; listIdx: number }>();
 
-  for (const list of lists) {
+  for (let listIdx = 0; listIdx < lists.length; listIdx++) {
+    const list = lists[listIdx]!;
     list.forEach((chunk, idx) => {
       const id = `${chunk.documentId ?? ""}:${chunk.chunkIndex ?? idx}`;
       const add = 1 / (rankConstant + idx + 1);
       const prev = scores.get(id);
       if (!prev) {
-        scores.set(id, { chunk, score: add });
+        scores.set(id, { chunk, score: add, listIdx });
         return;
       }
       prev.score += add;
-      // Prefer higher original similarity as representative payload when tying ids
-      if (chunk.similarity > prev.chunk.similarity) {
-        prev.chunk = chunk;
+      // Prefer later lists (vector cosine) over earlier BM25 payloads for gating similarity.
+      if (listIdx > prev.listIdx) {
+        prev.chunk = {
+          ...chunk,
+          bm25Score: chunk.bm25Score ?? prev.chunk.bm25Score,
+        };
+        prev.listIdx = listIdx;
+      } else if (listIdx === prev.listIdx && chunk.similarity > prev.chunk.similarity) {
+        prev.chunk = {
+          ...chunk,
+          bm25Score: chunk.bm25Score ?? prev.chunk.bm25Score,
+        };
+      } else if (chunk.bm25Score != null && prev.chunk.bm25Score == null) {
+        prev.chunk = { ...prev.chunk, bm25Score: chunk.bm25Score };
       }
     });
   }

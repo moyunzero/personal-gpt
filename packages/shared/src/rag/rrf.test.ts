@@ -36,14 +36,18 @@ describe("reciprocalRankFusion", () => {
   });
 
   it("ranks a unique top hit above single-list competitors", () => {
+    const bm25 = [
+      { ...chunk("shared", 1, 0), bm25Score: 12 },
+      { ...chunk("onlyEs", 0, 0), bm25Score: 8 },
+    ];
     const vector = [chunk("onlyVec", 0, 0.99), chunk("shared", 1, 0.5)];
-    const bm25 = [chunk("shared", 1, 0.9), chunk("onlyEs", 0, 0.8)];
 
-    const fused = reciprocalRankFusion([vector, bm25], 60);
+    const fused = reciprocalRankFusion([bm25, vector], 60);
 
     expect(fused[0]!.documentId).toBe("shared");
-    // Prefer higher original similarity when merging same id
-    expect(fused[0]!.similarity).toBe(0.9);
+    // Prefer vector-list cosine over BM25 _score when merging same id
+    expect(fused[0]!.similarity).toBe(0.5);
+    expect(fused[0]!.bm25Score).toBe(12);
     expect(fused.map((c) => `${c.documentId}:${c.chunkIndex}`)).toEqual([
       "shared:1",
       "onlyVec:0",

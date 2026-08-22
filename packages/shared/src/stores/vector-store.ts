@@ -19,6 +19,8 @@ export interface ChunkRecord {
 export interface RetrievedChunk {
   text: string;
   similarity: number;
+  /** BM25 _score from ES — not comparable to cosine; kept separate for hybrid RRF. */
+  bm25Score?: number;
   title?: string;
   source?: string;
   category?: string;

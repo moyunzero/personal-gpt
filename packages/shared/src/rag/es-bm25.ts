@@ -114,9 +114,11 @@ function mapHit(hit: {
   _score?: number | null;
 }): RetrievedChunk {
   const source = hit._source ?? {};
+  const bm25Score = Number(hit._score ?? 0);
   return {
     text: String(source.content ?? ""),
-    similarity: Number(hit._score ?? 0),
+    similarity: 0,
+    bm25Score,
     title: source.title as string | undefined,
     source: source.source as string | undefined,
     category: source.category as string | undefined,
