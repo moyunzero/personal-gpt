@@ -149,8 +149,28 @@ describe("synthesizeIntentPlan (D-03/D-13/D-10)", () => {
       neo4jOk: true,
     });
     expect(plan.primary).toBe("kb_graph_hybrid");
+    expect(plan.retrieverTools).toEqual(["kb_search", "graph_search"]);
     expect(plan.fallbackChain).toContain("graph_search");
     expect(plan.graphSignal).toBe(true);
+  });
+
+  it("mixed graph+KB L0 non-terminal → kb_graph_hybrid with both retriever tools (CR-X-01)", () => {
+    const l0 = matchL0Rules("珍珠奶茶原料知识库里怎么写的")!;
+    expect(l0?.terminal).toBe(false);
+    const plan = synthesizeIntentPlan({
+      query: "珍珠奶茶原料知识库里怎么写的",
+      l0,
+      l1: {
+        kbHigh: true,
+        graphSignal: true,
+        kb: { probed: true, topSimilarity: 0.9, title: "珍珠奶茶" },
+        reason: "l1:kb_high:0.900",
+      },
+      neo4jOk: true,
+    });
+    expect(plan.primary).toBe("kb_graph_hybrid");
+    expect(plan.retrieverTools).toContain("kb_search");
+    expect(plan.retrieverTools).toContain("graph_search");
   });
 
   it("kb_doc without graph signals → no unconditional graph fallback (D-13)", () => {

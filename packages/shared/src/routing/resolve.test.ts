@@ -85,6 +85,23 @@ describe("resolveIntentPlan", () => {
     expect(plan.primary).toBeDefined();
   });
 
+  it("mixed graph+KB query → kb_graph_hybrid with both retriever tools (CR-X-01)", async () => {
+    const probeKb = vi.fn().mockResolvedValue({
+      probed: true,
+      topSimilarity: 0.9,
+      title: "珍珠奶茶",
+    });
+    const { plan, layers } = await resolveIntentPlan("珍珠奶茶原料知识库里怎么写的", {
+      probeKb,
+      neo4jAvailable: () => true,
+    });
+    expect(layers).toContain("L0");
+    expect(layers).toContain("L1");
+    expect(plan.primary).toBe("kb_graph_hybrid");
+    expect(plan.retrieverTools).toContain("kb_search");
+    expect(plan.retrieverTools).toContain("graph_search");
+  });
+
   it("心理学 content query → kb_doc retriever (not graph default)", async () => {
     const { plan } = await resolveIntentPlan("心理学有哪些内容？整理给我", {
       neo4jAvailable: () => true,

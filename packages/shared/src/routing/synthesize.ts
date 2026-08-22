@@ -154,9 +154,10 @@ export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
   );
   const primary = pickPrimary(input);
   const specialists = specialistsFor(input, primary);
-  const retrieverTools = input.l0?.retrieverTools?.length
-    ? [...input.l0.retrieverTools]
-    : retrieverToolsFor(primary, graphSignal);
+  const retrieverTools =
+    input.l0?.retrieverTools?.length && primary === input.l0.primary
+      ? [...input.l0.retrieverTools]
+      : retrieverToolsFor(primary, graphSignal);
 
   const plan: IntentPlan = {
     primary,
