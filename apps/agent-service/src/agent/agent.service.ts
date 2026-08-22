@@ -34,6 +34,7 @@ import { inferRequiredSpecialists } from "../agents/supervisor.prompt";
 import { ensureAgentLangSmithEnv } from "../observability/langsmith";
 import {
   createAgentTraceCollector,
+  summarizeGraphToolOutput,
   summarizeKbToolOutput,
   type AgentTraceCollector,
 } from "../observability/agent-trace";
@@ -113,6 +114,13 @@ function collectCitationsFromUpdate(
             name: "kb_search",
             agent: nodeName,
             summary: summarizeKbToolOutput(content),
+            detail: content,
+          });
+        } else if (/GRAPH_SEARCH_STATUS:/i.test(trimmed)) {
+          trace.recordTool({
+            name: "graph_search",
+            agent: nodeName,
+            summary: summarizeGraphToolOutput(content),
             detail: content,
           });
         } else if (/^引用:\s*\d+/m.test(trimmed) && /URL:\s*https?:\/\//i.test(trimmed)) {

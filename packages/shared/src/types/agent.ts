@@ -2,7 +2,10 @@
  * Agent 模式跨端类型（web / agent-service）。
  * Phase 2：todo 进度、步骤面板、chat body 约定。
  * Phase 2.x：执行轨迹可观测（data-agent-trace）。
+ * Phase 3.1：IntentPlan + routerLayers on trace intent（D-08/D-15）。
  */
+
+import type { IntentPlan, RouterLayer } from "../routing/types";
 
 /** 单条 todo（Supervisor / 前端步骤面板） */
 export type TodoStatus = "pending" | "active" | "completed";
@@ -67,9 +70,20 @@ export interface AgentTraceEvent {
   detail?: string;
 }
 
+/** D-04/D-08: Agent execution mode surfaced on trace */
+export type AgentExecutionRoute =
+  | "short"
+  | "supervisor"
+  | "sequential"
+  | "single_specialist";
+
 export interface AgentTraceIntent {
-  route: "short" | "supervisor";
+  route: AgentExecutionRoute;
   requiredSpecialists: string[];
+  /** D-08: full IntentPlan from shared router */
+  plan?: IntentPlan;
+  /** D-08: layers hit during resolveIntentPlan (L0/L1/L2) */
+  routerLayers?: RouterLayer[];
 }
 
 export interface AgentTracePlanItem {
