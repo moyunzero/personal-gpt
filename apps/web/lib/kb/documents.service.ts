@@ -6,7 +6,12 @@ import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import type { IngestJobPayload } from "@personal-gpt/shared/types/kb";
 import { normalizeUploadMime } from "@personal-gpt/shared/utils/ingest";
 import { getUploadsDir } from "@personal-gpt/shared/utils/paths";
-import { deleteByDocumentId, resolveCorpusTargets } from "@personal-gpt/shared";
+import {
+  deleteByDocumentId,
+  deleteCatalogForDocument,
+  deleteGraphForDocument,
+  resolveCorpusTargets,
+} from "@personal-gpt/shared";
 import {
   createVectorStore,
   shouldWriteAstra,
@@ -16,6 +21,7 @@ import { createMilvusVectorStore } from "@personal-gpt/shared/stores/vector-stor
 
 import { DocumentEntity } from "@/lib/db/entities/document.entity";
 import { IngestJobEntity } from "@/lib/db/entities/ingest-job.entity";
+import { createEntityCatalogStore } from "@/lib/db/entity-catalog-store";
 import { getDataSource } from "@/lib/db/get-data-source";
 import { env } from "@/lib/env";
 
@@ -320,6 +326,13 @@ export async function updateDocumentMetadata(
   return docRepo.save(document);
 }
 
+async function purgeGraphAndCatalog(workspaceId: string, documentId: string): Promise<void> {
+  const ds = await getDataSource();
+  const store = createEntityCatalogStore(ds);
+  await deleteGraphForDocument(workspaceId, documentId);
+  await deleteCatalogForDocument(workspaceId, documentId, store);
+}
+
 /**
  * 删除文档（INGEST-04 / Pitfall 5）：
  * 先删 Astra 向量 → 再删本地文件 → 最后删 PG 行。
@@ -335,6 +348,12 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
 
   const errors: Error[] = [];
   const tasks: Promise<void>[] = [];
+
+  tasks.push(
+    purgeGraphAndCatalog(DEFAULT_WORKSPACE_ID, documentId).catch((err) => {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }),
+  );
 
   if (shouldWriteAstra()) {
     tasks.push(
@@ -397,6 +416,8 @@ export async function reindexDocument(
   if (document.status === "processing") {
     throw new ReindexBusyError();
   }
+
+  await purgeGraphAndCatalog(DEFAULT_WORKSPACE_ID, documentId);
 
   await docRepo.update(
     { id: documentId, workspaceId: DEFAULT_WORKSPACE_ID },
