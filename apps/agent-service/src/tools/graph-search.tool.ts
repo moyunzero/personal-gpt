@@ -7,16 +7,23 @@ import { tool } from "langchain";
 import { z } from "zod";
 
 import {
+  createCatalogEntityFixtureExecutor,
   createSeededMilkTeaFixtureExecutor,
   graphRagQuery,
+  resolveGraphEntity,
   type GraphQueryExecutor,
   type GraphRagResult,
+  type ResolvedGraphEntity,
 } from "@personal-gpt/shared";
 
 export type GraphSearchInput = {
   question: string;
+  workspaceId?: string;
+  resolvedEntity?: ResolvedGraphEntity;
   /** 测试注入；生产走 Neo4j read session */
   executor?: GraphQueryExecutor;
+  /** Optional document filter stub for Wave 1 PROD-03 (04-05) */
+  documentIds?: string[];
 };
 
 export async function invokeGraphSearch(input: GraphSearchInput): Promise<string> {
@@ -26,8 +33,16 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
   }
 
   try {
+    let resolvedEntity = input.resolvedEntity;
+    if (!resolvedEntity && input.workspaceId) {
+      const resolved = await resolveGraphEntity(question, input.workspaceId);
+      if (resolved) resolvedEntity = resolved;
+    }
+
     const result: GraphRagResult = await graphRagQuery({
       question,
+      workspaceId: input.workspaceId,
+      resolvedEntity,
       executor: input.executor,
     });
     if (!result.paths.length) {
@@ -61,13 +76,23 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
 }
 
 export const graphSearchTool = tool(
-  async (input: { question: string }) => invokeGraphSearch({ question: input.question }),
+  async (input: { question: string; workspaceId?: string; documentIds?: string[] }) =>
+    invokeGraphSearch({
+      question: input.question,
+      workspaceId: input.workspaceId,
+      documentIds: input.documentIds,
+    }),
   {
     name: "graph_search",
     description:
       "查询窄域知识图谱中的实体关系路径（节点 id + 关系类型可追溯）。适用于「A 包含什么 / A 与 B 的关系 / 配料工艺」类问题；非图谱问题请用 kb_search。",
     schema: z.object({
       question: z.string().min(1).describe("实体关系问题，例如：珍珠奶茶的配料用了什么工艺？"),
+      workspaceId: z.string().optional().describe("Workspace scope for user graph entities"),
+      documentIds: z
+        .array(z.string())
+        .optional()
+        .describe("Optional document filter stub (Wave 1 ACL; empty = no filter)"),
     }),
   },
 );
@@ -77,5 +102,25 @@ export function invokeGraphSearchWithFixture(question: string): Promise<string> 
   return invokeGraphSearch({
     question,
     executor: createSeededMilkTeaFixtureExecutor(),
+  });
+}
+
+/** 测试辅助：catalog entity path via entity_rel_path template */
+export function invokeGraphSearchWithCatalogFixture(
+  question: string,
+  workspaceId = "ws-1",
+): Promise<string> {
+  const catalogEntity: ResolvedGraphEntity = {
+    source: "catalog",
+    displayName: "Project Atlas",
+    normalizedName: "project atlas",
+    entityType: "concept",
+    neo4jNodeId: "entity:ws-1:project atlas:concept",
+  };
+  return invokeGraphSearch({
+    question,
+    workspaceId,
+    resolvedEntity: catalogEntity,
+    executor: createCatalogEntityFixtureExecutor(),
   });
 }

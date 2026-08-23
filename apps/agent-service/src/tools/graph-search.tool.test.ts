@@ -29,4 +29,12 @@ describe("graph_search tool", () => {
     expect(out).toMatch(/GRAPH_SEARCH_STATUS: NO_PATH/);
     expect(out).not.toMatch(/product:pearl-milk-tea/);
   });
+
+  it("returns HIT for catalog entity via workspace-scoped template", async () => {
+    const { invokeGraphSearchWithCatalogFixture } = await import("./graph-search.tool");
+    const out = await invokeGraphSearchWithCatalogFixture("Project Atlas 与谁有关？");
+    expect(out).toMatch(/GRAPH_SEARCH_STATUS: HIT/);
+    expect(out).toMatch(/entity:ws-1:project atlas:concept/);
+    expect(out).toMatch(/RELATED_TO/);
+  });
 });
