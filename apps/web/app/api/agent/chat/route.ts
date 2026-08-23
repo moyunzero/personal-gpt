@@ -14,6 +14,7 @@ import {
 } from "@/lib/chat/chat-session.service";
 import { createThreadId, SAFE_THREAD_ID_PATTERN } from "@/lib/chat/thread-id";
 import { logger } from "@/lib/logger";
+import { runApiGuards } from "@/lib/middleware/api-guards";
 
 import {
   AGENT_UPSTREAM_TIMEOUT_MS,
@@ -133,6 +134,15 @@ export async function POST(req: Request) {
 
   const retrievalCtx = await resolveRetrievalContext(authResult.session);
   const requestId = randomUUID();
+
+  return runApiGuards(
+    req,
+    {
+      userId: retrievalCtx.userId,
+      workspaceId: retrievalCtx.workspaceId,
+      requestId,
+    },
+    async () => {
   const upstream = agentUpstreamUrl();
   const headers = new Headers();
   const contentType = req.headers.get("content-type");
@@ -271,4 +281,7 @@ export async function POST(req: Request) {
     status: upstreamRes.status,
     headers: outHeaders,
   });
+    },
+    "chat",
+  );
 }

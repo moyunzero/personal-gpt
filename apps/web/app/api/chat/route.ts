@@ -22,7 +22,7 @@ import { getRelevantContext } from "@/lib/chat/retrieve";
 import { createChatStream } from "@/lib/chat/stream";
 import "@/lib/env";
 import { logger } from "@/lib/logger";
-import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
+import { runApiGuards } from "@/lib/middleware/api-guards";
 
 const MAX_CHAT_MESSAGES = 50;
 const GRAPH_RAG_TIMEOUT_MS = 12_000;
@@ -146,31 +146,14 @@ export async function POST(req: Request) {
     }
     const retrievalCtx = await resolveRetrievalContext(authResult.session);
 
-    // ====================== 限流（C1） ======================
-    // 按客户端 IP 限流 10 req / 60s 滑动窗口。
-    // checkRateLimit 内部对 Upstash 故障已做 fail-open，不会抛错。
-    const rl = await checkRateLimit(authResult.session.user.id, requestId);
-    if (!rl.success) {
-      return new Response(
-        JSON.stringify({
-          error: "Rate limit exceeded",
-          retryAfter: rl.retryAfterSeconds,
-          requestId,
-        }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "Retry-After": String(rl.retryAfterSeconds),
-            "X-RateLimit-Limit": String(rl.limit),
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": String(rl.reset),
-            ...corsHeaders,
-          },
-        },
-      );
-    }
-
+    const guarded = await runApiGuards(
+      req,
+      {
+        userId: retrievalCtx.userId,
+        workspaceId: retrievalCtx.workspaceId,
+        requestId,
+      },
+      async () => {
     const body = (await req.json()) as {
       messages?: unknown;
       corpus?: unknown;
@@ -337,6 +320,18 @@ export async function POST(req: Request) {
       if (value) streamResponse.headers.set(key, value);
     });
     return streamResponse;
+      },
+      "chat",
+    );
+
+    if (guarded.status === 429) {
+      const headers = new Headers(guarded.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        if (value) headers.set(key, value);
+      });
+      return new Response(guarded.body, { status: 429, headers });
+    }
+    return guarded;
   } catch (error) {
     // 把详细错误留在服务端，客户端只能拿到 requestId
     log.error("unhandled error", { err: error });
