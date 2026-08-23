@@ -2,7 +2,7 @@
 
 基于 Next.js 的个性化智能对话应用：RAG（检索增强生成）+ Astra 向量库 + 可自助管理的知识库（`/kb`），回答可溯源引用。
 
-当前基线：**v1.0 已封板**（Monorepo · BullMQ 异步入库 · 引用卡片 · 三层查询路由）。下一步见 [产品路线图](#产品路线图-product-roadmap)。
+当前基线：**v3.0 已关账**（混合检索 · 记忆 · Graph demo · 意图路由 · Phase 3.1 UAT）。下一步 **v4.0**（Graph KB 产品化 + 身份治理 + 可生产部署）。详见 [产品路线图](#产品路线图-product-roadmap)。
 
 [在线演示](https://personal-emotion-gpt.vercel.app) · [开发笔记](./docs/rag-chat-phase-1-notes.md)
 
@@ -345,13 +345,16 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 ## 文档
 
-| 文档                                                                                           | 说明                          |
+> `docs/` 与 `.planning/` 同为**本地文档目录**（`.gitignore` 排除，不入库、不推 GitHub）。克隆后请在本地维护路线图与开发笔记。
+
+| 文档（本地路径）                                                                               | 说明                          |
 | ---------------------------------------------------------------------------------------------- | ----------------------------- |
 | [docs/README.md](./docs/README.md)                                                             | docs 索引与笔记写作规范       |
 | [docs/rag-chat-phase-1-notes.md](./docs/rag-chat-phase-1-notes.md)                             | Phase 1 开发笔记（唯一真源）  |
 | [docs/enterprise-roadmap.md](./docs/enterprise-roadmap.md)                                     | 企业级路线图与任务拆解        |
 | [docs/issues/ISSUE-001-mixed-corpus-recall.md](./docs/issues/ISSUE-001-mixed-corpus-recall.md) | 混库召回已知边界              |
 | [docs/google-ai-provider.md](./docs/google-ai-provider.md)                                     | Gemini 方案备忘（非现行主栈） |
+| `.planning/ROADMAP.md`                                                                         | GSD 执行路线图（Phase/Plan）  |
 
 ## 产品路线图 (Product Roadmap)
 
@@ -402,14 +405,14 @@ Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单
 
 **v2 收口**：不再扩办事型工具；详细对标与后续规划见 `docs/enterprise-roadmap.md`。
 
-### v3.0 — 检索可信度 + 记忆 + 评测 🔜
+### v3.0 — 检索可信度 + 记忆 + 评测 ✅
 
-对标 RAGFlow/FastGPT「答得准」：混合检索默认路径、Corrective RAG、黄金集评测、Postgres checkpointer、Redis/Mem0 记忆。  
-**不做**：登录、连接器、业务写操作。
+对标 RAGFlow/FastGPT「答得准」：混合检索、Corrective RAG、黄金集评测、Redis/Mem0 记忆、Milvus/ES、Neo4j Graph demo、Phase 3.1 统一意图路由。  
+**已知缺口（v4 补齐）**：Postgres 多实例 checkpointer、权限感知检索、应用级 Graph KB、agent 全栈 Docker。
 
-### v4.0 — 身份治理 + 可生产部署
+### v4.0 — Graph KB + 身份治理 + 可生产部署 🔜
 
-对标 MaxKB/企业交付 + Copilot 权限裁剪：Auth、RBAC、ACL 过滤检索、全栈 Docker（含 agent）、会话历史、审计。
+对标 MaxKB 私有化交付 + Copilot 权限裁剪 + Glean 知识边界：**Wave 0** 用户文档自动构图；**Wave 1** Auth、RBAC、ACL 过滤检索、全栈 Docker（含 agent）、Postgres checkpointer、会话历史、审计。
 
 ### v5.0 — 连接器 Lite / HITL / 谨慎行动
 
@@ -417,7 +420,7 @@ Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单
 
 ---
 
-**当前进度**：**v1.0 已封板** · **v2.0 MVP + v2.x 加固** → 下一步 **v3.0（检索与评测）**。完整路线图：`docs/enterprise-roadmap.md`。
+**当前进度**：**v3.0 + Phase 3.1 已关账** → 下一步 **v4.0（Graph KB 产品化 + 身份 / 部署）**。完整路线图：`docs/enterprise-roadmap.md` · 执行进度：`.planning/ROADMAP.md`。
 
 ## 贡献
 

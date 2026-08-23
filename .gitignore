@@ -87,6 +87,7 @@ uploads/
 .planning/
 .env*.local
 
+# 本地产品与开发文档（与 .planning/ 同级，不入库、不推 GitHub）
 docs/
 
 # 本地 Phase 复盘博客（不入库）
