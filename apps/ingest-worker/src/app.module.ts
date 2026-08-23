@@ -1,7 +1,8 @@
 import { BullModule } from "@nestjs/bullmq";
-import { Controller, Get, Module } from "@nestjs/common";
+import { Controller, Get, Module, Res } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import type { Response } from "express";
 
 import { INGEST_QUEUE_NAME } from "@personal-gpt/shared";
 
@@ -12,12 +13,19 @@ import { IngestJobEntity } from "../../web/lib/db/entities/ingest-job.entity";
 import { WorkspaceEntity } from "../../web/lib/db/entities/workspace.entity";
 
 import { IngestModule } from "./ingest/ingest.module";
+import { metricsContentType, metricsText } from "./metrics";
 
 @Controller()
 class HealthController {
   @Get("health")
   health() {
     return { status: "ok", queue: INGEST_QUEUE_NAME };
+  }
+
+  @Get("metrics")
+  async metrics(@Res() res: Response): Promise<void> {
+    res.setHeader("Content-Type", metricsContentType());
+    res.send(await metricsText());
   }
 }
 

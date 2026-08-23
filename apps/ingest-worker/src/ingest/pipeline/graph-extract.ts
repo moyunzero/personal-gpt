@@ -7,6 +7,7 @@ import {
 import type { DataSource } from "typeorm";
 
 import { createEntityCatalogStore } from "../entity-catalog-store";
+import { graphExtractDurationSeconds } from "../../metrics";
 
 export type ExtractAndUpsertGraphParams = {
   workspaceId: string;
@@ -23,7 +24,9 @@ export async function extractAndUpsertGraph(
   params: ExtractAndUpsertGraphParams,
   options: ExtractAndUpsertGraphOptions = {},
 ): Promise<void> {
+  const extractStarted = process.hrtime.bigint();
   const { entities, relations } = await extractGraphFromChunks(params.chunks);
+  graphExtractDurationSeconds.observe(Number(process.hrtime.bigint() - extractStarted) / 1e9);
   await ensureNeo4jGraphConstraintsFromEnv();
   await upsertDocumentGraph({
     workspaceId: params.workspaceId,

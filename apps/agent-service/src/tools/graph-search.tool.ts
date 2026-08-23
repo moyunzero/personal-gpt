@@ -16,6 +16,8 @@ import {
   type ResolvedGraphEntity,
 } from "@personal-gpt/shared";
 
+import { graphHitTotal, graphMissTotal } from "../metrics";
+
 export type GraphSearchInput = {
   question: string;
   workspaceId?: string;
@@ -46,6 +48,7 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
       executor: input.executor,
     });
     if (!result.paths.length) {
+      graphMissTotal.inc();
       return ["GRAPH_SEARCH_STATUS: NO_PATH", "图谱未找到可追溯路径。"].join("\n");
     }
 
@@ -62,6 +65,7 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
       return [`[path ${i + 1}]`, "nodes:", nodes, "relationships:", rels].join("\n");
     });
 
+    graphHitTotal.inc();
     return [
       "GRAPH_SEARCH_STATUS: HIT",
       result.summary,

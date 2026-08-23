@@ -19,6 +19,7 @@ import { parseDocument } from "./pipeline/parse";
 import { splitText, toChunkRecords } from "./pipeline/split";
 import { traceIngestStep } from "./pipeline/tracing";
 import { upsertChunks } from "./pipeline/upsert";
+import { ingestFailuresTotal } from "../metrics";
 
 @Injectable()
 @Processor(INGEST_QUEUE_NAME, { concurrency: 2 })
@@ -114,6 +115,7 @@ export class IngestProcessor extends WorkerHost {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      ingestFailuresTotal.inc({ step: "ingest" });
       this.logger.error(`Ingest failed for document ${documentId}: ${message}`);
 
       try {
