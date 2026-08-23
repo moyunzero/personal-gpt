@@ -10,7 +10,10 @@ import {
 
 import type { DocumentStatus } from "@personal-gpt/shared/types/kb";
 
+import { UserEntity } from "./user.entity";
 import { WorkspaceEntity } from "./workspace.entity";
+
+export type DocumentVisibility = "workspace" | "private" | "restricted";
 
 @Entity("documents")
 export class DocumentEntity {
@@ -47,6 +50,19 @@ export class DocumentEntity {
 
   @Column({ name: "mime_type", type: "varchar", nullable: true })
   mimeType!: string | null;
+
+  @Column({ name: "owner_id", type: "uuid", nullable: true })
+  ownerId!: string | null;
+
+  @ManyToOne(() => UserEntity, { onDelete: "SET NULL", nullable: true })
+  @JoinColumn({ name: "owner_id" })
+  owner!: UserEntity | null;
+
+  @Column({ type: "varchar", default: "workspace" })
+  visibility!: DocumentVisibility;
+
+  @Column({ name: "restricted_user_ids", type: "jsonb", default: () => "'[]'" })
+  restrictedUserIds!: string[];
 
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;

@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 
+import { auth } from "@/auth";
+
 /**
- * KB API 鉴权：设 KB_ADMIN_TOKEN 时要求 Bearer token；未设则放行（本地 dev / E2E）。
+ * KB API 鉴权：优先 session（D-22）；保留 KB_ADMIN_TOKEN 供脚本/E2E 回退。
  */
-export function assertKbAuth(req: Request): NextResponse | null {
+export async function assertKbAuth(req: Request): Promise<NextResponse | null> {
+  const session = await auth();
+  if (session?.user?.id) {
+    return null;
+  }
+
   const expected = process.env.KB_ADMIN_TOKEN;
-  if (!expected) return null;
+  if (!expected) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const provided = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (provided !== expected) {
