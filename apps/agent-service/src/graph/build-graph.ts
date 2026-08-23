@@ -382,6 +382,11 @@ export function buildPrefetchNode(plan: IntentPlan) {
   ): Promise<{ messages: BaseMessage[] } | Record<string, never>> => {
     const text = lastUserText(state.messages);
     const workspaceId = String(config?.configurable?.workspaceId ?? "default");
+    const allowedRaw = config?.configurable?.allowedDocumentIds;
+    const documentIds =
+      Array.isArray(allowedRaw) && allowedRaw.length
+        ? allowedRaw.filter((id): id is string => typeof id === "string" && id.trim()).map((id) => id.trim())
+        : undefined;
     const raceOpts = {
       signal: config?.configurable?.abortSignal as AbortSignal | undefined,
     };
@@ -395,7 +400,10 @@ export function buildPrefetchNode(plan: IntentPlan) {
       (plan.fallbackChain.includes("graph_search") || plan.graphSignal === true);
 
     if (graphOnly) {
-      const graphOut = await raceExternalCall(invokeGraphSearch({ question: text }), raceOpts);
+      const graphOut = await raceExternalCall(
+        invokeGraphSearch({ question: text, workspaceId, documentIds }),
+        raceOpts,
+      );
       if (graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
         blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
       } else if (graphOut && plan.fallbackChain.includes("kb_search")) {
@@ -404,6 +412,7 @@ export function buildPrefetchNode(plan: IntentPlan) {
             query: extractKbSearchQuery(text),
             userText: text,
             workspaceId,
+            documentIds,
           }),
           raceOpts,
         );
@@ -422,13 +431,17 @@ export function buildPrefetchNode(plan: IntentPlan) {
           query: extractKbSearchQuery(text),
           userText: text,
           workspaceId,
+          documentIds,
         }),
         raceOpts,
       );
       if (kbOut) {
         const kbMiss = /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut);
         if (kbMiss && allowGraphFallback) {
-          graphOutCache = await raceExternalCall(invokeGraphSearch({ question: text }), raceOpts);
+          graphOutCache = await raceExternalCall(
+            invokeGraphSearch({ question: text, workspaceId, documentIds }),
+            raceOpts,
+          );
           if (graphOutCache && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOutCache)) {
             blocks.push(
               `【图谱回退检索·工具结果·可信】\nKB 未命中后按 fallbackChain 触发 graph_search；必须采信。\n${graphOutCache}`,
@@ -448,7 +461,10 @@ export function buildPrefetchNode(plan: IntentPlan) {
       ) {
         const graphOut =
           graphOutCache ??
-          (await raceExternalCall(invokeGraphSearch({ question: text }), raceOpts));
+          (await raceExternalCall(
+            invokeGraphSearch({ question: text, workspaceId, documentIds }),
+            raceOpts,
+          ));
         if (graphOut) {
           blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
         }

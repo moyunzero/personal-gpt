@@ -3,6 +3,7 @@
  * 调用 shared graphRagQuery；禁止新建 Graph/Corrective 子 Agent（D-32/D-35）。
  */
 
+import type { RunnableConfig } from "@langchain/core/runnables";
 import { tool } from "langchain";
 import { z } from "zod";
 
@@ -36,8 +37,11 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
 
   try {
     let resolvedEntity = input.resolvedEntity;
+    const documentIds = input.documentIds?.length ? input.documentIds : undefined;
     if (!resolvedEntity && input.workspaceId) {
-      const resolved = await resolveGraphEntity(question, input.workspaceId);
+      const resolved = await resolveGraphEntity(question, input.workspaceId, {
+        allowedDocumentIds: documentIds,
+      });
       if (resolved) resolvedEntity = resolved;
     }
 
@@ -46,6 +50,7 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
       workspaceId: input.workspaceId,
       resolvedEntity,
       executor: input.executor,
+      documentIds,
     });
     if (!result.paths.length) {
       graphMissTotal.inc();
@@ -79,13 +84,28 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
   }
 }
 
+function allowedDocumentIdsFromConfig(config?: RunnableConfig): string[] | undefined {
+  const fromCfg = config?.configurable?.allowedDocumentIds;
+  if (!Array.isArray(fromCfg)) return undefined;
+  const ids = fromCfg
+    .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+    .map((id) => id.trim());
+  return ids.length ? ids : undefined;
+}
+
 export const graphSearchTool = tool(
-  async (input: { question: string; workspaceId?: string; documentIds?: string[] }) =>
-    invokeGraphSearch({
+  async (
+    input: { question: string; workspaceId?: string; documentIds?: string[] },
+    config?: RunnableConfig,
+  ) => {
+    const fromConfig = allowedDocumentIdsFromConfig(config);
+    const documentIds = input.documentIds?.length ? input.documentIds : fromConfig;
+    return invokeGraphSearch({
       question: input.question,
       workspaceId: input.workspaceId,
-      documentIds: input.documentIds,
-    }),
+      documentIds,
+    });
+  },
   {
     name: "graph_search",
     description:

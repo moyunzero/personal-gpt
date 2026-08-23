@@ -80,9 +80,11 @@ function parseKbProbeFromToolOutput(text: string | undefined): KbProbeResult {
 export async function resolveIntentPlanForAgent(input: {
   query: string;
   workspaceId: string;
+  allowedDocumentIds?: string[];
 }): Promise<{ plan: IntentPlan; layers: RouterLayer[] }> {
   const config = readIntentRouterConfig();
   const neo4jOk = await probeNeo4jAvailable();
+  const documentIds = input.allowedDocumentIds?.length ? input.allowedDocumentIds : undefined;
 
   return resolveIntentPlan(input.query, {
     probeKb: async (q: string) => {
@@ -91,6 +93,7 @@ export async function resolveIntentPlanForAgent(input: {
         userText: q,
         workspaceId: input.workspaceId,
         topK: 3,
+        documentIds,
       });
       return parseKbProbeFromToolOutput(out);
     },
