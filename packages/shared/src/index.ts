@@ -101,13 +101,22 @@ export {
   type UpsertCatalogEntriesParams,
 } from "./graph/entity-catalog";
 export {
+  MILK_TEA_PATH_CYPHER,
+  ENTITY_REL_PATH_CYPHER,
+  DOC_ENTITY_MENTIONS_CYPHER,
+  GRAPH_CYPHER_TEMPLATES,
+  selectTemplateForEntity,
+  type GraphCypherTemplate,
+  type GraphCypherTemplateId,
+} from "./rag/graph-cypher-templates";
+export {
   graphRagQuery,
   seedMilkTeaSubgraph,
   createSeededMilkTeaFixtureExecutor,
+  createCatalogEntityFixtureExecutor,
   getNeo4jDriverFromEnv,
   resetNeo4jDriverForTests,
   resolveProductName,
-  MILK_TEA_PATH_CYPHER,
   MILK_TEA_SEED_CYPHER,
   type GraphRagResult,
   type GraphPathTrace,
@@ -116,3 +125,9 @@ export {
   type GraphQueryExecutor,
   type GraphRagQueryOptions,
 } from "./rag/graph-rag";
+export {
+  resolveGraphEntity,
+  setEntityCatalogStoreForTests,
+  type ResolvedGraphEntity,
+  type ResolveGraphEntityDeps,
+} from "./routing/entity-resolve";
