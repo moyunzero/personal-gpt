@@ -9,6 +9,10 @@ import { NextResponse } from "next/server";
 import { retrievalContextHeaders, resolveRetrievalContext } from "@/lib/auth/acl-resolver";
 import { requireSession } from "@/lib/auth/session";
 import {
+  extractLastUserContentFromMessages,
+  tapAgentStreamForPersistence,
+} from "@/lib/chat/agent-stream-persist";
+import {
   ensureChatSession,
   ThreadOwnershipError,
 } from "@/lib/chat/chat-session.service";
@@ -205,8 +209,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid thread_id" }, { status: 400 });
   }
 
+  let chatSession;
   try {
-    await ensureChatSession({
+    chatSession = await ensureChatSession({
       threadId: rawThread,
       userId: retrievalCtx.userId,
       workspaceId: retrievalCtx.workspaceId,
@@ -272,7 +277,18 @@ export async function POST(req: Request) {
     });
   }
 
-  const body = pipeUpstreamBody(upstreamRes.body, {
+  const userContent = extractLastUserContentFromMessages(parsedBody.messages);
+
+  let upstreamBody = upstreamRes.body;
+  if (chatSession) {
+    upstreamBody = tapAgentStreamForPersistence(upstreamBody, {
+      session: chatSession,
+      userContent,
+      upstreamStatus: upstreamRes.status,
+    });
+  }
+
+  const body = pipeUpstreamBody(upstreamBody, {
     clientSignal: req.signal,
     timeout,
   });
