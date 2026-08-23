@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "3.0.179",
+    "@aws-sdk/client-s3": "3.787.0",
     "@datastax/astra-db-ts": "2.2.1",
     "@personal-gpt/shared": "*",
     "@upstash/ratelimit": "^2.0.8",

@@ -8,6 +8,7 @@ import { DataSource, Repository } from "typeorm";
 import { INGEST_QUEUE_NAME } from "@personal-gpt/shared";
 import type { IngestJobPayload } from "@personal-gpt/shared";
 import { getEnv } from "@personal-gpt/shared/schemas/env";
+import { isS3Uri } from "@personal-gpt/shared/storage/s3-uri";
 import { DocumentEntity } from "../../../web/lib/db/entities/document.entity";
 import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity";
 
@@ -39,9 +40,11 @@ export class IngestProcessor extends WorkerHost {
     const { workspaceId, documentId, filePath, mimeType, title, category, tags } = job.data;
 
     const maxBytes = getEnv().UPLOAD_MAX_BYTES;
-    const stat = await fs.stat(filePath);
-    if (stat.size > maxBytes) {
-      throw new Error(`File exceeds upload limit: ${stat.size} bytes`);
+    if (!isS3Uri(filePath)) {
+      const stat = await fs.stat(filePath);
+      if (stat.size > maxBytes) {
+        throw new Error(`File exceeds upload limit: ${stat.size} bytes`);
+      }
     }
 
     const bullJobId = String(job.id ?? job.name);

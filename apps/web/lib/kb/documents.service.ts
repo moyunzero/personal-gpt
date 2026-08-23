@@ -24,6 +24,7 @@ import { IngestJobEntity } from "@/lib/db/entities/ingest-job.entity";
 import { createEntityCatalogStore } from "@/lib/db/entity-catalog-store";
 import { getDataSource } from "@/lib/db/get-data-source";
 import { env } from "@/lib/env";
+import { isMinioConfigured, uploadToMinio } from "@/lib/storage/minio";
 
 import { getIngestQueue } from "./queue";
 
@@ -147,13 +148,18 @@ export function serializeDocumentRow(document: DocumentEntity, job: IngestJobEnt
   };
 }
 
-async function saveUploadToDisk(file: UploadFileInput, mimeType: string): Promise<string> {
+async function saveUpload(file: UploadFileInput, mimeType: string): Promise<string> {
   const ext = resolveExtension(mimeType);
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (isMinioConfigured()) {
+    return uploadToMinio(buffer, mimeType, ext);
+  }
+
   const fileName = `${randomUUID()}.${ext}`;
   const uploadsDir = getUploadsDir();
   await fs.mkdir(uploadsDir, { recursive: true });
   const absolutePath = path.join(uploadsDir, fileName);
-  const buffer = Buffer.from(await file.arrayBuffer());
   await fs.writeFile(absolutePath, buffer);
   return absolutePath;
 }
@@ -191,7 +197,7 @@ export async function uploadDocument(
   const mimeType = normalizeUploadMime(file.name, file.type);
   validateUploadFile({ type: mimeType, size: file.size });
 
-  const filePath = await saveUploadToDisk(file, mimeType);
+  const filePath = await saveUpload(file, mimeType);
   const title = meta.title?.trim() || file.name.replace(/\.[^.]+$/, "") || file.name;
 
   const ds = await getDataSource();
