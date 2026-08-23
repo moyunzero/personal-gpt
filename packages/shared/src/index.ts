@@ -92,6 +92,7 @@ export {
   stableEntityId,
   type UpsertDocumentGraphParams,
 } from "./graph/neo4j-upsert";
+export { deleteGraphForDocument } from "./graph/neo4j-delete";
 export {
   upsertCatalogEntries,
   deleteCatalogForDocument,

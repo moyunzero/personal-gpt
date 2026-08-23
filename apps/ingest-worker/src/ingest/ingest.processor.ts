@@ -114,7 +114,7 @@ export class IngestProcessor extends WorkerHost {
       this.logger.error(`Ingest failed for document ${documentId}: ${message}`);
 
       try {
-        await deleteDocument(workspaceId, documentId, "user");
+        await deleteDocument(workspaceId, documentId, "user", { dataSource: this.dataSource });
       } catch (cleanupErr) {
         this.logger.warn(
           `Vector cleanup after ingest failure failed: ${
