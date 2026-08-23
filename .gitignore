@@ -17,12 +17,16 @@ packages/*/node_modules
 
 # acceptance / 本地人工与 live smoke 产物（不入库、不推 GitHub）
 tests/acceptance/**/*.png
+tests/acceptance/**/*.html
 tests/acceptance/**/*.log
+tests/acceptance/**/*-stream.txt
 tests/acceptance/**/*RESULT*.json
+tests/acceptance/**/*RESULT*.md
 tests/acceptance/**/checks*.json
 tests/acceptance/**/trace-obs*
 tests/acceptance/**/SMOKE-RESULT*.json
 tests/acceptance/**/fixtures/
+tests/acceptance/**/screenshots/
 tests/acceptance/**/run.mjs
 tests/acceptance/**/run-*.mjs
 tests/acceptance/**/smoke-*.mjs
@@ -31,10 +35,13 @@ tests/acceptance/**/run*.py
 tests/acceptance/**/*-probe.json
 tests/acceptance/**/*export.md
 tests/acceptance/**/*export.json
-# 保留验收说明文档
+tests/acceptance/**/*RETEST*.md
+tests/acceptance/**/*FIX-ACCEPTANCE*.md
+# 保留验收说明文档（截图/stream/报告仍走 .gitignore，不入库）
 !tests/acceptance/**/README.md
 !tests/acceptance/**/CLOSEOUT.md
 !tests/acceptance/**/ACCEPTANCE.md
+!tests/acceptance/**/MCP-ACCEPTANCE.md
 
 # next.js
 /.next/
@@ -80,6 +87,7 @@ uploads/
 .planning/
 .env*.local
 
+# 本地产品与开发文档（与 .planning/ 同级，不入库、不推 GitHub）
 docs/
 
 # 本地 Phase 复盘博客（不入库）

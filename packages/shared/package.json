@@ -45,6 +45,14 @@
       "types": "./src/stores/vector-store.astra.ts",
       "default": "./dist/stores/vector-store.astra.js"
     },
+    "./stores/vector-store.milvus": {
+      "types": "./src/stores/vector-store.milvus.ts",
+      "default": "./dist/stores/vector-store.milvus.js"
+    },
+    "./stores/vector-store.factory": {
+      "types": "./src/stores/vector-store.factory.ts",
+      "default": "./dist/stores/vector-store.factory.js"
+    },
     "./ai/groq-models": {
       "types": "./src/ai/groq-models.ts",
       "default": "./dist/ai/groq-models.js"
@@ -68,6 +76,10 @@
     "./ai/rag-helper": {
       "types": "./src/ai/rag-helper.ts",
       "default": "./dist/ai/rag-helper.js"
+    },
+    "./routing": {
+      "types": "./src/routing/index.ts",
+      "default": "./dist/routing/index.js"
     }
   },
   "scripts": {
@@ -79,7 +91,12 @@
   "dependencies": {
     "@ai-sdk/openai-compatible": "2.0.56",
     "@datastax/astra-db-ts": "2.2.1",
+    "@elastic/elasticsearch": "8.17.1",
+    "@zilliz/milvus2-sdk-node": "3.0.4",
     "ai": "6.0.177",
+    "ioredis": "5.11.1",
+    "mem0ai": "3.1.6",
+    "neo4j-driver": "6.2.0",
     "zod": "4.4.3"
   },
   "devDependencies": {

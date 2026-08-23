@@ -1,11 +1,23 @@
 /**
- * buildAgentGraph 单测：compile、闲聊短路、recursionLimit（无 live LLM）。
+ * buildAgentGraph 单测：compile、闲聊短路、recursionLimit、checkpointer（无 live LLM）。
  */
 import { HumanMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
-import { afterEach, describe, expect, it } from "vitest";
+import { MemorySaver } from "@langchain/langgraph";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildAgentGraph, getAgentRunConfig, resolveAgentRoute } from "./build-graph";
+import {
+  buildAgentGraph,
+  createSingleSpecialistWorkflow,
+  ensureCheckpointerSetup,
+  getAgentRunConfig,
+  resetCheckpointerSingletonsForTests,
+  resolveAgentRoute,
+  resolveCheckpointer,
+  resolveExecutionMode,
+  SINGLE_SPECIALIST_PREFETCH_NODE,
+  SINGLE_SPECIALIST_SYNTHESIZE_NODE,
+} from "./build-graph";
 
 function mockChatModel() {
   return new ChatOpenAI({
@@ -14,6 +26,95 @@ function mockChatModel() {
     configuration: { baseURL: "http://127.0.0.1:9" },
   });
 }
+
+describe("resolveExecutionMode (D-04/D-12/D-16)", () => {
+  const graphPlan = {
+    primary: "graph_relation" as const,
+    channels: "graph" as const,
+    specialists: ["retriever"],
+    retrieverTools: ["graph_search"],
+    fallbackChain: ["kb_search"],
+    reason: "l0:graph_relation",
+    confidence: 0.95,
+    graphSignal: true,
+  };
+
+  it("graph_relation one specialist → single_specialist not supervisor (D-04, D-16)", () => {
+    expect(resolveExecutionMode(graphPlan)).toBe("single_specialist");
+  });
+
+  it("chitchat → short (D-04)", () => {
+    expect(
+      resolveExecutionMode({
+        ...graphPlan,
+        primary: "chitchat",
+        channels: "none",
+        specialists: [],
+        retrieverTools: [],
+        fallbackChain: [],
+        reason: "l0:chitchat",
+      }),
+    ).toBe("short");
+  });
+
+  it("≥2 specialists in plan order → sequential (D-12)", () => {
+    expect(
+      resolveExecutionMode({
+        ...graphPlan,
+        primary: "multi_step",
+        channels: "kb",
+        specialists: ["researcher", "retriever", "editor"],
+        retrieverTools: ["kb_search"],
+        fallbackChain: [],
+        reason: "l0:multi_step",
+      }),
+    ).toBe("sequential");
+  });
+
+  it("ambiguous plan → supervisor only (D-16)", () => {
+    expect(
+      resolveExecutionMode({
+        ...graphPlan,
+        ambiguous: true,
+      }),
+    ).toBe("supervisor");
+  });
+});
+
+describe("createSingleSpecialistWorkflow (D-11)", () => {
+  it("includes prefetch + synthesizer for graph_relation retriever (rag_generate)", () => {
+    const plan = {
+      primary: "graph_relation" as const,
+      channels: "graph" as const,
+      specialists: ["retriever"],
+      retrieverTools: ["graph_search"],
+      fallbackChain: ["kb_search"],
+      reason: "test",
+      confidence: 1,
+    };
+    const wf = createSingleSpecialistWorkflow(mockChatModel(), plan, "retriever");
+    const nodes = (wf as { nodes?: Record<string, unknown> }).nodes ?? {};
+    expect(Object.keys(nodes)).toContain(SINGLE_SPECIALIST_PREFETCH_NODE);
+    expect(Object.keys(nodes)).toContain(SINGLE_SPECIALIST_SYNTHESIZE_NODE);
+    expect(Object.keys(nodes)).not.toContain("retriever");
+  });
+
+  it("non-synthesis specialist keeps retriever node without synthesizer", () => {
+    const plan = {
+      primary: "web_research" as const,
+      channels: "web" as const,
+      specialists: ["researcher"],
+      retrieverTools: [],
+      fallbackChain: [],
+      reason: "test",
+      confidence: 1,
+    };
+    const wf = createSingleSpecialistWorkflow(mockChatModel(), plan, "researcher");
+    const nodes = (wf as { nodes?: Record<string, unknown> }).nodes ?? {};
+    expect(Object.keys(nodes)).toContain("researcher");
+    expect(Object.keys(nodes)).not.toContain(SINGLE_SPECIALIST_SYNTHESIZE_NODE);
+  });
+});
 
 describe("resolveAgentRoute", () => {
   it("routes greetings to short", () => {
@@ -50,9 +151,68 @@ describe("getAgentRunConfig", () => {
   });
 });
 
+describe("resolveCheckpointer", () => {
+  const prevMode = process.env.AGENT_CHECKPOINTER;
+  const prevUrl = process.env.DATABASE_URL;
+
+  afterEach(() => {
+    resetCheckpointerSingletonsForTests();
+    if (prevMode === undefined) delete process.env.AGENT_CHECKPOINTER;
+    else process.env.AGENT_CHECKPOINTER = prevMode;
+    if (prevUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = prevUrl;
+  });
+
+  it("defaults to memory when DATABASE_URL missing (D-21 degrade)", async () => {
+    delete process.env.AGENT_CHECKPOINTER;
+    delete process.env.DATABASE_URL;
+    const saver = await resolveCheckpointer();
+    expect(saver).toBeInstanceOf(MemorySaver);
+  });
+
+  it("uses MemorySaver when AGENT_CHECKPOINTER=memory", async () => {
+    process.env.AGENT_CHECKPOINTER = "memory";
+    const saver = await resolveCheckpointer();
+    expect(saver).toBeInstanceOf(MemorySaver);
+  });
+
+  it("honors options.checkpointer override", async () => {
+    const injected = new MemorySaver();
+    const saver = await resolveCheckpointer(injected);
+    expect(saver).toBe(injected);
+  });
+
+  it("ensureCheckpointerSetup is no-op without DATABASE_URL", async () => {
+    delete process.env.AGENT_CHECKPOINTER;
+    delete process.env.DATABASE_URL;
+    await expect(ensureCheckpointerSetup()).resolves.toBeUndefined();
+  });
+
+  it("ensureCheckpointerSetup calls setup() once when postgres saver is ready", async () => {
+    const { plantPostgresSaverForTests } = await import("./build-graph");
+    process.env.AGENT_CHECKPOINTER = "postgres";
+    process.env.DATABASE_URL = "postgresql://u:p@127.0.0.1:5432/testdb";
+    resetCheckpointerSingletonsForTests();
+
+    const setup = vi.fn(async () => undefined);
+    plantPostgresSaverForTests({ setup } as never);
+
+    await ensureCheckpointerSetup();
+    await ensureCheckpointerSetup();
+    expect(setup).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("buildAgentGraph", () => {
-  it("compiles with a mock ChatModel (createSupervisor + MemorySaver)", async () => {
-    const graph = await buildAgentGraph({ model: mockChatModel() });
+  afterEach(() => {
+    resetCheckpointerSingletonsForTests();
+  });
+
+  it("compiles with a mock ChatModel (createSupervisor + checkpointer)", async () => {
+    const graph = await buildAgentGraph({
+      model: mockChatModel(),
+      checkpointer: new MemorySaver(),
+    });
     expect(graph).toBeTruthy();
     expect(typeof graph.invoke).toBe("function");
     expect(typeof graph.stream).toBe("function");
@@ -68,6 +228,7 @@ describe("buildAgentGraph", () => {
     process.env.AGENT_CHECKPOINTER = "sqlite";
     process.env.AGENT_CHECKPOINTER_SQLITE_PATH = join(dir, "t.sqlite");
     try {
+      resetCheckpointerSingletonsForTests();
       const graph = await buildAgentGraph({ model: mockChatModel() });
       expect(graph).toBeTruthy();
       expect(typeof graph.stream).toBe("function");
@@ -76,11 +237,15 @@ describe("buildAgentGraph", () => {
       else process.env.AGENT_CHECKPOINTER = prevMode;
       if (prevPath === undefined) delete process.env.AGENT_CHECKPOINTER_SQLITE_PATH;
       else process.env.AGENT_CHECKPOINTER_SQLITE_PATH = prevPath;
+      resetCheckpointerSingletonsForTests();
     }
   });
 
   it("short-circuits chitchat without entering supervisor workers", async () => {
-    const graph = await buildAgentGraph({ model: mockChatModel() });
+    const graph = await buildAgentGraph({
+      model: mockChatModel(),
+      checkpointer: new MemorySaver(),
+    });
     const run = getAgentRunConfig("chitchat-thread");
     const result = await graph.invoke({ messages: [new HumanMessage("你好")] }, run);
     const texts = (result.messages ?? []).map((m) =>
@@ -97,5 +262,59 @@ describe("buildAgentGraph", () => {
 
   it("marks non-chitchat as supervisor route before subgraph invoke", () => {
     expect(resolveAgentRoute("对比三家供应商报价并输出结构化分析报告")).toBe("supervisor");
+  });
+});
+
+describe("AgentState checkpoint channels (D-22)", () => {
+  it("resumes messages + todos + citations for same thread_id after rebuild", async () => {
+    const { END, START, StateGraph } = await import("@langchain/langgraph");
+    const { AgentState } = await import("./state");
+    const checkpointer = new MemorySaver();
+    const threadId = "d22-resume-thread";
+
+    const buildTiny = () =>
+      new StateGraph(AgentState)
+        .addNode("seed", (state) => ({
+          messages: state.messages,
+          todos: state.todos,
+          citations: state.citations,
+          workspaceId: state.workspaceId,
+        }))
+        .addEdge(START, "seed")
+        .addEdge("seed", END)
+        .compile({ checkpointer });
+
+    const graph1 = buildTiny();
+    await graph1.invoke(
+      {
+        messages: [new HumanMessage("记住这笔报销")],
+        todos: [{ id: "t1", content: "查政策", status: "completed" as const }],
+        citations: [
+          {
+            documentId: "doc-1",
+            title: "差旅政策",
+            similarity: 0.91,
+            snippet: "需事先申请",
+            source: "kb",
+          },
+        ],
+        workspaceId: "ws-d22",
+      },
+      getAgentRunConfig(threadId),
+    );
+
+    // Simulate process restart: new compiled graph, same checkpointer + thread_id
+    const graph2 = buildTiny();
+    const snapped = await graph2.getState(getAgentRunConfig(threadId));
+    const values = snapped.values as {
+      messages?: { content?: unknown }[];
+      todos?: { id: string }[];
+      citations?: { documentId: string }[];
+      workspaceId?: string;
+    };
+    expect(values.todos?.some((t) => t.id === "t1")).toBe(true);
+    expect(values.citations?.some((c) => c.documentId === "doc-1")).toBe(true);
+    expect(values.workspaceId).toBe("ws-d22");
+    expect(values.messages?.length).toBeGreaterThan(0);
   });
 });

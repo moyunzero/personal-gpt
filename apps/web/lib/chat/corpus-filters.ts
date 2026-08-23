@@ -1,4 +1,12 @@
-/** 路由预检与 retrieve Path A/B 共用的 corpus 过滤（对齐检索可见范围） */
+/**
+ * parseCorpus: request body corpus=seed|user；缺省 user（D-27/D-28, T-03-seed）。
+ */
+import type { Corpus } from "@personal-gpt/shared";
+
+/**
+ * @deprecated Path A/B Astra $or filter — superseded by physical corpus collections +
+ * shared hybridSearch (D-24/D-29). Kept for embedding-precheck until that migrates.
+ */
 export const ROUTE_CORPUS_FILTER = {
   $or: [
     { documentId: { $exists: true } },
@@ -6,3 +14,15 @@ export const ROUTE_CORPUS_FILTER = {
     { source: { $eq: "psychology-qa" } },
   ],
 } as const;
+
+export function routePrecheckFilter(corpus: Corpus) {
+  if (corpus === "seed") {
+    return ROUTE_CORPUS_FILTER;
+  }
+  return { documentId: { $exists: true } } as const;
+}
+
+/** Untrusted request field → corpus; anything other than "seed" → user. */
+export function parseCorpus(raw: unknown): Corpus {
+  return raw === "seed" ? "seed" : "user";
+}

@@ -20,14 +20,14 @@ describe("agent tool caps (D-07 / D-15)", () => {
   });
 
   it("documents per-agent tool allow-lists", () => {
-    expect([...AGENT_TOOL_CAPS.retriever]).toEqual(["kb_search"]);
+    expect([...AGENT_TOOL_CAPS.retriever]).toEqual(["kb_search", "graph_search"]);
     expect([...AGENT_TOOL_CAPS.researcher]).toEqual(["web_search"]);
     expect([...AGENT_TOOL_CAPS.analyst]).toEqual(["calculator"]);
     expect([...AGENT_TOOL_CAPS.editor]).toEqual([]);
     expect([...AGENT_TOOL_CAPS.supervisor]).toEqual([]);
   });
 
-  it("binds Retriever → kb_search only and Researcher → web_search only", async () => {
+  it("binds Retriever → kb_search+graph_search and Researcher → web_search only", async () => {
     const { ChatOpenAI } = await import("@langchain/openai");
     const model = new ChatOpenAI({
       model: "mock-model",
@@ -55,7 +55,7 @@ describe("agent tool caps (D-07 / D-15)", () => {
     const eNames = namesOf(editor as { tools?: Array<{ name?: string }> });
 
     if (rNames.length || sNames.length || aNames.length || eNames.length) {
-      expect(rNames).toEqual(["kb_search"]);
+      expect(rNames).toEqual(["kb_search", "graph_search"]);
       expect(sNames).toEqual(["web_search"]);
       expect(aNames).toEqual(["calculator"]);
       expect(eNames).toEqual([]);
@@ -71,12 +71,59 @@ describe("agent tool caps (D-07 / D-15)", () => {
     const buildSrc = await fs.readFile(path.join(dir, "../graph/build-graph.ts"), "utf8");
 
     expect(retrieverSrc).toMatch(/kbSearchTool|kb_search/);
+    expect(retrieverSrc).toMatch(/graphSearchTool|graph_search/);
     expect(retrieverSrc).not.toMatch(/webSearchTool/);
     expect(researcherSrc).toMatch(/webSearchTool|web_search/);
     expect(researcherSrc).not.toMatch(/kbSearchTool/);
     expect(analystSrc).toMatch(/calculatorTool|calculator/);
     expect(editorSrc).toMatch(/tools:\s*\[\s*\]/);
     expect(buildSrc).toMatch(/createRetrieverAgent|createResearcherAgent/);
+  });
+
+  it("createRetrieverAgent allowedTools graph_search only (D-02)", async () => {
+    const { ChatOpenAI } = await import("@langchain/openai");
+    const model = new ChatOpenAI({
+      model: "mock-model",
+      apiKey: "sk-test-mock",
+      configuration: { baseURL: "http://127.0.0.1:9" },
+    });
+    const { createRetrieverAgent } = await import("./retriever.agent");
+    const agent = createRetrieverAgent(model, { allowedTools: ["graph_search"] });
+    const names = ((agent as { tools?: Array<{ name?: string }> }).tools ?? []).map((t) => t.name);
+    if (names.length) {
+      expect(names).toEqual(["graph_search"]);
+    } else {
+      const fs = await import("node:fs/promises");
+      const src = await fs.readFile(`${__dirname}/retriever.agent.ts`, "utf8");
+      expect(src).toMatch(/allowedTools/);
+    }
+  });
+
+  it("createRetrieverAgent allowedTools kb_search excludes graph_search (D-02)", async () => {
+    const { ChatOpenAI } = await import("@langchain/openai");
+    const model = new ChatOpenAI({
+      model: "mock-model",
+      apiKey: "sk-test-mock",
+      configuration: { baseURL: "http://127.0.0.1:9" },
+    });
+    const { createRetrieverAgent } = await import("./retriever.agent");
+    const agent = createRetrieverAgent(model, { allowedTools: ["kb_search"] });
+    const names = ((agent as { tools?: Array<{ name?: string }> }).tools ?? []).map((t) => t.name);
+    if (names.length) {
+      expect(names).toEqual(["kb_search"]);
+      expect(names).not.toContain("graph_search");
+    }
+  });
+
+  it("createRetrieverAgent throws when allowedTools empty (D-02)", async () => {
+    const { ChatOpenAI } = await import("@langchain/openai");
+    const model = new ChatOpenAI({
+      model: "mock-model",
+      apiKey: "sk-test-mock",
+      configuration: { baseURL: "http://127.0.0.1:9" },
+    });
+    const { createRetrieverAgent } = await import("./retriever.agent");
+    expect(() => createRetrieverAgent(model, { allowedTools: [] })).toThrow(/allowedTools/);
   });
 
   it("Supervisor prompt has no specialist tool binding and states caps", () => {

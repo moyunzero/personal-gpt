@@ -10,6 +10,7 @@ const base = {
   ASTRA_DB_API_ENDPOINT: "https://example.apps.astra.datastax.com",
   ASTRA_DB_APPLICATION_TOKEN: "AstraCS:test",
   NIM_API_KEY: "nvapi-test",
+  NEO4J_PASSWORD: "test-neo4j-password",
 };
 
 describe("parseSharedEnv chat keys", () => {
@@ -43,5 +44,47 @@ describe("parseSharedEnv chat keys", () => {
         CHAT_PROVIDER: "openai",
       } as NodeJS.ProcessEnv),
     ).toThrow(/OPENAI_API_KEY/);
+  });
+
+  it("allows milvus-only without Astra credentials", () => {
+    const env = parseSharedEnv({
+      ...base,
+      GROQ_API_KEY: "gsk",
+      VECTOR_BACKEND: "milvus",
+      ASTRA_DB_COLLECTION: undefined,
+      ASTRA_DB_API_ENDPOINT: undefined,
+      ASTRA_DB_APPLICATION_TOKEN: undefined,
+    } as NodeJS.ProcessEnv);
+    expect(env.VECTOR_BACKEND).toBe("milvus");
+  });
+
+  it("requires Astra credentials when VECTOR_BACKEND=astra", () => {
+    try {
+      parseSharedEnv({
+        GROQ_API_KEY: "gsk",
+        NIM_API_KEY: "nvapi-test",
+        NEO4J_PASSWORD: "test-neo4j-password",
+        VECTOR_BACKEND: "astra",
+      } as NodeJS.ProcessEnv);
+      expect.fail("expected parseSharedEnv to throw");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      expect(message).toContain("- ASTRA_DB_COLLECTION:");
+    }
+  });
+
+  it("accepts USER+SEED corpus collections without legacy ASTRA_DB_COLLECTION", () => {
+    const env = parseSharedEnv({
+      GROQ_API_KEY: "gsk",
+      NIM_API_KEY: "nvapi-test",
+      NEO4J_PASSWORD: "test-neo4j-password",
+      VECTOR_BACKEND: "astra",
+      ASTRA_DB_API_ENDPOINT: "https://example.apps.astra.datastax.com",
+      ASTRA_DB_APPLICATION_TOKEN: "AstraCS:test",
+      ASTRA_DB_COLLECTION_USER: "user_col",
+      ASTRA_DB_COLLECTION_SEED: "seed_col",
+    } as NodeJS.ProcessEnv);
+    expect(env.ASTRA_DB_COLLECTION_USER).toBe("user_col");
+    expect(env.ASTRA_DB_COLLECTION_SEED).toBe("seed_col");
   });
 });

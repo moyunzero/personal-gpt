@@ -27,6 +27,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { createChatStream } from "./stream";
+import type { GraphPathDisplay } from "@/lib/chat/graph-path-display";
 
 function mockTextStream(chunks: Array<{ type: string; text?: string }>) {
   streamTextMock.mockReturnValue({
@@ -159,5 +160,75 @@ describe("createChatStream citations", () => {
     expect(streamTextMock).toHaveBeenCalled();
     const arg = streamTextMock.mock.calls[0]?.[0] as { model: { id: string; __mock: true } };
     expect(arg.model).toEqual({ id: "mock-model", __mock: true });
+  });
+});
+
+describe("createChatStream graph paths (D-07)", () => {
+  beforeEach(() => {
+    streamTextMock.mockReset();
+  });
+
+  it("writes data-graph-paths before text stream with path summary, no cypher", async () => {
+    mockSuccessfulTextStream("珍珠奶茶使用煮制工艺");
+
+    const graphPaths: GraphPathDisplay[] = [
+      {
+        nodes: ["Product:珍珠奶茶", "Ingredient:珍珠", "Method:煮制"],
+        relationships: ["CONTAINS", "USES"],
+      },
+    ];
+
+    const stream = createChatStream({
+      systemPrompt: "system",
+      messages: [{ role: "user", content: "珍珠奶茶有哪些原料，用了什么工艺？" }],
+      requestId: "req-graph",
+      citations: [],
+      graphPaths,
+    });
+
+    const parts = await collectStreamParts(stream);
+    const textStartIndex = parts.findIndex(
+      (part) => (part as { type: string }).type === "text-start",
+    );
+    const textEndIndex = parts.findIndex((part) => (part as { type: string }).type === "text-end");
+    const graphIndex = parts.findIndex(
+      (part) => (part as { type: string }).type === "data-graph-paths",
+    );
+
+    expect(graphIndex).toBeGreaterThan(-1);
+    if (textStartIndex >= 0) {
+      expect(graphIndex).toBeLessThan(textStartIndex);
+    } else if (textEndIndex >= 0) {
+      expect(graphIndex).toBeLessThan(textEndIndex);
+    }
+
+    const dataPart = parts[graphIndex] as {
+      type: string;
+      data: { paths: GraphPathDisplay[] };
+    };
+
+    expect(dataPart.data.paths).toHaveLength(1);
+    expect(dataPart.data.paths[0]!.nodes[0]).toContain("珍珠奶茶");
+
+    const serialized = JSON.stringify(dataPart.data);
+    expect(serialized).not.toMatch(/cypher/i);
+    expect(serialized).not.toMatch(/MATCH/i);
+  });
+
+  it("does not write data-graph-paths when paths are empty", async () => {
+    mockSuccessfulTextStream("你好");
+
+    const stream = createChatStream({
+      systemPrompt: "system",
+      messages: [{ role: "user", content: "你好" }],
+      requestId: "req-no-graph",
+      citations: [],
+      graphPaths: [],
+    });
+
+    const parts = await collectStreamParts(stream);
+    expect(parts.some((part) => (part as { type: string }).type === "data-graph-paths")).toBe(
+      false,
+    );
   });
 });

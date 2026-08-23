@@ -21,6 +21,9 @@ export type LoadSkillsOptions = {
 
 const DEFAULT_ENABLED = ["kb-retrieval", "web-research", "report-writer"] as const;
 
+/** Opt-in via ENABLED_SKILLS（Wave4 Graph）：graph-retrieval */
+export const OPTIONAL_SKILLS = ["graph-retrieval"] as const;
+
 /** 默认 skills 根：apps/agent-service/skills（相对本文件编译后路径） */
 export function defaultSkillsRoot(): string {
   return path.resolve(__dirname, "../../skills");

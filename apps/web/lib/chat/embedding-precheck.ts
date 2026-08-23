@@ -1,9 +1,11 @@
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
-import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
+import { createVectorStoreFromEnv } from "@personal-gpt/shared/stores/vector-store.factory";
 
 import { logger } from "@/lib/logger";
 
-import { ROUTE_CORPUS_FILTER } from "./corpus-filters";
+import type { Corpus } from "@personal-gpt/shared";
+
+import { routePrecheckFilter } from "./corpus-filters";
 import { embedQueryText } from "./embedding-service";
 import { ROUTE_DIRECT_SIMILARITY, ROUTE_RETRIEVE_SIMILARITY } from "./rag-options";
 
@@ -21,6 +23,7 @@ export async function probeKbRelevance(
   query: string,
   workspaceId: string = DEFAULT_WORKSPACE_ID,
   requestId?: string,
+  corpus: Corpus = "user",
 ): Promise<EmbeddingPrecheckResult> {
   const log = logger.child({ scope: "chat.embedding-precheck", requestId });
 
@@ -31,13 +34,13 @@ export async function probeKbRelevance(
       return { topSimilarity: 0, probed: false };
     }
 
-    const vectorStore = createVectorStore();
+    const vectorStore = createVectorStoreFromEnv({ corpus });
     const hits = await vectorStore.search({
       workspaceId,
       vector,
       limit: 1,
       similarityThreshold: 0,
-      filter: ROUTE_CORPUS_FILTER,
+      filter: routePrecheckFilter(corpus),
     });
 
     const top = hits[0];

@@ -7,15 +7,14 @@ import * as crypto from "crypto";
 
 import { embedTexts } from "@personal-gpt/shared/ai/embeddings";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
+import { resolveCorpusTargets } from "@personal-gpt/shared";
 
 const WORKSPACE_ID = process.env.WORKSPACE_ID ?? DEFAULT_WORKSPACE_ID;
 
-const {
-  ASTRA_DB_NAMESPACE,
-  ASTRA_DB_COLLECTION,
-  ASTRA_DB_API_ENDPOINT,
-  ASTRA_DB_APPLICATION_TOKEN,
-} = process.env;
+const { ASTRA_DB_NAMESPACE, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN } = process.env;
+
+/** Seed corpus physical collection (D-24); prompt-suggestion → corpus=seed */
+const ASTRA_DB_COLLECTION = resolveCorpusTargets("seed").astraCollection;
 
 if (!ASTRA_DB_API_ENDPOINT || !ASTRA_DB_APPLICATION_TOKEN) {
   throw new Error(
@@ -57,6 +56,7 @@ interface VectorDocument {
   author: string;
   fileHash: string;
   docId: string;
+  documentId: string;
 }
 
 // ====================== 配置 ======================
@@ -376,8 +376,8 @@ const loadPromptSuggestions = async () => {
     const embeddings = await getEmbeddingsBatch(chunks);
     console.log(`  ✔ 向量生成完成`);
 
-    // 准备插入数据
-    const docId = `prompt-${doc.category}-${Date.now()}`;
+    // 准备插入数据 — stable documentId from fileName (re-runs do not orphan chunks)
+    const docId = `prompt-${crypto.createHash("sha256").update(doc.fileName).digest("hex").slice(0, 16)}`;
     const insertPromises: Promise<unknown>[] = [];
 
     for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
@@ -389,6 +389,7 @@ const loadPromptSuggestions = async () => {
         category: doc.category,
         title: doc.title,
         fileName: doc.fileName,
+        documentId: docId,
         chunkIndex,
         totalChunks: chunks.length,
         keywords: doc.keywords,

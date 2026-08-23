@@ -5,7 +5,65 @@ import {
   assertSearchWorkspaceId,
   type AstraCollectionHandle,
   createAstraVectorStore,
+  resolveAstraCollectionName,
 } from "./vector-store.astra";
+
+describe("VectorStore corpus collection targeting (D-24)", () => {
+  it("resolveAstraCollectionName targets distinct user vs seed collections", () => {
+    const prev = {
+      USER: process.env.ASTRA_DB_COLLECTION_USER,
+      SEED: process.env.ASTRA_DB_COLLECTION_SEED,
+      LEGACY: process.env.ASTRA_DB_COLLECTION,
+    };
+    process.env.ASTRA_DB_COLLECTION_USER = "kb_user_phys";
+    process.env.ASTRA_DB_COLLECTION_SEED = "kb_seed_phys";
+    delete process.env.ASTRA_DB_COLLECTION;
+
+    expect(resolveAstraCollectionName({ corpus: "user" })).toBe("kb_user_phys");
+    expect(resolveAstraCollectionName({ corpus: "seed" })).toBe("kb_seed_phys");
+    expect(resolveAstraCollectionName({})).toBe("kb_user_phys");
+    expect(resolveAstraCollectionName({ collectionName: "explicit" })).toBe("explicit");
+
+    if (prev.USER === undefined) delete process.env.ASTRA_DB_COLLECTION_USER;
+    else process.env.ASTRA_DB_COLLECTION_USER = prev.USER;
+    if (prev.SEED === undefined) delete process.env.ASTRA_DB_COLLECTION_SEED;
+    else process.env.ASTRA_DB_COLLECTION_SEED = prev.SEED;
+    if (prev.LEGACY === undefined) delete process.env.ASTRA_DB_COLLECTION;
+    else process.env.ASTRA_DB_COLLECTION = prev.LEGACY;
+  });
+
+  it("user corpus falls back to legacy ASTRA_DB_COLLECTION when USER unset", () => {
+    const prev = {
+      USER: process.env.ASTRA_DB_COLLECTION_USER,
+      LEGACY: process.env.ASTRA_DB_COLLECTION,
+    };
+    delete process.env.ASTRA_DB_COLLECTION_USER;
+    process.env.ASTRA_DB_COLLECTION = "db_emotion";
+
+    expect(resolveAstraCollectionName({ corpus: "user" })).toBe("db_emotion");
+
+    if (prev.USER === undefined) delete process.env.ASTRA_DB_COLLECTION_USER;
+    else process.env.ASTRA_DB_COLLECTION_USER = prev.USER;
+    if (prev.LEGACY === undefined) delete process.env.ASTRA_DB_COLLECTION;
+    else process.env.ASTRA_DB_COLLECTION = prev.LEGACY;
+  });
+
+  it("user corpus uses kb_user default when USER and legacy unset", () => {
+    const prev = {
+      USER: process.env.ASTRA_DB_COLLECTION_USER,
+      LEGACY: process.env.ASTRA_DB_COLLECTION,
+    };
+    delete process.env.ASTRA_DB_COLLECTION_USER;
+    delete process.env.ASTRA_DB_COLLECTION;
+
+    expect(resolveAstraCollectionName({ corpus: "user" })).toBe("kb_user");
+
+    if (prev.USER === undefined) delete process.env.ASTRA_DB_COLLECTION_USER;
+    else process.env.ASTRA_DB_COLLECTION_USER = prev.USER;
+    if (prev.LEGACY === undefined) delete process.env.ASTRA_DB_COLLECTION;
+    else process.env.ASTRA_DB_COLLECTION = prev.LEGACY;
+  });
+});
 
 describe("VectorStore workspace isolation", () => {
   it("search throws when workspaceId is missing", async () => {

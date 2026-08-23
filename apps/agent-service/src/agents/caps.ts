@@ -10,7 +10,7 @@ export const MAX_PARALLEL_RESEARCH_TOPICS = 3;
 
 /** 文档化：各 Agent 允许的 tool 名（caps 单测对齐） */
 export const AGENT_TOOL_CAPS = {
-  retriever: ["kb_search"] as const,
+  retriever: ["kb_search", "graph_search"] as const,
   researcher: ["web_search"] as const,
   analyst: ["calculator"] as const,
   editor: [] as const,

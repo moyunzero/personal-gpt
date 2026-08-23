@@ -11,14 +11,20 @@ import type { Response } from "express";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import type { Citation } from "@personal-gpt/shared";
+import { loadMemoryContextBlock, persistTurnMemory } from "@personal-gpt/shared";
 import { z } from "zod";
 
+import { raceExternalCall } from "./race-external-call";
 import {
+  buildExecutionGraph,
   buildSupervisorGraph,
   getAgentRunConfig,
+  isRetrieverSynthesisPlan,
   lastUserText,
   resolveAgentRoute,
+  resolveExecutionMode,
   shouldUseSequentialPipeline,
+  type ExecutionMode,
 } from "../graph/build-graph";
 import { buildShortReplyMessages } from "../graph/short-circuit";
 import { resolveKbMinSimilarity, resolveWorkspaceId } from "../rag/retrieve";
@@ -29,10 +35,11 @@ import {
   missingRequiredSpecialists,
   nextRequiredSpecialist,
 } from "../agents/pipeline-enforce";
-import { inferRequiredSpecialists } from "../agents/supervisor.prompt";
+import { inferRequiredSpecialists, type SpecialistName } from "../agents/supervisor.prompt";
 import { ensureAgentLangSmithEnv } from "../observability/langsmith";
 import {
   createAgentTraceCollector,
+  summarizeGraphToolOutput,
   summarizeKbToolOutput,
   type AgentTraceCollector,
 } from "../observability/agent-trace";
@@ -43,6 +50,11 @@ import {
 } from "../tools/kb-search-context";
 import { extractKbSearchQuery } from "../tools/extract-kb-query";
 import { invokeKbSearch } from "../tools/kb-search.tool";
+import { invokeGraphSearch } from "../tools/graph-search.tool";
+import { resolveIntentPlanForAgent } from "../routing/intent-plan";
+import { readIntentRouterConfig } from "@personal-gpt/shared/routing";
+import type { IntentPlan, RouterLayer } from "@personal-gpt/shared/routing";
+import type { AgentExecutionRoute } from "@personal-gpt/shared";
 import {
   clearWebSearchCallCount,
   formatWebReferencesMarkdown,
@@ -50,7 +62,13 @@ import {
   resetWebSearchCallCount,
   type WebSearchSource,
 } from "../tools/web-search.tool";
-import { sanitizeUserFacingAgentText } from "./sanitize-user-text";
+import { sanitizeUserFacingAgentText, isToolCallLeakText } from "./sanitize-user-text";
+import { formatGraphAnswerFromToolOutput } from "./graph-answer-format";
+import {
+  formatKbAnswerFromCitations,
+  hasSubstantiveKbAnswer,
+  isKbSearchToolOutput,
+} from "./kb-answer-format";
 
 /**
  * 从 kb_search 工具返回文本解析真实 Citation（禁止依赖模型在正文里自造 DOC-*）。
@@ -85,7 +103,11 @@ export function parseKbCitationsFromToolText(text: string): Citation[] {
 function collectCitationsFromUpdate(
   update: Record<string, unknown>,
   bag: Map<string, Citation>,
-  tracker?: { kbNoRelevantHit: boolean },
+  tracker?: {
+    kbNoRelevantHit: boolean;
+    graphSearchHit?: boolean;
+    graphPrefetchOutput?: string;
+  },
   trace?: AgentTraceCollector,
   webSources?: Map<string, WebSearchSource>,
 ): void {
@@ -101,17 +123,37 @@ function collectCitationsFromUpdate(
             ? (msg as { kwargs: { content: string } }).kwargs.content
             : "";
       if (!content) continue;
-      if (tracker && /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(content)) {
-        tracker.kbNoRelevantHit = true;
+      if (tracker && isKbSearchToolOutput(content)) {
+        if (/KB_SEARCH_STATUS:\s*HIT/i.test(content)) {
+          tracker.kbNoRelevantHit = false;
+        } else if (
+          /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(content) &&
+          parseKbCitationsFromToolText(content).length === 0
+        ) {
+          tracker.kbNoRelevantHit = true;
+        }
+      }
+      if (tracker && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(content)) {
+        tracker.graphSearchHit = true;
+        if (!tracker.graphPrefetchOutput) {
+          tracker.graphPrefetchOutput = content;
+        }
       }
       if (trace) {
         // 仅认「工具原文」形态，避免专科复述被当成重复 tool 事件
         const trimmed = content.trim();
-        if (/^KB_SEARCH_STATUS:/i.test(trimmed) || trimmed.includes("[citation")) {
+        if (/KB_SEARCH_STATUS:/i.test(content) || content.includes("[citation")) {
           trace.recordTool({
             name: "kb_search",
             agent: nodeName,
             summary: summarizeKbToolOutput(content),
+            detail: content,
+          });
+        } else if (/GRAPH_SEARCH_STATUS:/i.test(content)) {
+          trace.recordTool({
+            name: "graph_search",
+            agent: nodeName,
+            summary: summarizeGraphToolOutput(content),
             detail: content,
           });
         } else if (/^引用:\s*\d+/m.test(trimmed) && /URL:\s*https?:\/\//i.test(trimmed)) {
@@ -138,6 +180,7 @@ function collectCitationsFromUpdate(
       for (const c of parseKbCitationsFromToolText(content)) {
         const key = `${c.documentId}:${c.chunkIndex ?? 0}`;
         bag.set(key, c);
+        if (tracker) tracker.kbNoRelevantHit = false;
       }
     }
   }
@@ -157,6 +200,39 @@ export function attachResponseAbortSignal(res: Response): AbortSignal {
     ee.once("error", abort);
   }
   return ac.signal;
+}
+
+const INTENT_RESOLVE_TIMEOUT_MS = 5_000;
+const MEMORY_LOAD_TIMEOUT_MS = 3_000;
+
+async function withBoundedTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), ms);
+        timer.unref?.();
+      }),
+    ]);
+  } catch {
+    return fallback;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function memoryHintForShortReply(userText: string, memoryBlock: string): string | undefined {
+  if (!memoryBlock || !/喜欢|偏好|记住|习惯/.test(userText)) return undefined;
+  if (!memoryBlock.includes("【长期记忆】")) return undefined;
+  const fact = memoryBlock
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("【") && !line.startsWith("---"))
+    .map((line) => line.replace(/^[-•]\s*/, ""))
+    .find(Boolean);
+  if (!fact) return "我会根据你之前告诉我的偏好来回答。";
+  return `我记得你之前提过：${fact}`;
 }
 
 /**
@@ -261,12 +337,14 @@ export type AgentChatBody = {
   messages?: unknown;
   thread_id?: unknown;
   workspaceId?: unknown;
+  userKey?: unknown;
 };
 
 export type ParsedAgentChat = {
   messages: UIMessage[];
   threadId: string;
   workspaceId: string;
+  userKey: string;
 };
 
 const AgentUiMessageSchema = z
@@ -279,6 +357,7 @@ const AgentChatBodySchema = z.object({
   messages: z.array(AgentUiMessageSchema),
   thread_id: z.string().optional().nullable(),
   workspaceId: z.string().optional().nullable(),
+  userKey: z.string().optional().nullable(),
 });
 
 const SAFE_THREAD_ID = /^[A-Za-z0-9_.:-]{1,128}$/;
@@ -290,7 +369,7 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
     throw new InvalidAgentBodyError("Invalid body: messages must be an array of message objects");
   }
 
-  const { messages, thread_id, workspaceId } = result.data;
+  const { messages, thread_id, workspaceId, userKey } = result.data;
   const trimmedThread = typeof thread_id === "string" ? thread_id.trim() : "";
   if (trimmedThread && !SAFE_THREAD_ID.test(trimmedThread)) {
     throw new InvalidAgentBodyError(
@@ -300,11 +379,14 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
   const threadRaw = trimmedThread || randomUUID();
   const workspaceRaw =
     typeof workspaceId === "string" && workspaceId.trim() ? workspaceId.trim() : "default";
+  const userKeyRaw =
+    typeof userKey === "string" && userKey.trim() ? userKey.trim().slice(0, 128) : "anonymous";
 
   return {
     messages: messages as unknown as UIMessage[],
     threadId: threadRaw,
     workspaceId: resolveWorkspaceId(workspaceRaw),
+    userKey: userKeyRaw,
   };
 }
 
@@ -373,7 +455,153 @@ const SPECIALIST_META: Record<
     todoId: "todo-report",
     summary: "整理 Markdown 报告与引用",
   },
+  synthesizer: {
+    stepId: "step-synthesizer",
+    agent: "Synthesizer",
+    title: "成文作答",
+    todoId: "todo-synthesize",
+    summary: "rag_generate · 基于预检索撰写用户可见答案",
+  },
 };
+
+function shouldGraphFallbackAfterKbMiss(plan: IntentPlan, enableFallback: boolean): boolean {
+  if (!enableFallback) return false;
+  return plan.fallbackChain.includes("graph_search") || plan.graphSignal === true;
+}
+
+function isGraphOnlyRetrieverPlan(plan?: IntentPlan): boolean {
+  return (
+    !!plan?.retrieverTools.includes("graph_search") && !plan?.retrieverTools.includes("kb_search")
+  );
+}
+
+function applyGraphOnlyRetrieverPresentation(tracker: ProgressTracker): void {
+  tracker.retrieverStepTitle = "图谱检索";
+  tracker.retrieverStepSummary = "graph_search · 图谱路径检索";
+  tracker.retrieverTodoLabel = "图谱检索";
+}
+
+/** single_specialist 成文路径：仅传当前轮用户消息，避免历史轮次污染答案 */
+function messagesForSingleTurnSynthesis<T extends { getType?: () => string }>(messages: T[]): T[] {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]!;
+    const role = m.getType?.() ?? "";
+    if (role === "human" || role === "user") {
+      return [m];
+    }
+  }
+  return messages.length ? [messages[messages.length - 1]!] : [];
+}
+
+async function prefetchForSingleSpecialist(input: {
+  plan: IntentPlan;
+  userText: string;
+  workspaceId: string;
+  trace: AgentTraceCollector;
+  tracker?: ProgressTracker;
+  abortSignal?: AbortSignal;
+  kbSearchPrefetched?: boolean;
+}): Promise<SystemMessage[]> {
+  const seeds: SystemMessage[] = [];
+  let kbSearchExecuted = input.kbSearchPrefetched ?? false;
+  if (input.plan.retrieverTools.includes("graph_search")) {
+    const graphOut = await raceExternalCall(invokeGraphSearch({ question: input.userText }), {
+      signal: input.abortSignal,
+    });
+    if (input.abortSignal?.aborted) return seeds;
+    const graphHit = Boolean(graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut));
+    if (graphOut) {
+      input.trace.recordTool({
+        name: "graph_search",
+        agent: "system",
+        summary: summarizeGraphToolOutput(graphOut),
+        detail: graphOut,
+      });
+      if (graphHit) {
+        if (input.tracker) {
+          input.tracker.graphSearchHit = true;
+          input.tracker.graphPrefetchOutput = graphOut;
+        }
+        seeds.push(
+          new SystemMessage(
+            [
+              "【图谱预检索·工具结果·可信】",
+              "以下由服务端在 Retriever 运行前直接调用 graph_search 得到；必须采信。",
+              graphOut,
+            ].join("\n"),
+          ),
+        );
+      }
+    }
+    if (!graphHit && input.plan.fallbackChain.includes("kb_search")) {
+      kbSearchExecuted = true;
+      const kbOut = await raceExternalCall(
+        invokeKbSearch({
+          query: extractKbSearchQuery(input.userText),
+          userText: input.userText,
+          workspaceId: input.workspaceId,
+        }),
+        { signal: input.abortSignal },
+      );
+      if (input.abortSignal?.aborted) return seeds;
+      if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
+        input.trace.recordTool({
+          name: "kb_search",
+          agent: "system",
+          summary: `图谱未命中回退 · ${summarizeKbToolOutput(kbOut)}`,
+          detail: kbOut,
+        });
+        seeds.push(
+          new SystemMessage(
+            [
+              "【知识库回退检索·工具结果·可信】",
+              "图谱未命中后按 IntentPlan fallbackChain 触发 kb_search；必须采信。",
+              kbOut,
+            ].join("\n"),
+          ),
+        );
+      } else if (kbOut) {
+        input.trace.recordTool({
+          name: "kb_search",
+          agent: "system",
+          summary: `图谱未命中回退 · ${summarizeKbToolOutput(kbOut)}`,
+          detail: kbOut,
+        });
+        if (input.tracker) input.tracker.kbNoRelevantHit = true;
+      }
+    }
+  }
+  if (input.plan.retrieverTools.includes("kb_search") && !kbSearchExecuted) {
+    kbSearchExecuted = true;
+    const kbOut = await raceExternalCall(
+      invokeKbSearch({
+        query: extractKbSearchQuery(input.userText),
+        userText: input.userText,
+        workspaceId: input.workspaceId,
+      }),
+      { signal: input.abortSignal },
+    );
+    if (input.abortSignal?.aborted) return seeds;
+    if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
+      input.trace.recordTool({
+        name: "kb_search",
+        agent: "system",
+        summary: `预检索 · ${summarizeKbToolOutput(kbOut)}`,
+        detail: kbOut,
+      });
+      seeds.push(
+        new SystemMessage(
+          [
+            "【知识库预检索·工具结果·可信】",
+            "以下由服务端在 Retriever 运行前直接调用 kb_search 得到；必须采信。",
+            kbOut,
+          ].join("\n"),
+        ),
+      );
+    }
+  }
+  return seeds;
+}
 
 function writeProgress(
   writer: { write: (chunk: any) => void },
@@ -405,23 +633,6 @@ function parseLgModeEvent(event: unknown): { mode: string; data: unknown } | nul
   return { mode: String(event[0]), data: event[1] };
 }
 
-/**
- * 拦截 updates（用于逐步进度），其余事件原样交给 toUIMessageStream。
- */
-async function* forwardUiEvents(
-  source: AsyncIterable<unknown>,
-  onUpdates: (update: Record<string, unknown>) => void,
-): AsyncGenerator<unknown> {
-  for await (const event of source) {
-    const parsed = parseLgModeEvent(event);
-    if (parsed?.mode === "updates" && parsed.data && typeof parsed.data === "object") {
-      onUpdates(parsed.data as Record<string, unknown>);
-      continue;
-    }
-    yield event;
-  }
-}
-
 type ProgressTracker = {
   todos: TodoItem[];
   stepsById: Map<string, AgentStepPayload>;
@@ -432,6 +643,14 @@ type ProgressTracker = {
   ranSpecialists: Set<string>;
   /** kb_search 明确无有效命中 */
   kbNoRelevantHit: boolean;
+  /** graph_search 已 HIT（图谱问答不应触发 KB 未命中脚注） */
+  graphSearchHit: boolean;
+  /** 最近一次 graph HIT 工具原文（LLM 漏答时兜底） */
+  graphPrefetchOutput?: string;
+  /** graph-only 路由下的 Retriever 步骤文案 */
+  retrieverStepTitle?: string;
+  retrieverStepSummary?: string;
+  retrieverTodoLabel?: string;
   /** 是否已标记「Supervisor 直答」避免重复写进度 */
   directAnswerMarked: boolean;
   sawError: boolean;
@@ -451,6 +670,7 @@ function createProgressTracker(
     sawSpecialist: false,
     ranSpecialists: new Set(),
     kbNoRelevantHit: false,
+    graphSearchHit: false,
     directAnswerMarked: false,
     sawError: false,
     onChange: emit,
@@ -480,8 +700,27 @@ function markSupervisorDirectAnswer(tracker: ProgressTracker): void {
   tracker.onChange();
 }
 
-function applyNodeUpdate(tracker: ProgressTracker, nodeName: string): void {
+function applyNodeUpdate(
+  tracker: ProgressTracker,
+  nodeName: string,
+  _executionMode?: ExecutionMode,
+): void {
   const key = nodeName.toLowerCase();
+
+  if (key === "prefetch") {
+    tracker.sawSpecialist = true;
+    tracker.directAnswerMarked = false;
+    const existing = tracker.stepsById.get("step-prefetch");
+    tracker.stepsById.set("step-prefetch", {
+      id: "step-prefetch",
+      agent: "System",
+      title: existing?.title ?? "预检索",
+      status: "completed",
+      summary: existing?.summary ?? "服务端工具预取（D-11）",
+    });
+    tracker.onChange();
+    return;
+  }
 
   if (key === "supervisor") {
     const existing = tracker.stepsById.get("step-supervisor");
@@ -534,7 +773,11 @@ function applyNodeUpdate(tracker: ProgressTracker, nodeName: string): void {
   // 若曾误判为「直答」并清空了待办，恢复调研待办骨架
   if (tracker.todos.length === 0) {
     tracker.todos = [
-      { id: "todo-retrieve", label: "检索知识库", status: "pending" },
+      {
+        id: "todo-retrieve",
+        label: tracker.retrieverTodoLabel ?? "检索知识库",
+        status: "pending",
+      },
       { id: "todo-research", label: "联网补充（如需）", status: "pending" },
       { id: "todo-analyze", label: "分析整理", status: "pending" },
       { id: "todo-report", label: "撰写报告", status: "pending" },
@@ -567,12 +810,23 @@ function applyNodeUpdate(tracker: ProgressTracker, nodeName: string): void {
   tracker.stepsById.set(meta.stepId, {
     id: meta.stepId,
     agent: meta.agent,
-    title: meta.title,
+    title:
+      key === "retriever" && tracker.retrieverStepTitle ? tracker.retrieverStepTitle : meta.title,
     status: "active",
-    summary: meta.summary,
+    summary:
+      key === "retriever" && tracker.retrieverStepSummary
+        ? tracker.retrieverStepSummary
+        : meta.summary,
   });
   tracker.todos = tracker.todos.map((t) => {
-    if (t.id === meta.todoId) return { ...t, status: "active" };
+    if (t.id === meta.todoId) {
+      return {
+        ...t,
+        status: "active",
+        label:
+          key === "retriever" && tracker.retrieverTodoLabel ? tracker.retrieverTodoLabel : t.label,
+      };
+    }
     if (t.status === "active" && t.id !== meta.todoId) {
       return { ...t, status: "completed" };
     }
@@ -582,7 +836,32 @@ function applyNodeUpdate(tracker: ProgressTracker, nodeName: string): void {
   tracker.onChange();
 }
 
-function finalizeProgress(tracker: ProgressTracker): void {
+function finalizeProgress(tracker: ProgressTracker, executionMode?: ExecutionMode): void {
+  if (executionMode === "single_specialist" || executionMode === "sequential") {
+    for (const name of tracker.ranSpecialists) {
+      const meta = SPECIALIST_META[name];
+      if (!meta) continue;
+      tracker.todos = tracker.todos.map((t) =>
+        t.id === meta.todoId ? { ...t, status: "completed" as const } : t,
+      );
+      const step = tracker.stepsById.get(meta.stepId);
+      if (step && step.status !== "completed") {
+        tracker.stepsById.set(meta.stepId, { ...step, status: "completed" });
+      }
+    }
+    tracker.todos = tracker.todos.map((t) =>
+      t.status === "active" ? { ...t, status: "completed" as const } : t,
+    );
+    for (const [id, step] of tracker.stepsById) {
+      if (step.status === "active") {
+        tracker.stepsById.set(id, { ...step, status: "completed" });
+      }
+    }
+    tracker.activeSpecialist = null;
+    tracker.onChange();
+    return;
+  }
+
   if (!tracker.sawSpecialist) {
     markSupervisorDirectAnswer(tracker);
     const step = tracker.stepsById.get("step-supervisor");
@@ -621,8 +900,9 @@ function finalizeProgress(tracker: ProgressTracker): void {
 }
 
 function buildInitialProgress(
-  route: "short" | "supervisor",
+  route: AgentExecutionRoute,
   userText = "",
+  plan?: IntentPlan,
 ): {
   todos: TodoItem[];
   steps: AgentStepPayload[];
@@ -642,10 +922,107 @@ function buildInitialProgress(
     };
   }
 
-  const required = inferRequiredSpecialists(userText);
+  if (route === "single_specialist" && plan?.specialists.length === 1) {
+    const name = plan.specialists[0]!;
+    const useSynthesis = isRetrieverSynthesisPlan(plan);
+    const graphOnly = isGraphOnlyRetrieverPlan(plan);
+    const toolHint = plan.retrieverTools.includes("graph_search")
+      ? "graph_search"
+      : plan.retrieverTools.includes("kb_search")
+        ? "kb_search"
+        : "";
+    const prefetchSummary = useSynthesis
+      ? `single_specialist · ${toolHint || name} 预检索 + 成文（rag_generate）`
+      : `single_specialist · ${toolHint || name} 预检索 + LLM 复述`;
+    if (useSynthesis) {
+      const synthMeta = SPECIALIST_META.synthesizer!;
+      return {
+        todos: [
+          {
+            id: synthMeta.todoId,
+            label: synthMeta.title,
+            status: "pending" as const,
+          },
+        ],
+        steps: [
+          {
+            id: "step-prefetch",
+            agent: "System",
+            title: toolHint === "graph_search" ? "图谱检索" : "知识库检索",
+            status: "active",
+            summary: prefetchSummary,
+          },
+          {
+            id: synthMeta.stepId,
+            agent: synthMeta.agent,
+            title: graphOnly ? "图谱成文" : synthMeta.title,
+            status: "pending" as const,
+            summary: synthMeta.summary,
+          },
+        ],
+      };
+    }
+    const meta = SPECIALIST_META[name];
+    return {
+      todos: meta
+        ? [
+            {
+              id: meta.todoId,
+              label: graphOnly ? "图谱检索" : meta.title,
+              status: "pending" as const,
+            },
+          ]
+        : [],
+      steps: [
+        {
+          id: "step-prefetch",
+          agent: "System",
+          title: toolHint === "graph_search" ? "图谱检索" : "知识库检索",
+          status: "active",
+          summary: prefetchSummary,
+        },
+        ...(meta
+          ? [
+              {
+                id: meta.stepId,
+                agent: meta.agent,
+                title: graphOnly ? "图谱检索" : meta.title,
+                status: "pending" as const,
+                summary: graphOnly ? "graph_search · 图谱路径检索" : meta.summary,
+              },
+            ]
+          : []),
+      ],
+    };
+  }
+
+  if (route === "sequential" && plan && plan.specialists.length >= 2) {
+    const pipeline = plan.specialists;
+    return {
+      todos: pipeline.map((name: string) => {
+        const meta = SPECIALIST_META[name]!;
+        return {
+          id: meta.todoId,
+          label: meta.title,
+          status: "pending" as const,
+        };
+      }),
+      steps: [
+        {
+          id: "step-supervisor",
+          agent: "System",
+          title: "顺序流水线",
+          status: "active",
+          summary: `确定性边：${pipeline.join(" → ")}`,
+        },
+      ],
+    };
+  }
+
+  const required = plan?.specialists ?? inferRequiredSpecialists(userText);
   const todos: TodoItem[] =
     required.length >= 2
-      ? required.map((name) => {
+      ? required.map((name: string) => {
           const meta = SPECIALIST_META[name]!;
           return {
             id: meta.todoId,
@@ -702,7 +1079,7 @@ function dropHandoffNoiseText(): TransformStream<any, any> {
       if (collecting && t === "text-end") {
         buf.push(chunk);
         collecting = false;
-        if (!isHandoffNoiseText(text)) {
+        if (!isHandoffNoiseText(text) && !isToolCallLeakText(text)) {
           const cleaned = sanitizeUserFacingAgentText(text);
           if (cleaned.trim()) {
             const start = buf[0] as { type?: string; id?: string };
@@ -726,7 +1103,7 @@ function dropHandoffNoiseText(): TransformStream<any, any> {
       // 段未闭合就遇到非 text：按 text-end 同款消毒后关闭，后续配对 text-end 会被忽略
       if (collecting) {
         collecting = false;
-        if (!isHandoffNoiseText(text)) {
+        if (!isHandoffNoiseText(text) && !isToolCallLeakText(text)) {
           const cleaned = sanitizeUserFacingAgentText(text);
           if (cleaned.trim()) {
             const start = buf[0] as { type?: string; id?: string };
@@ -853,11 +1230,49 @@ export class AgentService {
     const parsed = parseAgentChatBody(body);
     const lcMessages = await toBaseMessages(parsed.messages);
     const userText = lastUserText(lcMessages);
-    const route = resolveAgentRoute(userText);
+    const routerConfig = readIntentRouterConfig();
+    let intentPlan: IntentPlan | undefined;
+    let routerLayers: RouterLayer[] = [];
+    let executionMode: ExecutionMode;
+
+    if (routerConfig.enableIntentRouter) {
+      try {
+        const resolved = await withBoundedTimeout(
+          resolveIntentPlanForAgent({
+            query: userText,
+            workspaceId: parsed.workspaceId,
+          }),
+          INTENT_RESOLVE_TIMEOUT_MS,
+          null as { plan: IntentPlan; layers: RouterLayer[] } | null,
+        );
+        if (resolved?.plan) {
+          intentPlan = resolved.plan;
+          routerLayers = resolved.layers;
+          executionMode = resolveExecutionMode(intentPlan);
+        } else {
+          executionMode = resolveAgentRoute(userText) === "short" ? "short" : "supervisor";
+        }
+      } catch {
+        executionMode = resolveAgentRoute(userText) === "short" ? "short" : "supervisor";
+      }
+    } else {
+      executionMode = resolveAgentRoute(userText) === "short" ? "short" : "supervisor";
+    }
+
+    const executionRoute = executionMode as AgentExecutionRoute;
+    const requiredEarly = intentPlan?.specialists ?? inferRequiredSpecialists(userText);
     const runConfig = getAgentRunConfig(parsed.threadId);
     const abortSignal = attachResponseAbortSignal(res);
     // 请求级 runId：避免同 thread 并发互相覆盖 KB/web 配额状态
     const runId = randomUUID();
+    const memoryBlock = await withBoundedTimeout(
+      loadMemoryContextBlock(
+        { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
+        userText,
+      ),
+      MEMORY_LOAD_TIMEOUT_MS,
+      "",
+    ).catch(() => "");
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
@@ -866,18 +1281,20 @@ export class AgentService {
           workspaceId: parsed.workspaceId,
         });
         resetWebSearchCallCount(runId);
+        let assistantForMemory = "";
         try {
-          const requiredEarly = inferRequiredSpecialists(userText);
           const trace = createAgentTraceCollector({
             threadId: parsed.threadId,
             userText,
             intent: {
-              route,
+              route: executionRoute,
               requiredSpecialists: requiredEarly,
+              plan: intentPlan,
+              routerLayers: routerLayers.length ? routerLayers : undefined,
             },
             langsmithProject: process.env.LANGSMITH_PROJECT?.trim(),
           });
-          const { todos, steps } = buildInitialProgress(route, userText);
+          const { todos, steps } = buildInitialProgress(executionRoute, userText, intentPlan);
           trace.recordPlan(
             todos.map((t) => ({
               id: t.id,
@@ -904,30 +1321,53 @@ export class AgentService {
           };
 
           try {
-            if (route === "short") {
+            if (executionMode === "short") {
               // 直接写出短路正文：外层图 AIMessage 经 toUIMessageStream 不会产生 text-delta
               const shortMsgs = buildShortReplyMessages(userText);
-              const shortText = shortMsgs
+              let shortText = shortMsgs
                 .map((m) => (typeof m.content === "string" ? m.content : ""))
                 .filter(Boolean)
                 .join("\n");
+              if (
+                memoryBlock &&
+                /喜欢|偏好|记住|习惯/.test(userText) &&
+                memoryBlock.includes("【长期记忆】")
+              ) {
+                const hint = memoryHintForShortReply(userText, memoryBlock);
+                if (hint) {
+                  shortText = `${shortText}\n\n${hint}`;
+                }
+              }
               if (shortText) {
                 const messageId = `short-${parsed.threadId}`;
                 writer.write({ type: "text-start", id: messageId });
                 writer.write({ type: "text-delta", id: messageId, delta: shortText });
                 writer.write({ type: "text-end", id: messageId });
+                assistantForMemory = shortText;
               }
               trace.recordSpecialist("System", "闲聊短路 · 未进入 Supervisor 多 Agent");
               emitTrace();
             } else {
-              const required = requiredEarly;
-              const hideUntilEditor = required.includes("editor");
-              const supervisorGraph = await buildSupervisorGraph({
-                userText,
-              });
+              const required = requiredEarly as SpecialistName[];
+              const hideUntilEditor =
+                executionMode !== "single_specialist" && required.includes("editor");
+              const executionGraph =
+                routerConfig.enableIntentRouter && intentPlan
+                  ? await buildExecutionGraph({
+                      plan: intentPlan,
+                      userText,
+                      memoryContextBlock: memoryBlock || undefined,
+                    })
+                  : await buildSupervisorGraph({
+                      userText,
+                      memoryContextBlock: memoryBlock || undefined,
+                    });
               const tracker = createProgressTracker(todos, steps, () => {
                 emitTracker(tracker, writer, parsed.threadId);
               });
+              if (isGraphOnlyRetrieverPlan(intentPlan ?? undefined)) {
+                applyGraphOnlyRetrieverPresentation(tracker);
+              }
               const streamConfig = {
                 streamMode: ["updates", "values", "messages"] as ["updates", "values", "messages"],
                 recursionLimit: runConfig.recursionLimit,
@@ -944,22 +1384,65 @@ export class AgentService {
               const textGate = { open: !hideUntilEditor };
               let visibleReportChars = 0;
               let finalBuf = "";
-              const sequential = shouldUseSequentialPipeline(required);
+              const sequential =
+                executionMode === "sequential" || shouldUseSequentialPipeline(required);
               if (sequential) {
                 trace.recordSpecialist(
                   "System",
                   `确定性流水线 · ${required.join(" → ")}（无 Supervisor handoff）`,
                 );
+              } else if (executionMode === "single_specialist") {
+                const synth = intentPlan && isRetrieverSynthesisPlan(intentPlan);
+                trace.recordSpecialist(
+                  "System",
+                  synth
+                    ? `single_specialist · ${intentPlan?.primary ?? "retriever"} · 预检索 + 成文（rag_generate）`
+                    : `single_specialist · ${intentPlan?.primary ?? "retriever"} · 预检索 + LLM 复述`,
+                );
               }
 
-              // 按需预检索：清单含 retriever，或用户话术涉及知识库
+              const useSynthesisPath =
+                executionMode === "single_specialist" &&
+                !!intentPlan &&
+                isRetrieverSynthesisPlan(intentPlan);
+
+              // 按需预检索：plan 驱动或 legacy 启发式（成文路径由图内 prefetch 负责，此处跳过重复）
               const shouldPrefetchKb =
-                required.includes("retriever") ||
-                /知识库|企业.?库|内部.?文档|\bkb\b|引用/.test(userText);
-              let seededMessages: Array<SystemMessage | (typeof lcMessages)[number]> = [
-                ...lcMessages,
-              ];
-              if (shouldPrefetchKb) {
+                !useSynthesisPath &&
+                (intentPlan
+                  ? intentPlan.retrieverTools.includes("kb_search") ||
+                    intentPlan.channels === "kb" ||
+                    intentPlan.channels === "kb+graph"
+                  : required.includes("retriever") ||
+                    /知识库|企业.?库|内部.?文档|\bkb\b|引用/.test(userText));
+              const skipKbPrefetchForSingleGraph =
+                executionMode === "single_specialist" &&
+                intentPlan?.retrieverTools.includes("graph_search") &&
+                !intentPlan?.retrieverTools.includes("kb_search") &&
+                !intentPlan?.fallbackChain.includes("kb_search");
+              let seededMessages: Array<SystemMessage | (typeof lcMessages)[number]> =
+                useSynthesisPath ? messagesForSingleTurnSynthesis(lcMessages) : [...lcMessages];
+              if (memoryBlock) {
+                const includeMemory =
+                  !useSynthesisPath ||
+                  /喜欢|偏好|记住|习惯|叫我|称呼/.test(userText) ||
+                  memoryBlock.includes("【长期记忆】");
+                if (includeMemory) {
+                  seededMessages = [
+                    new SystemMessage(
+                      [
+                        "【用户记忆·可信】",
+                        "以下为短期/长期记忆，请结合回答，勿编造未出现的偏好。",
+                        memoryBlock,
+                      ].join("\n"),
+                    ),
+                    ...seededMessages,
+                  ];
+                }
+              }
+              let serviceKbPrefetched = false;
+              if (shouldPrefetchKb && !skipKbPrefetchForSingleGraph) {
+                serviceKbPrefetched = true;
                 const KB_PREFETCH_TIMEOUT_MS = 8_000;
                 let timer: ReturnType<typeof setTimeout> | undefined;
                 let onAbort: (() => void) | undefined;
@@ -999,19 +1482,74 @@ export class AgentService {
                   for (const c of parseKbCitationsFromToolText(kbPrefetch)) {
                     citationBag.set(`${c.documentId}:${c.chunkIndex ?? 0}`, c);
                   }
+                  if (citationBag.size > 0) {
+                    tracker.kbNoRelevantHit = false;
+                  }
                   if (/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbPrefetch)) {
                     tracker.kbNoRelevantHit = true;
+                    if (
+                      intentPlan &&
+                      shouldGraphFallbackAfterKbMiss(intentPlan, routerConfig.enableKbGraphFallback)
+                    ) {
+                      try {
+                        const graphOut = await raceExternalCall(
+                          invokeGraphSearch({ question: userText }),
+                          { signal: abortSignal },
+                        );
+                        if (graphOut) {
+                          trace.recordTool({
+                            name: "graph_search",
+                            agent: "system",
+                            summary: summarizeGraphToolOutput(graphOut),
+                            detail: graphOut,
+                          });
+                          if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
+                            tracker.graphSearchHit = true;
+                            tracker.graphPrefetchOutput = graphOut;
+                            seededMessages = [
+                              new SystemMessage(
+                                [
+                                  "【图谱回退检索·工具结果·可信】",
+                                  "KB 未命中后按 IntentPlan fallbackChain 触发 graph_search；必须采信。",
+                                  graphOut,
+                                ].join("\n"),
+                              ),
+                              ...seededMessages,
+                            ];
+                          }
+                        }
+                      } catch {
+                        /* fail-open: keep KB miss path */
+                      }
+                    }
                   }
-                  seededMessages = [
-                    new SystemMessage(
-                      [
-                        "【知识库预检索·工具结果·可信】",
-                        "以下由服务端直接调用 kb_search 得到；子 Agent 必须采信，禁止编造相反的命中/未命中结论。",
-                        kbPrefetch,
-                      ].join("\n"),
-                    ),
-                    ...lcMessages,
-                  ];
+                  if (!/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbPrefetch)) {
+                    seededMessages = [
+                      new SystemMessage(
+                        [
+                          "【知识库预检索·工具结果·可信】",
+                          "以下由服务端直接调用 kb_search 得到；子 Agent 必须采信，禁止编造相反的命中/未命中结论。",
+                          kbPrefetch,
+                        ].join("\n"),
+                      ),
+                      ...seededMessages,
+                    ];
+                  }
+                }
+              }
+
+              if (executionMode === "single_specialist" && intentPlan && !useSynthesisPath) {
+                const prefetchSeeds = await prefetchForSingleSpecialist({
+                  plan: intentPlan,
+                  userText,
+                  workspaceId: parsed.workspaceId,
+                  trace,
+                  tracker,
+                  abortSignal,
+                  kbSearchPrefetched: serviceKbPrefetched,
+                });
+                if (prefetchSeeds.length) {
+                  seededMessages = [...prefetchSeeds, ...seededMessages];
                 }
               }
 
@@ -1020,29 +1558,57 @@ export class AgentService {
               }
 
               const drainGraphStream = async (input: { messages: unknown }): Promise<void> => {
-                const lgStream = await supervisorGraph.stream(
+                const lgStream = await executionGraph.stream(
                   input as { messages: typeof lcMessages },
                   streamConfig,
                 );
-                const uiSource = forwardUiEvents(lgStream, (update) => {
+                const onGraphUpdate = (update: Record<string, unknown>) => {
                   collectCitationsFromUpdate(update, citationBag, tracker, trace, webSources);
                   for (const nodeName of Object.keys(update)) {
                     const before = tracker.activeSpecialist;
-                    applyNodeUpdate(tracker, nodeName);
+                    applyNodeUpdate(tracker, nodeName, executionMode);
                     const key = nodeName.toLowerCase();
                     if (SPECIALIST_META[key] && tracker.activeSpecialist === key) {
                       const meta = SPECIALIST_META[key]!;
                       if (before !== key) {
-                        trace.recordSpecialist(meta.agent, `${meta.title} · ${meta.summary}`);
+                        const title =
+                          key === "retriever" && tracker.retrieverStepTitle
+                            ? tracker.retrieverStepTitle
+                            : meta.title;
+                        const summary =
+                          key === "retriever" && tracker.retrieverStepSummary
+                            ? tracker.retrieverStepSummary
+                            : meta.summary;
+                        trace.recordSpecialist(meta.agent, `${title} · ${summary}`);
                       }
                     }
-                    // Sequential 无 transfer：editor 节点 updates 到达即解锁（持有段在 transform flush）
-                    if (key === "editor") {
+                    if (key === "editor" || key === "synthesizer") {
                       textGate.open = true;
                     }
                   }
-                });
-                const uiStream = toUIMessageStream(uiSource as any)
+                };
+                const pending: unknown[] = [];
+                let resumeIter: (() => void) | null = null;
+                let lgDone = false;
+                const pokeIter = () => {
+                  const resume = resumeIter;
+                  resumeIter = null;
+                  resume?.();
+                };
+
+                async function* lgEventIter() {
+                  while (true) {
+                    while (pending.length > 0) {
+                      yield pending.shift()!;
+                    }
+                    if (lgDone) return;
+                    await new Promise<void>((resolve) => {
+                      resumeIter = resolve;
+                    });
+                  }
+                }
+
+                const uiStream = toUIMessageStream(lgEventIter() as any)
                   .pipeThrough(stripMergedStart())
                   .pipeThrough(dropOrphanToolOutputs())
                   .pipeThrough(deduplicateTextDeltas())
@@ -1059,6 +1625,30 @@ export class AgentService {
                     }),
                   )
                   .pipeThrough(dropHandoffNoiseText());
+
+                let lgStreamError: unknown;
+                const producer = (async () => {
+                  try {
+                    for await (const event of lgStream) {
+                      const parsed = parseLgModeEvent(event);
+                      if (
+                        parsed?.mode === "updates" &&
+                        parsed.data &&
+                        typeof parsed.data === "object"
+                      ) {
+                        onGraphUpdate(parsed.data as Record<string, unknown>);
+                        continue;
+                      }
+                      pending.push(event);
+                      pokeIter();
+                    }
+                  } catch (err) {
+                    lgStreamError = err;
+                  } finally {
+                    lgDone = true;
+                    pokeIter();
+                  }
+                })();
 
                 const reader = uiStream.getReader();
                 try {
@@ -1101,12 +1691,57 @@ export class AgentService {
                     /* ignore */
                   }
                 }
+                if (lgStreamError) throw lgStreamError;
+                await producer;
               };
 
               await drainGraphStream({ messages: seededMessages });
 
-              // Supervisor 开放模式才需要 HumanMessage 强制续跑；Sequential 由边保证跑完清单
-              if (!sequential) {
+              const kbMissDominates = /知识库未找到足够|KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(
+                finalBuf,
+              );
+              const hasSubstantiveGraphAnswer =
+                !kbMissDominates && hasSubstantiveKbAnswer(finalBuf);
+              if (
+                tracker.graphSearchHit &&
+                !hasSubstantiveGraphAnswer &&
+                tracker.graphPrefetchOutput
+              ) {
+                const fallback = formatGraphAnswerFromToolOutput(
+                  tracker.graphPrefetchOutput,
+                  userText,
+                );
+                if (fallback.trim()) {
+                  const fbId = `graph-fallback-${parsed.threadId}`;
+                  writer.write({ type: "text-start", id: fbId });
+                  writer.write({ type: "text-delta", id: fbId, delta: fallback });
+                  writer.write({ type: "text-end", id: fbId });
+                  visibleReportChars += fallback.length;
+                  finalBuf += fallback;
+                  trace.appendFinalText(fallback);
+                }
+              }
+
+              const kbCitations = [...citationBag.values()];
+              if (
+                kbCitations.length > 0 &&
+                !tracker.graphSearchHit &&
+                !hasSubstantiveKbAnswer(finalBuf)
+              ) {
+                const kbFallback = formatKbAnswerFromCitations(kbCitations, userText);
+                if (kbFallback.trim()) {
+                  const fbId = `kb-fallback-${parsed.threadId}`;
+                  writer.write({ type: "text-start", id: fbId });
+                  writer.write({ type: "text-delta", id: fbId, delta: kbFallback });
+                  writer.write({ type: "text-end", id: fbId });
+                  visibleReportChars += kbFallback.length;
+                  finalBuf += kbFallback;
+                  trace.appendFinalText(kbFallback);
+                }
+              }
+
+              // Supervisor 开放模式才需要 HumanMessage 强制续跑；Sequential / single_specialist 由边保证
+              if (!sequential && executionMode !== "single_specialist") {
                 let forceRound = 0;
                 while (
                   !tracker.sawError &&
@@ -1125,6 +1760,7 @@ export class AgentService {
                   trace.recordSpecialist("System", `强制续跑 #${forceRound} → ${target}`);
                   const kbMiss =
                     target === "editor" &&
+                    !tracker.graphSearchHit &&
                     (tracker.kbNoRelevantHit ||
                       (tracker.ranSpecialists.has("retriever") && citationBag.size === 0));
                   await drainGraphStream({
@@ -1142,15 +1778,26 @@ export class AgentService {
                 }
               }
 
-              if (tracker.ranSpecialists.has("retriever") && citationBag.size === 0) {
+              if (
+                tracker.ranSpecialists.has("retriever") &&
+                citationBag.size === 0 &&
+                !tracker.graphSearchHit
+              ) {
                 tracker.kbNoRelevantHit = true;
               }
 
               if (!tracker.sawError) {
-                if (
-                  tracker.kbNoRelevantHit ||
-                  (tracker.ranSpecialists.has("retriever") && citationBag.size === 0)
-                ) {
+                if (citationBag.size > 0) {
+                  tracker.kbNoRelevantHit = false;
+                }
+                const kbMissAlreadyInBody = /知识库未找到足够(?:相关)?依据/.test(finalBuf);
+                const showKbMissNote =
+                  executionMode !== "single_specialist" &&
+                  !tracker.graphSearchHit &&
+                  citationBag.size === 0 &&
+                  (tracker.kbNoRelevantHit || tracker.ranSpecialists.has("retriever")) &&
+                  !kbMissAlreadyInBody;
+                if (showKbMissNote) {
                   const noteId = `kb-miss-${parsed.threadId}`;
                   const note =
                     visibleReportChars >= 200
@@ -1176,7 +1823,7 @@ export class AgentService {
                   finalBuf += refMd;
                   trace.appendFinalText(refMd);
                 }
-                finalizeProgress(tracker);
+                finalizeProgress(tracker, executionMode);
                 trace.recordPlan(
                   tracker.todos.map((t) => ({
                     id: t.id,
@@ -1185,6 +1832,25 @@ export class AgentService {
                   })),
                 );
                 const citations = [...citationBag.values()];
+                // D-22：checkpoint 为真相源；SSE data-* 仅投影
+                try {
+                  await executionGraph.updateState(
+                    {
+                      configurable: {
+                        ...runConfig.configurable,
+                        run_id: runId,
+                        workspaceId: parsed.workspaceId,
+                      },
+                    },
+                    {
+                      todos: tracker.todos.map((t) => ({ ...t })),
+                      citations: citations.map((c) => ({ ...c })),
+                      workspaceId: parsed.workspaceId,
+                    },
+                  );
+                } catch (persistErr) {
+                  console.warn("[agent] checkpoint todos/citations persist failed", persistErr);
+                }
                 if (citations.length > 0) {
                   writer.write({
                     type: "data-citations",
@@ -1201,6 +1867,7 @@ export class AgentService {
                   })),
                 );
                 if (finalBuf.trim()) trace.setFinalText(finalBuf);
+                assistantForMemory = finalBuf;
                 emitTrace();
               } else {
                 for (const [id, step] of tracker.stepsById) {
@@ -1254,6 +1921,18 @@ export class AgentService {
               emitTrace();
             } catch {
               /* ignore trace failures */
+            }
+          } finally {
+            try {
+              if (assistantForMemory.trim()) {
+                await persistTurnMemory(
+                  { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
+                  userText,
+                  assistantForMemory,
+                );
+              }
+            } catch {
+              /* fail-open */
             }
           }
         } finally {

@@ -7,14 +7,42 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const streamMock = vi.fn();
 const buildAgentGraphMock = vi.fn();
 const buildSupervisorGraphMock = vi.fn();
+const buildExecutionGraphMock = vi.fn();
+const resolveIntentPlanForAgentMock = vi.fn();
+const invokeGraphSearchMock = vi.fn();
+const invokeKbSearchMock = vi.fn();
 const toBaseMessagesMock = vi.fn();
 const toUIMessageStreamMock = vi.fn();
 const pipeUIMessageStreamToResponseMock = vi.fn();
 const createUIMessageStreamMock = vi.fn();
 
+vi.mock("../routing/intent-plan", () => ({
+  resolveIntentPlanForAgent: (...args: unknown[]) => resolveIntentPlanForAgentMock(...args),
+  probeNeo4jAvailable: vi.fn(async () => true),
+  resetNeo4jAvailabilityCacheForTests: vi.fn(),
+}));
+
 vi.mock("../graph/build-graph", () => ({
   buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
   buildSupervisorGraph: (...args: unknown[]) => buildSupervisorGraphMock(...args),
+  buildExecutionGraph: (...args: unknown[]) => buildExecutionGraphMock(...args),
+  isRetrieverSynthesisPlan: (plan: {
+    specialists: string[];
+    retrieverTools: string[];
+    primary: string;
+  }) =>
+    plan.specialists[0] === "retriever" &&
+    plan.retrieverTools.length > 0 &&
+    (plan.primary === "kb_doc" ||
+      plan.primary === "graph_relation" ||
+      plan.primary === "kb_graph_hybrid"),
+  resolveExecutionMode: (plan: { primary: string; specialists: string[]; ambiguous?: boolean }) => {
+    if (plan.primary === "chitchat") return "short";
+    if (plan.ambiguous) return "supervisor";
+    if (plan.specialists.length >= 2) return "sequential";
+    if (plan.specialists.length === 1) return "single_specialist";
+    return "supervisor";
+  },
   getAgentRunConfig: (threadId: string) => ({
     recursionLimit: 40,
     configurable: { thread_id: threadId },
@@ -44,10 +72,40 @@ vi.mock("ai", async (importOriginal) => {
 });
 
 vi.mock("../tools/kb-search.tool", () => ({
-  invokeKbSearch: vi.fn(async () =>
-    ["KB_SEARCH_STATUS: NO_RELEVANT_HIT", "No relevant knowledge base hits."].join("\n"),
-  ),
+  invokeKbSearch: (...args: unknown[]) => invokeKbSearchMock(...args),
 }));
+
+vi.mock("../tools/graph-search.tool", () => ({
+  invokeGraphSearch: (...args: unknown[]) => invokeGraphSearchMock(...args),
+}));
+
+const GRAPH_PLAN = {
+  primary: "graph_relation" as const,
+  channels: "graph" as const,
+  specialists: ["retriever"],
+  retrieverTools: ["graph_search"],
+  fallbackChain: ["kb_search"],
+  reason: "l0:graph_relation:seed_entity",
+  confidence: 0.95,
+  graphSignal: true,
+};
+
+const KB_PLAN_NO_GRAPH = {
+  primary: "kb_doc" as const,
+  channels: "kb" as const,
+  specialists: ["retriever"],
+  retrieverTools: ["kb_search"],
+  fallbackChain: [],
+  reason: "l1:kb_doc",
+  confidence: 0.8,
+  graphSignal: false,
+};
+
+const KB_PLAN_WITH_GRAPH_FALLBACK = {
+  ...KB_PLAN_NO_GRAPH,
+  fallbackChain: ["graph_search"],
+  graphSignal: true,
+};
 
 describe("Agent SSE stream (AGENT-04)", () => {
   const fetchSpy = vi.spyOn(globalThis, "fetch");
@@ -57,12 +115,26 @@ describe("Agent SSE stream (AGENT-04)", () => {
     streamMock.mockReset();
     buildAgentGraphMock.mockReset();
     buildSupervisorGraphMock.mockReset();
+    buildExecutionGraphMock.mockReset();
+    resolveIntentPlanForAgentMock.mockReset();
+    invokeGraphSearchMock.mockReset();
+    invokeKbSearchMock.mockReset();
     toBaseMessagesMock.mockReset();
     toUIMessageStreamMock.mockReset();
     pipeUIMessageStreamToResponseMock.mockReset();
     createUIMessageStreamMock.mockReset();
 
     process.env.GROQ_API_KEY = "test-groq-key";
+    process.env.ENABLE_INTENT_ROUTER = "true";
+
+    resolveIntentPlanForAgentMock.mockResolvedValue({
+      plan: GRAPH_PLAN,
+      layers: ["L0"],
+    });
+    invokeGraphSearchMock.mockResolvedValue("GRAPH_SEARCH_STATUS: HIT\n珍珠奶茶 path summary");
+    invokeKbSearchMock.mockResolvedValue(
+      ["KB_SEARCH_STATUS: NO_RELEVANT_HIT", "No relevant knowledge base hits."].join("\n"),
+    );
 
     toBaseMessagesMock.mockResolvedValue([{ content: "对比 LangGraph 与 AutoGen" }]);
     streamMock.mockImplementation(() =>
@@ -71,7 +143,8 @@ describe("Agent SSE stream (AGENT-04)", () => {
       })(),
     );
     buildAgentGraphMock.mockResolvedValue({ stream: streamMock });
-    buildSupervisorGraphMock.mockResolvedValue({ stream: streamMock });
+    buildSupervisorGraphMock.mockResolvedValue({ stream: streamMock, updateState: vi.fn() });
+    buildExecutionGraphMock.mockResolvedValue({ stream: streamMock, updateState: vi.fn() });
     toUIMessageStreamMock.mockReturnValue(
       new ReadableStream({
         start(controller) {
@@ -160,7 +233,8 @@ describe("Agent SSE stream (AGENT-04)", () => {
     };
     await streamArg?.__ready;
 
-    expect(buildSupervisorGraphMock).toHaveBeenCalled();
+    expect(buildExecutionGraphMock).toHaveBeenCalled();
+    expect(buildSupervisorGraphMock).not.toHaveBeenCalled();
     expect(buildAgentGraphMock).not.toHaveBeenCalled();
     expect(streamMock).toHaveBeenCalled();
     expect(toUIMessageStreamMock).toHaveBeenCalled();
@@ -249,6 +323,18 @@ describe("Agent SSE stream (AGENT-04)", () => {
   });
 
   it("short route emits greeting text without LangGraph stream", async () => {
+    resolveIntentPlanForAgentMock.mockResolvedValue({
+      plan: {
+        primary: "chitchat",
+        channels: "none",
+        specialists: [],
+        retrieverTools: [],
+        fallbackChain: [],
+        reason: "l0:chitchat",
+        confidence: 1,
+      },
+      layers: ["L0"],
+    });
     toBaseMessagesMock.mockResolvedValue([{ content: "你好" }]);
     const { AgentService } = await import("./agent.service");
     const service = new AgentService();
@@ -434,5 +520,340 @@ describe("Agent SSE stream (AGENT-04)", () => {
       .filter((c) => (c as { type?: string }).type === "text-delta")
       .map((c) => (c as { delta: string }).delta);
     expect(deltas.join("")).toBe(report);
+  });
+
+  it("graph_relation plan uses buildExecutionGraph single_specialist (D-04, D-16)", async () => {
+    toBaseMessagesMock.mockResolvedValue([{ content: "珍珠奶茶有哪些原料，用了什么工艺？" }]);
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "g1",
+            role: "user",
+            parts: [{ type: "text", text: "珍珠奶茶有哪些原料，用了什么工艺？" }],
+          },
+        ],
+        thread_id: "t-graph-plan",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    expect(buildExecutionGraphMock).toHaveBeenCalled();
+    expect(buildSupervisorGraphMock).not.toHaveBeenCalled();
+  });
+
+  it("synthesis path skips duplicate service-level graph prefetch (D-11 rag_generate)", async () => {
+    toBaseMessagesMock.mockResolvedValue([{ content: "珍珠奶茶有哪些原料，用了什么工艺？" }]);
+    invokeGraphSearchMock.mockClear();
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "g2",
+            role: "user",
+            parts: [{ type: "text", text: "珍珠奶茶有哪些原料，用了什么工艺？" }],
+          },
+        ],
+        thread_id: "t-graph-prefetch",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    expect(invokeGraphSearchMock).not.toHaveBeenCalled();
+    expect(streamMock.mock.calls[0]?.[0]).toBeTruthy();
+  });
+
+  it("kb NO_HIT + graphSignal: synthesis defers prefetch to graph (D-05, D-13)", async () => {
+    resolveIntentPlanForAgentMock.mockResolvedValue({
+      plan: KB_PLAN_WITH_GRAPH_FALLBACK,
+      layers: ["L1"],
+    });
+    invokeKbSearchMock.mockClear();
+    invokeGraphSearchMock.mockClear();
+    toBaseMessagesMock.mockResolvedValue([{ content: "差旅报销政策有哪些条款？" }]);
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "k1",
+            role: "user",
+            parts: [{ type: "text", text: "差旅报销政策有哪些条款？" }],
+          },
+        ],
+        thread_id: "t-kb-graph-fallback",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    expect(invokeKbSearchMock).not.toHaveBeenCalled();
+    expect(invokeGraphSearchMock).not.toHaveBeenCalled();
+  });
+
+  it("kb prefetch without graphSignal invokes kb_search but NOT graph_search (D-13 negative)", async () => {
+    resolveIntentPlanForAgentMock.mockResolvedValue({
+      plan: {
+        primary: "general" as const,
+        channels: "kb" as const,
+        specialists: ["retriever"],
+        retrieverTools: ["kb_search"],
+        fallbackChain: [],
+        reason: "l1:kb_without_graph",
+        confidence: 0.8,
+        graphSignal: false,
+      },
+      layers: ["L1"],
+    });
+    invokeKbSearchMock.mockResolvedValue("KB_SEARCH_STATUS: HIT\n[citation documentId: doc-1]");
+    invokeGraphSearchMock.mockClear();
+    invokeKbSearchMock.mockClear();
+    toBaseMessagesMock.mockResolvedValue([{ content: "差旅报销政策有哪些条款？" }]);
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "k2",
+            role: "user",
+            parts: [{ type: "text", text: "差旅报销政策有哪些条款？" }],
+          },
+        ],
+        thread_id: "t-kb-no-graph",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    expect(invokeKbSearchMock).toHaveBeenCalledTimes(1);
+    expect(invokeGraphSearchMock).not.toHaveBeenCalled();
+  });
+
+  it("ENABLE_INTENT_ROUTER=false uses legacy buildSupervisorGraph (D-10)", async () => {
+    process.env.ENABLE_INTENT_ROUTER = "false";
+    toBaseMessagesMock.mockResolvedValue([{ content: "对比 LangGraph 与 AutoGen" }]);
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "leg1",
+            role: "user",
+            parts: [{ type: "text", text: "对比 LangGraph 与 AutoGen 并写报告" }],
+          },
+        ],
+        thread_id: "t-legacy-router",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    expect(buildSupervisorGraphMock).toHaveBeenCalled();
+    expect(buildExecutionGraphMock).not.toHaveBeenCalled();
+    expect(resolveIntentPlanForAgentMock).not.toHaveBeenCalled();
+  });
+
+  it("trace intent includes graph_relation plan for H-04 fixture (D-06, D-08)", async () => {
+    const graphOut = [
+      "GRAPH_SEARCH_STATUS: HIT",
+      "nodes:",
+      "  - id=product:pearl-milk-tea labels=Product name=珍珠奶茶",
+    ].join("\n");
+    streamMock.mockImplementation(() =>
+      (async function* () {
+        yield ["updates", { prefetch: { messages: [{ content: graphOut }] } }];
+      })(),
+    );
+    toBaseMessagesMock.mockResolvedValue([{ content: "珍珠奶茶有哪些原料，用了什么工艺？" }]);
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "h4",
+            role: "user",
+            parts: [{ type: "text", text: "珍珠奶茶有哪些原料，用了什么工艺？" }],
+          },
+        ],
+        thread_id: "t-h4-trace",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __writes?: unknown[];
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    const tracePart = streamArg?.__writes?.find(
+      (w) => (w as { type?: string }).type === "data-agent-trace",
+    ) as Record<string, unknown> | undefined;
+    const traceData = tracePart?.data as {
+      intent?: { plan?: { primary?: string }; route?: string };
+      events?: Array<{ name?: string }>;
+    };
+    expect(traceData?.intent?.plan?.primary).toBe("graph_relation");
+    expect(traceData?.intent?.route).toBe("single_specialist");
+    const toolEvents = traceData?.events?.filter((e) => e.name === "graph_search");
+    expect(toolEvents?.length).toBeGreaterThan(0);
+  });
+
+  it("graph HIT suppresses KB miss note and injects fallback when LLM is silent (D-06 UX)", async () => {
+    const graphOut = [
+      "GRAPH_SEARCH_STATUS: HIT",
+      "nodes:",
+      "  - id=product:pearl-milk-tea labels=Product name=珍珠奶茶",
+      "  - id=ingredient:tapioca labels=Ingredient name=珍珠",
+    ].join("\n");
+    toBaseMessagesMock.mockResolvedValue([{ content: "珍珠奶茶有哪些原料，用了什么工艺？" }]);
+    streamMock.mockImplementation(() =>
+      (async function* () {
+        yield ["updates", { prefetch: { messages: [{ content: graphOut }] } }];
+      })(),
+    );
+    toUIMessageStreamMock.mockReturnValue(
+      new ReadableStream({
+        start(controller) {
+          controller.close();
+        },
+      }).pipeThrough(new TransformStream()),
+    );
+
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "gx",
+            role: "user",
+            parts: [{ type: "text", text: "珍珠奶茶有哪些原料，用了什么工艺？" }],
+          },
+        ],
+        thread_id: "t-graph-no-kb-miss",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __writes?: unknown[];
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    const deltas = (streamArg?.__writes ?? [])
+      .filter((w) => (w as { type?: string }).type === "text-delta")
+      .map((w) => (w as { delta?: string }).delta ?? "")
+      .join("");
+    expect(deltas).not.toMatch(/知识库未找到足够依据/);
+    expect(deltas).toMatch(/珍珠奶茶/);
+  });
+
+  it("kb HIT injects citation fallback when LLM wrongly reports miss (D-11 synthesis)", async () => {
+    const KB_HIT = [
+      "KB_SEARCH_STATUS: HIT",
+      "知识库检索结果（workspace=default，来源=知识库，minSimilarity=0.60）：",
+      "[citation 1]",
+      "title: 红烧肉的做法",
+      "source: recipe.md",
+      "documentId: doc-braise",
+      "chunkIndex: 0",
+      "similarity: 0.920",
+      "workspaceId: default",
+      "snippet: 五花肉切块焯水，加冰糖炒糖色，慢火炖40分钟。",
+    ].join("\n\n");
+
+    resolveIntentPlanForAgentMock.mockResolvedValue({
+      plan: KB_PLAN_NO_GRAPH,
+      layers: ["L1"],
+    });
+    invokeKbSearchMock.mockClear();
+    toBaseMessagesMock.mockResolvedValue([{ content: "怎么做红烧肉？" }]);
+    streamMock.mockImplementation(() =>
+      (async function* () {
+        yield [
+          "updates",
+          {
+            prefetch: { messages: [{ content: KB_HIT }] },
+            synthesizer: {
+              messages: [
+                {
+                  content: "知识库未找到足够相关依据。\nKB_SEARCH_STATUS: NO_RELEVANT_HIT",
+                },
+              ],
+            },
+          },
+        ];
+      })(),
+    );
+    toUIMessageStreamMock.mockReturnValue(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            type: "text-delta",
+            id: "r1",
+            delta: "知识库未找到足够相关依据。",
+          });
+          controller.close();
+        },
+      }).pipeThrough(new TransformStream()),
+    );
+
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "kb1",
+            role: "user",
+            parts: [{ type: "text", text: "怎么做红烧肉？" }],
+          },
+        ],
+        thread_id: "t-kb-hit-fallback",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __writes?: unknown[];
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    const deltas = (streamArg?.__writes ?? [])
+      .filter((w) => (w as { type?: string }).type === "text-delta")
+      .map((w) => (w as { delta?: string }).delta ?? "")
+      .join("");
+    expect(deltas).toMatch(/五花肉切块焯水/);
+    expect(deltas).toMatch(/红烧肉的做法/);
+    expect(deltas).not.toMatch(/说明：知识库未找到足够依据/);
+    const citePart = streamArg?.__writes?.find(
+      (w) => (w as { type?: string }).type === "data-citations",
+    ) as { data?: { citations?: Array<{ documentId?: string }> } } | undefined;
+    expect(citePart?.data?.citations?.[0]?.documentId).toBe("doc-braise");
   });
 });

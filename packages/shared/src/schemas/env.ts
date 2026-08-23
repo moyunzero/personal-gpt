@@ -6,9 +6,66 @@ import { z } from "zod";
  */
 export const SharedEnvSchema = z
   .object({
-    ASTRA_DB_COLLECTION: z.string().min(1, "ASTRA_DB_COLLECTION 未设置"),
-    ASTRA_DB_API_ENDPOINT: z.string().min(1, "ASTRA_DB_API_ENDPOINT 未设置"),
-    ASTRA_DB_APPLICATION_TOKEN: z.string().min(1, "ASTRA_DB_APPLICATION_TOKEN 未设置"),
+    ASTRA_DB_COLLECTION: z.string().min(1).optional(),
+    ASTRA_DB_API_ENDPOINT: z.string().min(1).optional(),
+    ASTRA_DB_APPLICATION_TOKEN: z.string().min(1).optional(),
+
+    /** Corpus 分库（D-24）：用户上传 / 种子库物理隔离；未设时回退 ASTRA_DB_COLLECTION */
+    ASTRA_DB_COLLECTION_USER: z.string().min(1).optional(),
+    ASTRA_DB_COLLECTION_SEED: z.string().min(1).optional(),
+
+    /** Elasticsearch BM25（D-14）；本地 Compose 默认 http://localhost:9200 */
+    ES_NODE: z.string().url().default("http://localhost:9200"),
+    ES_INDEX_USER: z.string().min(1).default("kb_user"),
+    ES_INDEX_SEED: z.string().min(1).default("kb_seed"),
+
+    /**
+     * 向量后端（Wave3 STORE-01）。默认 astra；设 milvus 时走本地/自托管 Milvus。
+     */
+    VECTOR_BACKEND: z.enum(["astra", "milvus"]).default("astra"),
+
+    /** Milvus gRPC 地址（Compose 默认 localhost:19530） */
+    MILVUS_ADDRESS: z.string().min(1).default("localhost:19530"),
+
+    /** Milvus collection；未设时回退 Astra corpus collection 名 */
+    MILVUS_COLLECTION_USER: z.string().min(1).optional(),
+    MILVUS_COLLECTION_SEED: z.string().min(1).optional(),
+
+    /**
+     * Astra 默认时是否额外双写 Milvus（可选；VECTOR_BACKEND=milvus 时主写 Milvus）。
+     */
+    MILVUS_DUAL_WRITE: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((v) => v === "true"),
+
+    /** Neo4j Bolt URI（Wave4 Graph RAG；Compose 默认 bolt://localhost:7687） */
+    NEO4J_URI: z.string().min(1).default("bolt://localhost:7687"),
+    NEO4J_USER: z.string().min(1).default("neo4j"),
+    NEO4J_PASSWORD: z.string().min(1).optional(),
+    ENABLE_GRAPH_RAG: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((v) => v === "true"),
+
+    /** App-layer RRF rank constant k（经典 ≈60） */
+    RRF_K: z.coerce.number().int().min(1).max(200).default(60),
+
+    /**
+     * Dedicated rerank HTTP（OpenRouter/Cohere 兼容）。
+     * ENABLE_RERANKER 默认开（非 "false" 即启用）；Wave1c / 03-03 再统一切 Chat 调用点。
+     */
+    ENABLE_RERANKER: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((v) => v !== "false"),
+    RERANK_URL: z.string().url().optional(),
+    RERANK_API_KEY: z.string().min(1).optional(),
+    RERANK_MODEL: z.string().min(1).optional(),
+
+    /** Corrective 阈值（plan 03-03）；schema 先接受，本 plan 不接线 */
+    CORRECTIVE_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.35),
+
     /** Google AI Studio API Key（可选；国内不可用时可省略，RAG 辅助已改 Groq） */
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
 
@@ -47,6 +104,19 @@ export const SharedEnvSchema = z
     /** 本地 Docker Compose Redis（BullMQ）连接串 */
     REDIS_URL: z.string().url().optional(),
 
+    /** 短期记忆保留最近 N 轮（D-17）；默认 10 */
+    SHORT_MEMORY_N: z.coerce.number().int().min(1).max(100).default(10),
+
+    /** Redis 短期记忆键前缀（D-18）；最终键 = prefix:workspaceId:userKey */
+    MEMORY_KEY_PREFIX: z.string().min(1).default("pgpt:short_memory"),
+
+    /** Mem0 长期记忆（D-16）；未设 key 时 search/add 降级为空 */
+    MEM0_API_KEY: z.string().min(1).optional(),
+    MEM0_ENABLED: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((v) => v !== "false"),
+
     /**
      * 向量检索总超时（毫秒），从「调 embedding API」到「Astra 查完返回」算一段。
      */
@@ -82,9 +152,12 @@ export const SharedEnvSchema = z
     AGENT_RECURSION_LIMIT: z.coerce.number().int().min(1).max(200).default(40),
 
     /**
-     * Checkpointer 后端（D-08）。Phase 2 默认 memory；sqlite 需另装 checkpoint 包。
+     * Checkpointer 后端（D-20/D-21）。默认 postgres；memory|sqlite 仅测试或无 PG。
      */
-    AGENT_CHECKPOINTER: z.enum(["memory", "sqlite"]).default("memory"),
+    AGENT_CHECKPOINTER: z.enum(["memory", "sqlite", "postgres"]).default("postgres"),
+
+    /** PostgresSaver schema（可选；默认 public） */
+    AGENT_CHECKPOINT_SCHEMA: z.string().min(1).optional(),
 
     /**
      * 启用的 Skills 列表（D-12/D-13）。逗号分隔，默认三件套。
@@ -170,6 +243,37 @@ export const SharedEnvSchema = z
         code: "custom",
         path: ["OPENAI_API_KEY"],
         message: "CHAT_PROVIDER=openai 时必须设置 OPENAI_API_KEY",
+      });
+    }
+    const needsAstra = data.VECTOR_BACKEND === "astra" || data.MILVUS_DUAL_WRITE === true;
+    if (needsAstra) {
+      for (const field of ["ASTRA_DB_API_ENDPOINT", "ASTRA_DB_APPLICATION_TOKEN"] as const) {
+        if (!data[field]?.trim()) {
+          ctx.addIssue({
+            code: "custom",
+            path: [field],
+            message: `VECTOR_BACKEND=astra 或 MILVUS_DUAL_WRITE=true 时必须设置 ${field}`,
+          });
+        }
+      }
+      const hasLegacyCollection = Boolean(data.ASTRA_DB_COLLECTION?.trim());
+      const hasCorpusCollections =
+        Boolean(data.ASTRA_DB_COLLECTION_USER?.trim()) &&
+        Boolean(data.ASTRA_DB_COLLECTION_SEED?.trim());
+      if (!hasLegacyCollection && !hasCorpusCollections) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["ASTRA_DB_COLLECTION"],
+          message:
+            "VECTOR_BACKEND=astra 或 MILVUS_DUAL_WRITE=true 时必须设置 ASTRA_DB_COLLECTION，或同时设置 ASTRA_DB_COLLECTION_USER 与 ASTRA_DB_COLLECTION_SEED",
+        });
+      }
+    }
+    if (data.ENABLE_GRAPH_RAG === true && !data.NEO4J_PASSWORD?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["NEO4J_PASSWORD"],
+        message: "ENABLE_GRAPH_RAG=true 时必须设置 NEO4J_PASSWORD",
       });
     }
   });

@@ -1,8 +1,12 @@
+import { graphRagQuery } from "@personal-gpt/shared";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createUIMessageStreamResponse } from "ai";
 import { randomUUID } from "node:crypto";
 
+import { graphPathsToDisplay } from "@/lib/chat/graph-path-display";
 import { type VectorSearchResult } from "@/lib/chat/context";
+import { parseCorpus } from "@/lib/chat/corpus-filters";
+import { loadMemoryContextBlock, parseUserKey, persistTurnMemory } from "@/lib/chat/memory-context";
 import { formatMessages, type InputMessage } from "@/lib/chat/messages";
 import { buildSystemPrompt } from "@/lib/chat/prompt";
 import { decideQueryRoute } from "@/lib/chat/query-router";
@@ -13,6 +17,27 @@ import { logger } from "@/lib/logger";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
 const MAX_CHAT_MESSAGES = 50;
+const GRAPH_RAG_TIMEOUT_MS = 12_000;
+const MEMORY_LOAD_TIMEOUT_MS = 1_500;
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label}_timeout`)), ms);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function withGraphRagTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return withTimeout(promise, ms, "graph_rag");
+}
 
 function isTrustedInternalProxy(req: Request): boolean {
   const expected = process.env.INTERNAL_PROXY_KEY;
@@ -129,9 +154,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const { messages } = await req.json();
+    const body = (await req.json()) as {
+      messages?: unknown;
+      corpus?: unknown;
+      userKey?: unknown;
+    };
+    const { messages } = body;
+    // D-27/D-28 / T-03-seed: default user; seed only when explicit
+    const corpus = parseCorpus(body.corpus);
+    const userKey = parseUserKey(body.userKey);
 
-    if (!messages || messages.length === 0) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response("No messages provided", {
         status: 400,
         headers: corsHeaders,
@@ -156,8 +189,10 @@ export async function POST(req: Request) {
     const routeDecision = await decideQueryRoute(lastContent, {
       workspaceId: DEFAULT_WORKSPACE_ID,
       requestId,
+      corpus,
     });
     log.debug("query route", {
+      corpus,
       route: routeDecision.route,
       reason: routeDecision.reason,
       fastPath: routeDecision.fastPath ?? false,
@@ -165,8 +200,35 @@ export async function POST(req: Request) {
     });
 
     let contextResult: VectorSearchResult = { kind: "no-docs" };
-    if (routeDecision.route === "retrieve") {
-      contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID);
+    const graphOnlyRetrieve =
+      routeDecision.intentPrimary === "graph_relation" && routeDecision.needsGraphContext;
+    if (routeDecision.route === "retrieve" && !graphOnlyRetrieve) {
+      contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID, {
+        corpus,
+      });
+    }
+
+    let graphSummary = "";
+    let graphPathsForUi = graphPathsToDisplay([]);
+    if (routeDecision.needsGraphContext && corpus === "seed") {
+      try {
+        const graphResult = await withGraphRagTimeout(
+          graphRagQuery({ question: lastContent }),
+          GRAPH_RAG_TIMEOUT_MS,
+        );
+        if (graphResult.paths.length > 0) {
+          graphSummary = graphResult.summary;
+          graphPathsForUi = graphPathsToDisplay(graphResult.paths);
+        }
+      } catch (err) {
+        log.warn("graphRagQuery failed, continuing without graph context", { err });
+      }
+    }
+
+    if (graphOnlyRetrieve && graphPathsForUi.length === 0 && routeDecision.route === "retrieve") {
+      contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID, {
+        corpus,
+      });
     }
 
     const citations = contextResult.kind === "ok" ? contextResult.citations : [];
@@ -183,13 +245,39 @@ export async function POST(req: Request) {
     }
     // timeout / api-error 的日志在 getRelevantContext 里已经发过，避免重复。
 
-    const systemPrompt = buildSystemPrompt(contextResult);
+    const systemPromptBase = buildSystemPrompt(contextResult);
+    const graphBlock = graphSummary ? `\n\n## 图谱知识\n${graphSummary}` : "";
+    let memoryBlock = "";
+    if (userKey) {
+      try {
+        memoryBlock = await withTimeout(
+          loadMemoryContextBlock({ workspaceId: DEFAULT_WORKSPACE_ID, userKey }, lastContent),
+          MEMORY_LOAD_TIMEOUT_MS,
+          "memory_load",
+        );
+      } catch {
+        memoryBlock = "";
+      }
+    }
+    const systemPrompt = memoryBlock
+      ? `${systemPromptBase}${graphBlock}\n\n${memoryBlock}`
+      : `${systemPromptBase}${graphBlock}`;
 
     const stream = createChatStream({
       systemPrompt,
       messages: formattedMessages,
       requestId,
       citations,
+      graphPaths: graphPathsForUi,
+      onComplete: userKey
+        ? async (assistantText) => {
+            await persistTurnMemory(
+              { workspaceId: DEFAULT_WORKSPACE_ID, userKey },
+              lastContent,
+              assistantText,
+            );
+          }
+        : undefined,
     });
 
     // SSE 响应默认只有 text/event-stream，需要手动注入 CORS 头（空值的不写）

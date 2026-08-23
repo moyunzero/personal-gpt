@@ -81,9 +81,11 @@ export function createAgentTraceCollector(input: {
     }
   };
 
+  const planPrimary = input.intent.plan?.primary;
+  const layers = input.intent.routerLayers?.join("+") || "legacy";
   push(
     "intent",
-    `路由=${input.intent.route}；强制专科=[${input.intent.requiredSpecialists.join(", ") || "无"}]`,
+    `路由=${input.intent.route}${planPrimary ? ` · ${planPrimary}` : ""}；专科=[${input.intent.requiredSpecialists.join(", ") || "无"}]；层=${layers}`,
     {
       name: "intent",
       detail: truncateTraceText(input.userText, 500),
@@ -254,6 +256,20 @@ export function createAgentTraceCollector(input: {
       }
     },
   };
+}
+
+/** 从 graph_search 工具文本生成短摘要 */
+export function summarizeGraphToolOutput(text: string): string {
+  if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(text)) {
+    return "HIT · 图谱路径";
+  }
+  if (/GRAPH_SEARCH_STATUS:\s*NO_PATH/i.test(text)) {
+    return "NO_PATH";
+  }
+  if (/GRAPH_SEARCH_STATUS:\s*ERROR/i.test(text)) {
+    return "ERROR";
+  }
+  return truncateTraceText(text, 120);
 }
 
 /** 从 kb_search 工具文本生成短摘要 */

@@ -5,16 +5,31 @@
  */
 import { HumanMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildAgentGraph,
   getAgentRunConfig,
+  resetCheckpointerSingletonsForTests,
   resolveAgentRoute,
 } from "../../../apps/agent-service/src/graph/build-graph";
 import { isAgentChitchat } from "../../../apps/agent-service/src/graph/short-circuit";
 
 describe("Phase 2 regression #4: chitchat skips full multi-agent graph (D-03/D-17)", () => {
+  let prevCheckpointer: string | undefined;
+
+  beforeEach(() => {
+    prevCheckpointer = process.env.AGENT_CHECKPOINTER;
+    process.env.AGENT_CHECKPOINTER = "memory";
+    resetCheckpointerSingletonsForTests();
+  });
+
+  afterEach(() => {
+    if (prevCheckpointer === undefined) delete process.env.AGENT_CHECKPOINTER;
+    else process.env.AGENT_CHECKPOINTER = prevCheckpointer;
+    resetCheckpointerSingletonsForTests();
+  });
+
   it("placeholder harness (no live LLM)", () => {
     expect(true).toBe(true);
   });

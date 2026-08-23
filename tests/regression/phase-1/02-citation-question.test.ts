@@ -1,13 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Citation } from "@personal-gpt/shared/types/kb";
+import type { HybridSearchDeps, VectorStore } from "@personal-gpt/shared";
 
 const searchMock = vi.fn();
 const streamTextMock = vi.fn();
-
-vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
-  createVectorStore: () => ({ search: searchMock }),
-}));
 
 vi.mock("@/lib/env", () => ({
   env: {
@@ -15,10 +12,6 @@ vi.mock("@/lib/env", () => ({
     VECTOR_SEARCH_TIMEOUT_MS: 5000,
     EMBEDDING_CACHE_SIZE: 100,
   },
-}));
-
-vi.mock("@personal-gpt/shared/ai/embeddings", () => ({
-  embedText: vi.fn().mockResolvedValue([0.1, 0.2, 0.3]),
 }));
 
 vi.mock("@/lib/chat/tracing", () => ({
@@ -51,6 +44,20 @@ vi.mock("@/lib/logger", () => ({
 import { getRelevantContext } from "@/lib/chat/retrieve";
 import { createChatStream } from "@/lib/chat/stream";
 
+function hybridDeps(): HybridSearchDeps {
+  const store: VectorStore = {
+    search: searchMock,
+    upsert: vi.fn(),
+    deleteByDocument: vi.fn(),
+  };
+  return {
+    embed: async () => [0.1, 0.2, 0.3],
+    getStore: () => store,
+    esSearch: async () => [],
+    rewriteQuery: async (q) => q,
+  };
+}
+
 async function collectStreamParts(stream: ReadableStream<unknown>) {
   const reader = stream.getReader();
   const parts: unknown[] = [];
@@ -66,6 +73,7 @@ describe("Phase 1 regression #2: citation on relevant question", () => {
   beforeEach(() => {
     searchMock.mockReset();
     streamTextMock.mockReset();
+    process.env.ENABLE_RERANKER = "false";
   });
 
   it("returns citations with visible similarity and streams data-citations part", async () => {
@@ -80,7 +88,12 @@ describe("Phase 1 regression #2: citation on relevant question", () => {
       },
     ]);
 
-    const result = await getRelevantContext("请介绍一下 Personal GPT 项目的核心功能", "reg-2");
+    const result = await getRelevantContext(
+      "请介绍一下 Personal GPT 项目的核心功能",
+      "reg-2",
+      undefined,
+      { hybridDeps: hybridDeps() },
+    );
 
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") return;

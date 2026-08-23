@@ -7,6 +7,7 @@ import AgentStepPanels, { extractAgentSteps } from "./AgentStepPanels";
 import AgentTodoList, { extractTodos } from "./AgentTodoList";
 import AgentTracePanel, { extractAgentTrace } from "./AgentTracePanel";
 import CitationCards from "./CitationCards";
+import GraphPathCards, { type GraphPathDisplay } from "./GraphPathCards";
 
 interface BubbleProps {
   message: UIMessage;
@@ -30,6 +31,34 @@ function extractCitations(message: UIMessage): Citation[] {
       Array.isArray((part.data as { citations: unknown }).citations)
     ) {
       return (part.data as { citations: Citation[] }).citations;
+    }
+  }
+  return [];
+}
+
+function isValidGraphPath(value: unknown): value is GraphPathDisplay {
+  if (!value || typeof value !== "object") return false;
+  const path = value as GraphPathDisplay;
+  return (
+    Array.isArray(path.nodes) &&
+    path.nodes.every((n) => typeof n === "string") &&
+    Array.isArray(path.relationships) &&
+    path.relationships.every((r) => typeof r === "string")
+  );
+}
+
+function extractGraphPaths(message: UIMessage): GraphPathDisplay[] {
+  for (const part of message.parts) {
+    if (
+      "type" in part &&
+      part.type === "data-graph-paths" &&
+      "data" in part &&
+      part.data &&
+      typeof part.data === "object" &&
+      "paths" in part.data &&
+      Array.isArray((part.data as { paths: unknown }).paths)
+    ) {
+      return (part.data as { paths: unknown[] }).paths.filter(isValidGraphPath);
     }
   }
   return [];
@@ -60,6 +89,7 @@ const Bubble = ({
 
   const { role } = message;
   const citations = role === "assistant" && !isStreaming ? extractCitations(message) : [];
+  const graphPaths = role === "assistant" && !isStreaming ? extractGraphPaths(message) : [];
   const showTrace =
     agentMode && role === "assistant" && !isStreaming && Boolean(extractAgentTrace(message));
   const hasAgentChrome =
@@ -67,7 +97,7 @@ const Bubble = ({
     role === "assistant" &&
     (extractTodos(message).length > 0 || extractAgentSteps(message).length > 0 || showTrace);
 
-  if (!content && !hasAgentChrome) {
+  if (!content && !hasAgentChrome && graphPaths.length === 0) {
     return null;
   }
 
@@ -85,6 +115,7 @@ const Bubble = ({
           ) : null}
           {content ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown> : null}
           {citations.length > 0 ? <CitationCards citations={citations} /> : null}
+          {graphPaths.length > 0 ? <GraphPathCards paths={graphPaths} /> : null}
           {showTrace ? <AgentTracePanel message={message} /> : null}
         </div>
       </div>

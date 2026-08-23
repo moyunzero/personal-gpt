@@ -17,5 +17,7 @@ describe("query-intent", () => {
   it("纯算式", () => {
     expect(isPureMathExpression("1 + 2 = ?")).toBe(true);
     expect(isPureMathExpression("介绍一下")).toBe(false);
+    expect(isPureMathExpression("?")).toBe(false);
+    expect(isPureMathExpression("()")).toBe(false);
   });
 });

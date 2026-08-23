@@ -1,14 +1,20 @@
 /**
  * 查询路由：决定「直接回答」还是「检索知识库」。
  *
- * 三层决策：
- *   1. 意图快路径（寒暄、算式）— query-intent 词表
- *   2. embedding Top-1 预检 — 高相似 retrieve / 低相似 direct / 灰色地带 retrieve（宁可多检）
- *   3. LLM 路由器 — 仅预检不可用时（关闭预检或 embedding 失败）
+ * ENABLE_INTENT_ROUTER=true（默认）：shared resolveIntentPlan + mapIntentPlanToChatRoute（D-01/D-16）
+ * ENABLE_INTENT_ROUTER=false：legacy 三层决策（D-10 rollback）
  */
 
 import { generateRagHelperText } from "@personal-gpt/shared/ai/rag-helper";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
+import type { Corpus } from "@personal-gpt/shared";
+import { getNeo4jDriverFromEnv } from "@personal-gpt/shared";
+import {
+  mapIntentPlanToChatRoute,
+  readIntentRouterConfig,
+  resolveIntentPlan,
+  type PrimaryIntent,
+} from "@personal-gpt/shared/routing";
 import { z } from "zod";
 
 import {
@@ -26,17 +32,69 @@ export interface QueryRouteDecision {
   reason: string;
   fastPath?: boolean;
   precheckSimilarity?: number;
+  needsGraphContext?: boolean;
+  graphContextType?: "graph_relation";
+  intentPrimary?: PrimaryIntent;
 }
 
 export interface DecideQueryRouteOptions {
   workspaceId?: string;
   requestId?: string;
+  corpus?: Corpus;
 }
 
 const RouteSchema = z.object({
   route: z.enum(["direct", "retrieve"]),
   reason: z.string(),
 });
+
+let neo4jOkCache: boolean | null = null;
+let neo4jOkCachedAt = 0;
+let neo4jProbeInFlight: Promise<boolean> | null = null;
+const NEO4J_PROBE_TTL_MS = 30_000;
+const NEO4J_PROBE_TIMEOUT_MS = 2_000;
+
+async function probeNeo4jOnce(): Promise<boolean> {
+  try {
+    const driver = getNeo4jDriverFromEnv();
+    if (!driver) return false;
+    await Promise.race([
+      driver.verifyConnectivity(),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("neo4j_probe_timeout")), NEO4J_PROBE_TIMEOUT_MS);
+      }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Cached Neo4j probe — fail-open degrade per D-10; TTL re-probe (WR-05) */
+async function probeNeo4jAvailable(): Promise<boolean> {
+  if (neo4jOkCache !== null && Date.now() - neo4jOkCachedAt < NEO4J_PROBE_TTL_MS) {
+    return neo4jOkCache;
+  }
+  if (!neo4jProbeInFlight) {
+    neo4jProbeInFlight = probeNeo4jOnce()
+      .then((ok) => {
+        neo4jOkCache = ok;
+        neo4jOkCachedAt = Date.now();
+        return ok;
+      })
+      .finally(() => {
+        neo4jProbeInFlight = null;
+      });
+  }
+  return neo4jProbeInFlight;
+}
+
+/** Test hook */
+export function resetNeo4jAvailabilityCacheForTests(): void {
+  neo4jOkCache = null;
+  neo4jOkCachedAt = 0;
+  neo4jProbeInFlight = null;
+}
 
 function tryIntentFastPath(query: string): QueryRouteDecision | null {
   if (isEmptyQuery(query)) {
@@ -55,7 +113,7 @@ function tryIntentFastPath(query: string): QueryRouteDecision | null {
 }
 
 function routeQueryHeuristic(): QueryRouteDecision {
-  return { route: "direct", reason: "heuristic_default_direct" };
+  return { route: "retrieve", reason: "heuristic_default_retrieve_safe" };
 }
 
 const ROUTER_SYSTEM = `你是企业知识库问答路由器。判断用户问题是否需要检索「私有知识库」（用户上传文档、企业内部资料）。
@@ -103,6 +161,7 @@ async function routeWithEmbeddingPrecheck(
       query,
       options.workspaceId ?? DEFAULT_WORKSPACE_ID,
       options.requestId,
+      options.corpus ?? "user",
     );
   } catch {
     return { kind: "skip" };
@@ -138,7 +197,6 @@ async function routeWithEmbeddingPrecheck(
     };
   }
 
-  // 灰色地带 [directBelow, retrieveAt)：宁可多检，不调用 LLM
   return {
     kind: "decided",
     decision: {
@@ -150,12 +208,9 @@ async function routeWithEmbeddingPrecheck(
   };
 }
 
-/**
- * 决定当前 query 应走「直接回答」还是「向量检索」。
- */
-export async function decideQueryRoute(
+async function decideQueryRouteLegacy(
   query: string,
-  options: DecideQueryRouteOptions = {},
+  options: DecideQueryRouteOptions,
 ): Promise<QueryRouteDecision> {
   const intentFast = tryIntentFastPath(query);
   if (intentFast) {
@@ -176,6 +231,49 @@ export async function decideQueryRoute(
   }
 
   return routeQueryHeuristic();
+}
+
+async function decideWithSharedRouter(
+  query: string,
+  options: DecideQueryRouteOptions,
+): Promise<QueryRouteDecision> {
+  const neo4jOk = await probeNeo4jAvailable();
+  const { plan, precheckSimilarity } = await resolveIntentPlan(query, {
+    probeKb: async (q) =>
+      probeKbRelevance(
+        q,
+        options.workspaceId ?? DEFAULT_WORKSPACE_ID,
+        options.requestId,
+        options.corpus ?? "user",
+      ),
+    neo4jAvailable: () => neo4jOk,
+  });
+
+  const mapped = mapIntentPlanToChatRoute(plan);
+
+  return {
+    route: mapped.route,
+    reason: mapped.reason,
+    fastPath: true,
+    precheckSimilarity,
+    needsGraphContext: mapped.needsGraphContext,
+    graphContextType: mapped.graphContextType,
+    intentPrimary: plan.primary,
+  };
+}
+
+/**
+ * 决定当前 query 应走「直接回答」还是「向量检索」。
+ */
+export async function decideQueryRoute(
+  query: string,
+  options: DecideQueryRouteOptions = {},
+): Promise<QueryRouteDecision> {
+  const config = readIntentRouterConfig();
+  if (!config.enableIntentRouter) {
+    return decideQueryRouteLegacy(query, options);
+  }
+  return decideWithSharedRouter(query, options);
 }
 
 /** @deprecated 请用 decideQueryRoute；仅供同步单测/回归里寒暄短路 */

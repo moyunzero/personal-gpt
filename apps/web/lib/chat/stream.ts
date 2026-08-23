@@ -4,6 +4,8 @@ import { streamText, createUIMessageStream } from "ai";
 
 import { logger } from "@/lib/logger";
 
+import type { GraphPathDisplay } from "@/lib/chat/graph-path-display";
+
 import type { FormattedMessage } from "./messages";
 import { ThinkStripFilter } from "./think-strip";
 
@@ -12,6 +14,10 @@ export interface ChatStreamOptions {
   messages: FormattedMessage[];
   requestId: string;
   citations?: Citation[];
+  /** D-07: graph path cards — no cypher field */
+  graphPaths?: GraphPathDisplay[];
+  /** 流成功结束后回调（用于短期记忆 / Mem0 持久化）；失败不调用 */
+  onComplete?: (assistantText: string) => void | Promise<void>;
 }
 
 /**
@@ -25,6 +31,8 @@ export function createChatStream({
   messages,
   requestId,
   citations = [],
+  graphPaths = [],
+  onComplete,
 }: ChatStreamOptions) {
   const log = logger.child({ scope: "chat.stream", requestId });
 
@@ -34,7 +42,16 @@ export function createChatStream({
       let hasStarted = false;
       let lastError: Error | null = null;
 
+      if (graphPaths.length > 0) {
+        writer.write({
+          type: "data-graph-paths",
+          id: `graph-paths-${messageId}`,
+          data: { paths: graphPaths },
+        });
+      }
+
       const models = resolveChatModels();
+      let assistantText = "";
       for (let i = 0; i < models.length; i++) {
         const modelName = models[i]!;
         try {
@@ -52,6 +69,7 @@ export function createChatStream({
             if (part.type === "text-delta") {
               const visible = thinkFilter.feed(part.text);
               if (!visible) continue;
+              assistantText += visible;
               if (!hasStarted) {
                 writer.write({ type: "text-start", id: messageId });
                 hasStarted = true;
@@ -64,6 +82,7 @@ export function createChatStream({
             } else if (part.type === "finish") {
               const trailing = thinkFilter.flush();
               if (trailing) {
+                assistantText += trailing;
                 if (!hasStarted) {
                   writer.write({ type: "text-start", id: messageId });
                   hasStarted = true;
@@ -88,6 +107,21 @@ export function createChatStream({
               id: `citations-${messageId}`,
               data: { citations },
             });
+          }
+
+          if (onComplete && assistantText.trim()) {
+            try {
+              const ON_COMPLETE_TIMEOUT_MS = 5_000;
+              await Promise.race([
+                onComplete(assistantText),
+                new Promise<void>((resolve) => {
+                  const timer = setTimeout(resolve, ON_COMPLETE_TIMEOUT_MS);
+                  timer.unref?.();
+                }),
+              ]);
+            } catch (err) {
+              log.warn("onComplete failed (ignored)", { err });
+            }
           }
 
           return;

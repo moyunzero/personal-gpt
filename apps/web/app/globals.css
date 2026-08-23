@@ -232,6 +232,38 @@ main {
   margin: 0 auto;
 }
 
+.composer-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-xs);
+}
+
+.corpus-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.corpus-toggle-input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.corpus-toggle-input:disabled {
+  cursor: not-allowed;
+}
+
+.corpus-toggle-label {
+  letter-spacing: 0.02em;
+}
+
 .composer-shell {
   display: flex;
   align-items: center;
@@ -881,6 +913,10 @@ main {
 .mode-seg-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.mode-seg-group {
+  display: contents;
 }
 
 /* Agent 待办 / 步骤（消息内嵌，对齐 citation-card） */

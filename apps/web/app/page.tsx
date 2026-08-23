@@ -6,9 +6,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "./components/AppHeader";
 import AgentErrorCard from "./components/AgentErrorCard";
 import Bubble from "./components/Bubble";
+import CorpusToggle, { type CorpusChoice } from "./components/CorpusToggle";
 import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
+import { getOrCreateThreadId, rotateThreadId } from "@/lib/chat/thread-id";
+import { getOrCreateUserKey } from "@/lib/chat/user-key";
 
 function lastUserTextFromMessages(messages: { role?: string; parts?: unknown[] }[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -33,7 +36,16 @@ function lastUserTextFromMessages(messages: { role?: string; parts?: unknown[] }
 
 export default function Home() {
   const [mode, setMode] = useState<ChatMode>("chat");
+  const [corpus, setCorpus] = useState<CorpusChoice>("user");
   const [input, setInput] = useState("");
+  const [userKey] = useState(() => (typeof window !== "undefined" ? getOrCreateUserKey() : ""));
+  const [threadRevision, setThreadRevision] = useState(0);
+  const threadId = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    void threadRevision;
+    return getOrCreateThreadId(mode);
+  }, [mode, threadRevision]);
+  const [chatInstance, setChatInstance] = useState(0);
   const streamRef = useRef<HTMLElement>(null);
 
   const transport = useMemo(
@@ -41,12 +53,20 @@ export default function Home() {
       new DefaultChatTransport({
         // Agent 走 BFF，便于注入 AGENT_INTERNAL_TOKEN，避免浏览器直连暴露密钥
         api: mode === "agent" ? "/api/agent/chat" : "/api/chat",
+        // D-28: explicit corpus; default user (never silent seed)
+        // D-18: opaque userKey for memory scope
+        // D-23: per-mode thread_id for checkpointer resume
+        body: {
+          corpus,
+          ...(userKey ? { userKey } : {}),
+          ...(threadId ? { thread_id: threadId } : {}),
+        },
       }),
-    [mode],
+    [mode, corpus, userKey, threadId],
   );
 
-  const { messages, sendMessage, regenerate, status, error, clearError } = useChat({
-    id: `home-${mode}`,
+  const { messages, sendMessage, regenerate, status, error, clearError, setMessages } = useChat({
+    id: `home-${mode}-${chatInstance}`,
     transport,
   });
 
@@ -87,9 +107,24 @@ export default function Home() {
     setMode("chat");
   };
 
+  const handleNewThread = () => {
+    clearError();
+    rotateThreadId(mode);
+    setThreadRevision((n) => n + 1);
+    setMessages([]);
+    setChatInstance((n) => n + 1);
+    setInput("");
+  };
+
   return (
     <main>
-      <AppHeader activePage="chat" mode={mode} onModeChange={setMode} modeDisabled={isLoading} />
+      <AppHeader
+        activePage="chat"
+        mode={mode}
+        onModeChange={setMode}
+        modeDisabled={isLoading}
+        onNewThread={handleNewThread}
+      />
 
       <section ref={streamRef} className="chat-stream">
         <div className="chat-stream-inner">
@@ -165,6 +200,9 @@ export default function Home() {
 
       <form onSubmit={handleSubmit} className="composer">
         <div className="composer-inner">
+          <div className="composer-toolbar">
+            <CorpusToggle value={corpus} onChange={setCorpus} disabled={isLoading} />
+          </div>
           <div className="composer-shell">
             <input
               className="composer-input"

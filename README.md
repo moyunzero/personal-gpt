@@ -2,9 +2,9 @@
 
 基于 Next.js 的个性化智能对话应用：RAG（检索增强生成）+ Astra 向量库 + 可自助管理的知识库（`/kb`），回答可溯源引用。
 
-当前基线：**v1.0 已封板**（Monorepo · BullMQ 异步入库 · 引用卡片 · 三层查询路由）。下一步见 [产品路线图](#产品路线图-product-roadmap)。
+当前基线：**v3.0 已关账**（混合检索 · 记忆 · Graph demo · 意图路由 · Phase 3.1 UAT）。下一步 **v4.0**（Graph KB 产品化 + 身份治理 + 可生产部署）。详见下方 [产品路线图](#产品路线图-product-roadmap) 与 [仓库内文档](#仓库内文档)。
 
-[在线演示](https://personal-emotion-gpt.vercel.app) · [开发笔记](./docs/rag-chat-phase-1-notes.md)
+[在线演示](https://personal-emotion-gpt.vercel.app)
 
 ## 界面预览
 
@@ -69,9 +69,11 @@ flowchart TB
 
 ## 特性
 
-- **语义检索**：DataStax Astra DB ANN + NVIDIA NIM 2048 维 embedding（`query` / `passage` 分离）
-- **三层查询路由**：意图快路径 → embedding Top-1 预检 → Groq LLM 二分类（灰色地带倾向检索）
-- **双路检索**：用户语料 / `prompt-suggestion` 与 `psychology-qa` seed 分阈值合并（缓解混库挤占，见 [ISSUE-001](./docs/issues/ISSUE-001-mixed-corpus-recall.md)）
+- **语义检索**：Astra DB 或 Milvus ANN + NVIDIA NIM 2048 维 embedding（`query` / `passage` 分离）
+- **混合检索（v3）**：`packages/shared` 的 `hybridSearch` — 向量 + Elasticsearch BM25 + RRF，可选 rerank / Corrective
+- **Corpus 分库**：`user` / `seed` 物理 collection 隔离（默认 Chat 只查 user corpus；seed 用于预设问答与 Graph demo）
+- **意图路由（v3.1）**：Chat 与 Agent 共用 `packages/shared/src/routing/`（L0/L1 + `IntentPlan`）；`graph_relation` 等确定性走 `graph_search`
+- **三层查询路由（Chat）**：意图快路径 → embedding Top-1 预检 → Groq LLM 二分类（灰色地带倾向检索）
 - **流式回答 + 引用卡片**：Vercel AI SDK `data-citations`；流结束后展示标题 / 相似度 / snippet
 - **知识库管理**：`/kb` 上传 PDF·MD·TXT·DOCX，BullMQ 异步 parse→split→embed→upsert，SSE 进度
 - **Monorepo**：`apps/web` · `apps/ingest-worker` · `apps/agent-service` · `packages/shared`
@@ -80,19 +82,20 @@ flowchart TB
 
 ## 技术栈
 
-| 层级           | 选型                                                                    |
-| -------------- | ----------------------------------------------------------------------- |
-| Web            | Next.js 16.2 · React 19 · Tailwind CSS 4                                |
-| AI             | Vercel AI SDK 6 · `@ai-sdk/openai-compatible`（Groq OpenAI 兼容端点）   |
-| 聊天模型       | Groq：`qwen/qwen3.6-27b` → `openai/gpt-oss-120b` → `openai/gpt-oss-20b` |
-| Embedding      | NVIDIA NIM `nvidia/llama-nemotron-embed-1b-v2`（2048 维）               |
-| 向量库         | DataStax Astra DB Data API                                              |
-| 元数据 / 队列  | PostgreSQL 16 + TypeORM 0.3 · Redis 7 + BullMQ 5                        |
-| Worker / Agent | NestJS 11（ingest-worker :3001 · agent-service :3002）                  |
-| 质量           | TypeScript · Zod · Vitest · ESLint · Prettier                           |
-| 切块           | `@langchain/textsplitters`（ingest-worker + 部分 seed 脚本）            |
+| 层级           | 选型                                                                     |
+| -------------- | ------------------------------------------------------------------------ |
+| Web            | Next.js 16.2 · React 19 · Tailwind CSS 4                                 |
+| AI             | Vercel AI SDK 6 · `@ai-sdk/openai-compatible`（Groq OpenAI 兼容端点）    |
+| 聊天模型       | Groq：`qwen/qwen3.6-27b` → `openai/gpt-oss-120b` → `openai/gpt-oss-20b`  |
+| Embedding      | NVIDIA NIM `nvidia/llama-nemotron-embed-1b-v2`（2048 维）                |
+| 向量库         | DataStax Astra DB（默认）；可选 Milvus（`VECTOR_BACKEND=milvus`）        |
+| 检索增强（v3） | Elasticsearch BM25 · Neo4j Graph RAG（seed demo）· Redis 短期记忆 · Mem0 |
+| 元数据 / 队列  | PostgreSQL 16 + TypeORM 0.3 · Redis 7 + BullMQ 5                         |
+| Worker / Agent | NestJS 11（ingest-worker :3001 · agent-service :3002）                   |
+| 质量           | TypeScript · Zod · Vitest · ESLint · Prettier                            |
+| 切块           | `@langchain/textsplitters`（ingest-worker + 部分 seed 脚本）             |
 
-> 备忘：[docs/google-ai-provider.md](./docs/google-ai-provider.md) 描述过 Gemini 方案；**当前主栈仍是 Groq + NIM**，勿按该文配置生产。
+> 聊天与 Agent 默认栈：**Groq + NIM + Astra**；混合检索 / Graph 需本地 `docker compose` 拉起 ES、Neo4j 等（见 `.env.example`）。
 
 ## 前置要求
 
@@ -165,7 +168,7 @@ yarn dev:web
 
 #### 方案 B — 完整 v1.0（含 `/kb`）
 
-需要 PostgreSQL（文档元数据）与 Redis（BullMQ）：
+需要 PostgreSQL（文档元数据）与 Redis（BullMQ）。`yarn docker:up` 还会启动 Elasticsearch、Milvus、Neo4j（Phase 3 混合检索 / Graph demo 可选依赖）：
 
 ```bash
 yarn docker:up
@@ -193,6 +196,15 @@ yarn acceptance:phase-2-smoke   # live SSE：KB 命中 + 主链路门禁（需 e
 
 > 联网搜索断言：若要验证真实 web_search / Bocha 结果，需配置 `BOCHA_API_KEY`；未配置时相关断言视为可选跳过，embedding / Astra 等 KB 前置条件仍须满足。
 
+#### 方案 D — Phase 3 回归 / 评测（可选）
+
+```bash
+yarn test:regression:phase-3    # hybrid / corpus / memory / graph / intent
+yarn eval:phase-3               # 黄金集 smoke
+```
+
+验收说明（仓库内）：[`tests/acceptance/phase-3/ACCEPTANCE.md`](./tests/acceptance/phase-3/ACCEPTANCE.md) · [`tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md`](./tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md)
+
 ## 项目结构
 
 ```text
@@ -206,11 +218,11 @@ personal-gpt/
 ├── script/                  # Astra 初始化、seed、repair 等根级脚本
 ├── apps/web/script/         # migrateLegacy、KB 迁移辅助
 ├── tests/
-│   ├── regression/phase-1|2/ # 回归（phase-2 mock-only）
-│   └── acceptance/phase-1|2-agent/ # Playwright / live SSE smoke
-├── docs/                    # 开发笔记与路线图（见下方文档）
-├── assets/readme/           # README 截图（Playwright 采集）
-├── docker-compose.yml       # PostgreSQL 16 + Redis 7
+│   ├── regression/phase-1|2|3/   # Vitest 回归（PR 建议跑 test:regression）
+│   ├── eval/phase-3/             # 黄金集评测
+│   └── acceptance/               # 各阶段验收说明（ACCEPTANCE / CLOSEOUT / MCP-ACCEPTANCE）
+├── assets/readme/           # README 截图
+├── docker-compose.yml       # PG + Redis + ES + Milvus + Neo4j
 ├── .env.example
 └── package.json             # Yarn workspaces 根脚本
 ```
@@ -219,12 +231,12 @@ personal-gpt/
 
 ### 查询路由与 RAG
 
-对齐进阶 RAG 思路（`reference/advanced-rag`），实现落在 `apps/web/lib/chat/`：
+Chat 检索落在 `apps/web/lib/chat/`（`query-router.ts` · `retrieve.ts`），底层统一调用 `packages/shared` 的 `hybridSearch`：
 
-| 路由       | 含义            | 行为                                                    |
-| ---------- | --------------- | ------------------------------------------------------- |
-| `direct`   | 通用知识 / 闲聊 | 不检索，模型直接答；不发 citations                      |
-| `retrieve` | 需要私有资料    | 双路检索 → 有命中则注入 context + 流末 `data-citations` |
+| 路由       | 含义            | 行为                                                        |
+| ---------- | --------------- | ----------------------------------------------------------- |
+| `direct`   | 通用知识 / 闲聊 | 不检索，模型直接答；不发 citations                          |
+| `retrieve` | 需要私有资料    | hybridSearch → 有命中则注入 context + 流末 `data-citations` |
 
 **三层路由**（`query-router.ts`）：
 
@@ -232,16 +244,17 @@ personal-gpt/
 2. **embedding 预检**：Top-1 ≥ `ROUTE_RETRIEVE_SIMILARITY`（默认 0.68）→ retrieve；&lt; `ROUTE_DIRECT_SIMILARITY`（默认 0.42）→ direct
 3. **LLM 路由器**：灰色地带由 Groq `openai/gpt-oss-20b` 二分类（可用 `ENABLE_LLM_QUERY_ROUTER=false` 关闭）
 
-**可选增强**（默认全关，见 `rag-options.ts`）：
+**可选增强**（见 `rag-options.ts`；v3 管道内 rerank 另有 env 控制）：
 
-- `ENABLE_HYDE` / `ENABLE_MULTI_QUERY` / `ENABLE_RERANKER`
+- `ENABLE_HYDE` / `ENABLE_MULTI_QUERY` / `ENABLE_RERANKER`（Chat 层开关，默认关）
 
 ### 检索与阈值（代码默认值）
 
 | 项             | 默认                                    | 说明                                              |
 | -------------- | --------------------------------------- | ------------------------------------------------- |
-| Path A 门槛    | `TOP1_SIMILARITY_THRESHOLD=0.55`        | 用户上传 / `prompt-suggestion`                    |
-| Path B 门槛    | `SEED_CORPUS_SIMILARITY_THRESHOLD=0.72` | `psychology-qa` seed                              |
+| 默认 corpus    | `user`                                  | Chat 默认只查用户库；`seed` 须显式传入            |
+| Path A 门槛    | `TOP1_SIMILARITY_THRESHOLD=0.55`        | embedding 预检（user 路径）                       |
+| Path B 门槛    | `SEED_CORPUS_SIMILARITY_THRESHOLD=0.72` | embedding 预检（seed 路径）                       |
 | Top-K          | `RETRIEVAL_LIMIT=5`                     | 最终注入条数                                      |
 | 硬超时         | `VECTOR_SEARCH_TIMEOUT_MS=12000`        | 超时后再有固定 10s 宽限期（`RETRIEVAL_GRACE_MS`） |
 | Embedding 缓存 | `EMBEDDING_CACHE_SIZE=100`              | 进程内 LRU                                        |
@@ -271,7 +284,10 @@ yarn migrate:legacy          # v0.1 → PG（legacy-* source）
 # 质量
 yarn test
 yarn test:regression
+yarn test:regression:phase-3
+yarn eval:phase-3
 yarn acceptance:phase-1
+yarn acceptance:phase-2-smoke
 yarn validate                # format + lint + 各 workspace validate
 yarn lint
 yarn format
@@ -343,21 +359,24 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 完整注释见 [`.env.example`](./.env.example)。
 
-## 文档
+## 仓库内文档
 
-| 文档                                                                                           | 说明                          |
-| ---------------------------------------------------------------------------------------------- | ----------------------------- |
-| [docs/README.md](./docs/README.md)                                                             | docs 索引与笔记写作规范       |
-| [docs/rag-chat-phase-1-notes.md](./docs/rag-chat-phase-1-notes.md)                             | Phase 1 开发笔记（唯一真源）  |
-| [docs/enterprise-roadmap.md](./docs/enterprise-roadmap.md)                                     | 企业级路线图与任务拆解        |
-| [docs/issues/ISSUE-001-mixed-corpus-recall.md](./docs/issues/ISSUE-001-mixed-corpus-recall.md) | 混库召回已知边界              |
-| [docs/google-ai-provider.md](./docs/google-ai-provider.md)                                     | Gemini 方案备忘（非现行主栈） |
+以下文件**在 Git 仓库中可访问**（产品与开发笔记目录 `docs/`、GSD 目录 `.planning/` 为本地 gitignore，克隆后不在仓库内，故不在此列出）。
+
+| 文档                                                                                           | 说明                                   |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------- |
+| [AGENTS.md](./AGENTS.md)                                                                       | 本仓库 Agent / 贡献约定                |
+| [.env.example](./.env.example)                                                                 | 环境变量说明（含 v3 混合检索 / Neo4j） |
+| [tests/acceptance/phase-1/ACCEPTANCE.md](./tests/acceptance/phase-1/ACCEPTANCE.md)             | Phase 1 验收                           |
+| [tests/acceptance/phase-2-agent/CLOSEOUT.md](./tests/acceptance/phase-2-agent/CLOSEOUT.md)     | Phase 2 / v2.0 MVP 关账                |
+| [tests/acceptance/phase-2-agent/README.md](./tests/acceptance/phase-2-agent/README.md)         | Phase 2 验收与 smoke 说明              |
+| [tests/acceptance/phase-3/ACCEPTANCE.md](./tests/acceptance/phase-3/ACCEPTANCE.md)             | Phase 3 验收                           |
+| [tests/acceptance/phase-3/MCP-ACCEPTANCE.md](./tests/acceptance/phase-3/MCP-ACCEPTANCE.md)     | Phase 3 Playwright MCP 记录            |
+| [tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md](./tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md) | Phase 3.1 意图路由 UAT                 |
 
 ## 产品路线图 (Product Roadmap)
 
-**愿景**：从个人 RAG 聊天原型演进为可生产、多租户、可观测的企业知识库平台。
-
-完整拆解见 **[docs/enterprise-roadmap.md](./docs/enterprise-roadmap.md)**。
+**愿景**：从个人 RAG 聊天原型演进为可生产、多租户、可观测的企业级知识库平台（对标头部产品的权限感知检索 + 混合 RAG + 可私有化交付）。
 
 **架构原则**
 
@@ -383,7 +402,7 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 | RAG       | ✅ 引用 + 三层路由 + 双路检索 + 可选 HyDE/Multi-Query/Reranker |
 | 工程      | ✅ CI + 回归 + Playwright 验收 8/8 + LangSmith（可选）         |
 
-**仍未做**：用户认证、聊天历史持久化、多 workspace UI、BM25 混合检索、agent 生产部署（见 ISSUE-001 / v3–v4）。
+**仍未做（v4+）**：用户认证、聊天历史持久化、多 workspace UI、权限感知 ACL 检索、agent 全栈 Docker。
 
 **演示**：[https://personal-emotion-gpt.vercel.app](https://personal-emotion-gpt.vercel.app) · [GitHub](https://github.com/moyunzero/personal-gpt)
 
@@ -396,20 +415,21 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天仍走 `/api/chat`。  
 证据：人工截图 + `yarn acceptance:phase-2-smoke`（KB 命中 live citation）→ `tests/acceptance/phase-2-agent/`。
 
-**验收口径**：主链路可演示、可回归；报告头粘连 / 闲聊短路无正文 / 流式翻倍等 blocker 已在 v2.x 收口清除（见 `tests/acceptance/phase-2-agent/CR-FIX-ACCEPTANCE-2026-08-14.md`）。仍 **≠ 生产就绪**（无鉴权多租户、无 agent Docker）。
+**验收口径**：主链路可演示、可回归；v2.x blocker 已在加固轮次收口（见 [`CLOSEOUT.md`](./tests/acceptance/phase-2-agent/CLOSEOUT.md)）。仍 **≠ 生产就绪**（无鉴权多租户、无 agent Docker）。
 
-**v2.x（2026-08-14 → 2026-08-21）**：配额按 thread 隔离、模型默认值修复、checkpointer 单例、body Zod、可选内部令牌 + `/api/agent/chat` BFF；流式去重与消毒；Agent KB 查询压缩 + 默认相似度门槛 0.60。后续债务见 `docs/enterprise-roadmap.md`「v2.x → 后续版本」与 **v3 混合检索**。
+**v2.x（2026-08-14 → 2026-08-21）**：配额按 thread 隔离、模型默认值修复、checkpointer 单例、body Zod、可选内部令牌 + `/api/agent/chat` BFF；流式去重与消毒；Agent KB 查询压缩 + 默认相似度门槛 0.60。
 
-**v2 收口**：不再扩办事型工具；详细对标与后续规划见 `docs/enterprise-roadmap.md`。
+**v2 收口**：不再扩办事型工具。
 
-### v3.0 — 检索可信度 + 记忆 + 评测 🔜
+### v3.0 — 检索可信度 + 记忆 + 评测 ✅
 
-对标 RAGFlow/FastGPT「答得准」：混合检索默认路径、Corrective RAG、黄金集评测、Postgres checkpointer、Redis/Mem0 记忆。  
-**不做**：登录、连接器、业务写操作。
+对标 RAGFlow/FastGPT「答得准」：混合检索、Corrective RAG、黄金集评测、Redis/Mem0 记忆、Milvus/ES、Neo4j Graph demo、Phase 3.1 统一意图路由。  
+证据：[`tests/acceptance/phase-3/ACCEPTANCE.md`](./tests/acceptance/phase-3/ACCEPTANCE.md) · `yarn test:regression:phase-3` · `yarn eval:phase-3`。  
+**已知缺口（v4 补齐）**：Postgres 多实例 checkpointer、权限感知检索、应用级 Graph KB、agent 全栈 Docker。
 
-### v4.0 — 身份治理 + 可生产部署
+### v4.0 — Graph KB + 身份治理 + 可生产部署 🔜
 
-对标 MaxKB/企业交付 + Copilot 权限裁剪：Auth、RBAC、ACL 过滤检索、全栈 Docker（含 agent）、会话历史、审计。
+对标 MaxKB 私有化交付 + Copilot 权限裁剪 + Glean 知识边界：**Wave 0** 用户文档自动构图；**Wave 1** Auth、RBAC、ACL 过滤检索、全栈 Docker（含 agent）、Postgres checkpointer、会话历史、审计。
 
 ### v5.0 — 连接器 Lite / HITL / 谨慎行动
 
@@ -417,7 +437,7 @@ Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单
 
 ---
 
-**当前进度**：**v1.0 已封板** · **v2.0 MVP + v2.x 加固** → 下一步 **v3.0（检索与评测）**。完整路线图：`docs/enterprise-roadmap.md`。
+**当前进度**：**v3.0 + Phase 3.1 已关账** → 下一步 **v4.0（Graph KB 产品化 + 身份 / 部署）**。验收与关账证据见上方 [仓库内文档](#仓库内文档)。
 
 ## 贡献
 

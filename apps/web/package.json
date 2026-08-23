@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "DOTENV_CONFIG_PATH=../../.env next dev",
-    "build": "node script/run-kb-migrations.mjs && next build",
+    "build": "yarn workspace @personal-gpt/shared build && node script/run-kb-migrations.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",

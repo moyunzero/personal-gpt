@@ -60,6 +60,7 @@ describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)
     expect(degraded).toMatch(/降级|不可用/);
 
     // 其他专科路径仍可调用（用 mock store 模拟 KB 部分结果）
+    process.env.ENABLE_RERANKER = "false";
     const searchMock = vi.fn().mockResolvedValue([
       {
         text: "内部已有材料：Q1 营收摘要",
@@ -70,16 +71,19 @@ describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)
         chunkIndex: 0,
       },
     ]);
-    const embedMock = vi.fn().mockResolvedValue([0.1, 0.2]);
     const { retrieveKb } = await import("../../../apps/agent-service/src/rag/retrieve");
     const partial = await retrieveKb({
       query: "Q1 营收",
-      store: {
-        search: searchMock,
-        upsert: vi.fn(),
-        deleteByDocument: vi.fn(),
+      hybridDeps: {
+        embed: async () => [0.1, 0.2],
+        getStore: () => ({
+          search: searchMock,
+          upsert: vi.fn(),
+          deleteByDocument: vi.fn(),
+        }),
+        esSearch: async () => [],
+        rewriteQuery: async (q) => q,
       },
-      embed: embedMock,
     });
     expect(partial.chunks.length).toBe(1);
     expect(partial.chunks[0]!.documentId).toBe("partial-1");

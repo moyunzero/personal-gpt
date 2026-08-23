@@ -12,19 +12,16 @@ const toUIMessageStreamMock = vi.fn();
 const pipeUIMessageStreamToResponseMock = vi.fn();
 const createUIMessageStreamMock = vi.fn();
 
-vi.mock("../../../apps/agent-service/src/graph/build-graph", () => ({
-  buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
-  buildSupervisorGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
-  getAgentRunConfig: (threadId: string) => ({
-    recursionLimit: 40,
-    configurable: { thread_id: threadId },
-  }),
-  resolveAgentRoute: (text: string) => (/你好|天气/.test(text) ? "short" : "supervisor"),
-  lastUserText: (messages: { content?: unknown }[]) => {
-    const last = messages?.at(-1);
-    return typeof last?.content === "string" ? last.content : "调研并写报告";
-  },
-}));
+vi.mock("../../../apps/agent-service/src/graph/build-graph", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../apps/agent-service/src/graph/build-graph")>();
+  return {
+    ...actual,
+    buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+    buildSupervisorGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+    buildExecutionGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+  };
+});
 
 vi.mock("@ai-sdk/langchain", () => ({
   toBaseMessages: (...args: unknown[]) => toBaseMessagesMock(...args),
@@ -76,6 +73,7 @@ describe("Phase 2 regression #3: visible todo and agent-step events", () => {
     createUIMessageStreamMock.mockReset();
 
     process.env.GROQ_API_KEY = "test-groq-key";
+    process.env.ENABLE_INTENT_ROUTER = "false";
     toBaseMessagesMock.mockImplementation(async (messages: { parts?: { text?: string }[] }[]) => {
       const text = messages[0]?.parts?.[0]?.text ?? "调研";
       return [{ content: text }];

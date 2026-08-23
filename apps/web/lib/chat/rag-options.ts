@@ -13,7 +13,8 @@ function readFloatEnv(name: string, fallback: number): number {
 
 export const ENABLE_HYDE = process.env.ENABLE_HYDE === "true";
 export const ENABLE_MULTI_QUERY = process.env.ENABLE_MULTI_QUERY === "true";
-export const ENABLE_RERANKER = process.env.ENABLE_RERANKER === "true";
+/** D-11: rerank 默认开；设 ENABLE_RERANKER=false 可关 */
+export const ENABLE_RERANKER = process.env.ENABLE_RERANKER !== "false";
 
 /** 模糊问法由 LLM 判断 direct / retrieve；关闭则仅快速规则 + embedding 预检 */
 export const ENABLE_LLM_QUERY_ROUTER = process.env.ENABLE_LLM_QUERY_ROUTER !== "false";

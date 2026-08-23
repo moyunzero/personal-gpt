@@ -6,7 +6,13 @@ import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import type { IngestJobPayload } from "@personal-gpt/shared/types/kb";
 import { normalizeUploadMime } from "@personal-gpt/shared/utils/ingest";
 import { getUploadsDir } from "@personal-gpt/shared/utils/paths";
-import { createVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
+import { deleteByDocumentId, resolveCorpusTargets } from "@personal-gpt/shared";
+import {
+  createVectorStore,
+  shouldWriteAstra,
+  shouldWriteMilvus,
+} from "@personal-gpt/shared/stores/vector-store";
+import { createMilvusVectorStore } from "@personal-gpt/shared/stores/vector-store.milvus";
 
 import { DocumentEntity } from "@/lib/db/entities/document.entity";
 import { IngestJobEntity } from "@/lib/db/entities/ingest-job.entity";
@@ -327,8 +333,43 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   });
   if (!document) return false;
 
-  const vectorStore = createVectorStore();
-  await vectorStore.deleteByDocument(DEFAULT_WORKSPACE_ID, documentId);
+  const errors: Error[] = [];
+  const tasks: Promise<void>[] = [];
+
+  if (shouldWriteAstra()) {
+    tasks.push(
+      createVectorStore({ corpus: "user" })
+        .deleteByDocument(DEFAULT_WORKSPACE_ID, documentId)
+        .catch((err) => {
+          errors.push(err instanceof Error ? err : new Error(String(err)));
+        }),
+    );
+  }
+  if (shouldWriteMilvus()) {
+    tasks.push(
+      createMilvusVectorStore({ corpus: "user" })
+        .deleteByDocument(DEFAULT_WORKSPACE_ID, documentId)
+        .catch((err) => {
+          errors.push(err instanceof Error ? err : new Error(String(err)));
+        }),
+    );
+  }
+
+  await Promise.all(tasks);
+
+  try {
+    await deleteByDocumentId(
+      resolveCorpusTargets("user").esIndex,
+      DEFAULT_WORKSPACE_ID,
+      documentId,
+    );
+  } catch (err) {
+    errors.push(err instanceof Error ? err : new Error(String(err)));
+  }
+
+  if (errors.length > 0) {
+    throw new AggregateError(errors, `deleteDocument failed for ${documentId}`);
+  }
 
   if (document.filePath) {
     try {

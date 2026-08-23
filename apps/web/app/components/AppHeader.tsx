@@ -16,6 +16,8 @@ type AppHeaderProps = {
   mode?: ChatMode;
   onModeChange?: (mode: ChatMode) => void;
   modeDisabled?: boolean;
+  /** 新会话（D-23） */
+  onNewThread?: () => void;
 };
 
 /**
@@ -26,6 +28,7 @@ export default function AppHeader({
   mode,
   onModeChange,
   modeDisabled = false,
+  onNewThread,
 }: AppHeaderProps) {
   return (
     <header className="chat-header">
@@ -37,7 +40,12 @@ export default function AppHeader({
 
         <div className="app-header-cluster">
           {activePage === "chat" && mode && onModeChange ? (
-            <ModeSegmentedControl mode={mode} onChange={onModeChange} disabled={modeDisabled} />
+            <ModeSegmentedControl
+              mode={mode}
+              onChange={onModeChange}
+              disabled={modeDisabled}
+              onNewThread={onNewThread}
+            />
           ) : null}
           <nav className="app-header-nav" aria-label="主导航">
             {activePage === "chat" ? (

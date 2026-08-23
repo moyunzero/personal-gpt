@@ -8,15 +8,23 @@
  */
 
 import type { BaseMessage } from "@langchain/core/messages";
+import { SystemMessage } from "@langchain/core/messages";
 import type { LanguageModelLike } from "@langchain/core/language_models/base";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
-import { END, MemorySaver, MessagesAnnotation, START, StateGraph } from "@langchain/langgraph";
+import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { createSupervisor } from "@langchain/langgraph-supervisor";
+import {
+  isPlanAmbiguous,
+  readIntentRouterConfig,
+  type IntentPlan,
+} from "@personal-gpt/shared/routing";
 
+import { isRetrieverSynthesisPlan } from "../agent/agent-synthesis";
 import { createAnalystAgent } from "../agents/analyst.agent";
 import { createEditorAgent } from "../agents/editor.agent";
 import { createResearcherAgent } from "../agents/researcher.agent";
 import { createRetrieverAgent } from "../agents/retriever.agent";
+import { createSynthesizerAgent } from "../agents/synthesizer.agent";
 import {
   buildSupervisorPrompt,
   inferRequiredSpecialists,
@@ -29,10 +37,25 @@ import {
   formatSkillsOverview,
   loadEnabledSkills,
 } from "../skills/load-skills";
+import { raceExternalCall } from "../agent/race-external-call";
+import { extractKbSearchQuery } from "../tools/extract-kb-query";
+import { invokeGraphSearch } from "../tools/graph-search.tool";
+import { invokeKbSearch } from "../tools/kb-search.tool";
 import { buildShortReplyMessages, isAgentChitchat } from "./short-circuit";
 import { AgentState, type AgentStateType } from "./state";
 
 export type AgentRoute = "short" | "supervisor";
+
+/** D-04: plan-driven execution modes */
+export type ExecutionMode = "short" | "sequential" | "single_specialist" | "supervisor";
+
+/** D-11: prefetch node id — tested for single_specialist wiring */
+export const SINGLE_SPECIALIST_PREFETCH_NODE = "prefetch";
+
+/** rag_generate 成文节点（single_specialist kb/graph 路径） */
+export const SINGLE_SPECIALIST_SYNTHESIZE_NODE = "synthesizer";
+
+export { isRetrieverSynthesisPlan };
 
 export type BuildAgentGraphOptions = {
   /** 注入模型（测试用 mock）；缺省 createChatModel() */
@@ -41,6 +64,8 @@ export type BuildAgentGraphOptions = {
   checkpointer?: BaseCheckpointSaver;
   /** 当前用户原文：注入 Supervisor 强制调度清单 */
   userText?: string;
+  /** 短期+长期记忆上下文块（MEM-01/02）；拼入 Supervisor system prompt */
+  memoryContextBlock?: string;
 };
 
 export type AgentRunConfig = {
@@ -50,10 +75,21 @@ export type AgentRunConfig = {
 
 const DEFAULT_RECURSION_LIMIT = 40;
 
-/** 进程级 MemorySaver，保证同进程 thread_id 跨请求可续聊 */
+/** 进程级 MemorySaver（AGENT_CHECKPOINTER=memory 或无 DATABASE_URL 降级） */
 let memorySaverSingleton: MemorySaver | null = null;
 /** 进程级 SqliteSaver（若启用） */
 let sqliteSaverSingleton: BaseCheckpointSaver | null = null;
+/** 进程级 PostgresSaver（D-20/D-21 默认） */
+let postgresSaverSingleton: BaseCheckpointSaver | null = null;
+/** PostgresSaver.setup() 是否已在 bootstrap 完成（Pitfall 5） */
+let postgresSetupDone = false;
+let postgresSetupPromise: Promise<void> | null = null;
+
+type PostgresSaverInstance = BaseCheckpointSaver & { setup: () => Promise<void> };
+
+function checkpointerMode(): string {
+  return (process.env.AGENT_CHECKPOINTER ?? "postgres").toLowerCase();
+}
 
 /** 从 messages 取最近一条用户文本（用于路由） */
 export function lastUserText(messages: BaseMessage[] | undefined): string {
@@ -79,6 +115,18 @@ export function resolveAgentRoute(text: string): AgentRoute {
 }
 
 /**
+ * D-04/D-16: IntentPlan → execution mode.
+ * chitchat → short; ambiguous → supervisor; ≥2 specialists → sequential; 1 → single_specialist.
+ */
+export function resolveExecutionMode(plan: IntentPlan): ExecutionMode {
+  if (plan.primary === "chitchat") return "short";
+  if (isPlanAmbiguous(plan)) return "supervisor";
+  if (plan.specialists.length >= 2) return "sequential";
+  if (plan.specialists.length === 1) return "single_specialist";
+  return "supervisor";
+}
+
+/**
  * invoke/stream 运行配置：recursionLimit（D-15）+ 必填 thread_id（D-08）。
  */
 export function getAgentRunConfig(threadId: string): AgentRunConfig {
@@ -94,11 +142,39 @@ export function getAgentRunConfig(threadId: string): AgentRunConfig {
   };
 }
 
-async function resolveCheckpointer(override?: BaseCheckpointSaver): Promise<BaseCheckpointSaver> {
+function getMemorySaver(): MemorySaver {
+  if (!memorySaverSingleton) {
+    memorySaverSingleton = new MemorySaver();
+  }
+  return memorySaverSingleton;
+}
+
+async function createPostgresSaver(): Promise<PostgresSaverInstance> {
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) {
+    throw new Error("DATABASE_URL required when AGENT_CHECKPOINTER=postgres");
+  }
+  const { PostgresSaver } = await import("@langchain/langgraph-checkpoint-postgres");
+  const saver = PostgresSaver.fromConnString(url, {
+    schema: process.env.AGENT_CHECKPOINT_SCHEMA?.trim() || "public",
+  });
+  return saver as unknown as PostgresSaverInstance;
+}
+
+/**
+ * 解析 checkpointer：默认 postgres（D-21）；memory|sqlite 显式可选。
+ * 无 DATABASE_URL 且未显式设 postgres 时降级 MemorySaver（测试/本地无 PG）。
+ */
+export async function resolveCheckpointer(
+  override?: BaseCheckpointSaver,
+): Promise<BaseCheckpointSaver> {
   if (override) {
     return override;
   }
-  const mode = (process.env.AGENT_CHECKPOINTER ?? "memory").toLowerCase();
+  const mode = checkpointerMode();
+  if (mode === "memory") {
+    return getMemorySaver();
+  }
   if (mode === "sqlite") {
     if (sqliteSaverSingleton) {
       return sqliteSaverSingleton;
@@ -114,10 +190,72 @@ async function resolveCheckpointer(override?: BaseCheckpointSaver): Promise<Base
     sqliteSaverSingleton = SqliteSaver.fromConnString(dbPath) as unknown as BaseCheckpointSaver;
     return sqliteSaverSingleton;
   }
-  if (!memorySaverSingleton) {
-    memorySaverSingleton = new MemorySaver();
+  // postgres（默认）或未知值按 postgres 处理
+  if (postgresSaverSingleton) {
+    return postgresSaverSingleton;
   }
-  return memorySaverSingleton;
+  const url = process.env.DATABASE_URL?.trim();
+  const explicitPostgres = (process.env.AGENT_CHECKPOINTER ?? "").toLowerCase() === "postgres";
+  if (!url) {
+    if (explicitPostgres) {
+      throw new Error("DATABASE_URL required when AGENT_CHECKPOINTER=postgres");
+    }
+    // D-21：默认 postgres 但无 PG → 降级 memory（单测 / 无库环境）
+    return getMemorySaver();
+  }
+  postgresSaverSingleton = await createPostgresSaver();
+  return postgresSaverSingleton;
+}
+
+/**
+ * Nest bootstrap 调用一次：PostgresSaver.setup()（Pitfall 5）。
+ * memory/sqlite 或无 DATABASE_URL 时 no-op。
+ */
+export async function ensureCheckpointerSetup(): Promise<void> {
+  const mode = checkpointerMode();
+  if (mode === "memory" || mode === "sqlite") {
+    return;
+  }
+  if (!process.env.DATABASE_URL?.trim()) {
+    return;
+  }
+  if (postgresSetupDone) {
+    return;
+  }
+  if (postgresSetupPromise) {
+    await postgresSetupPromise;
+    return;
+  }
+  postgresSetupPromise = (async () => {
+    const saver = (await resolveCheckpointer()) as PostgresSaverInstance;
+    if (typeof saver.setup === "function") {
+      await saver.setup();
+    }
+    postgresSetupDone = true;
+  })();
+  try {
+    await postgresSetupPromise;
+  } finally {
+    postgresSetupPromise = null;
+  }
+}
+
+/** 测试用：重置进程级 checkpointer 单例 */
+export function resetCheckpointerSingletonsForTests(): void {
+  memorySaverSingleton = null;
+  sqliteSaverSingleton = null;
+  postgresSaverSingleton = null;
+  postgresSetupDone = false;
+  postgresSetupPromise = null;
+}
+
+/** 测试用：注入假 PostgresSaver（含 setup）以断言 bootstrap 契约 */
+export function plantPostgresSaverForTests(
+  saver: BaseCheckpointSaver & { setup: () => Promise<void> },
+): void {
+  postgresSaverSingleton = saver;
+  postgresSetupDone = false;
+  postgresSetupPromise = null;
 }
 
 function routerNode(state: AgentStateType) {
@@ -137,12 +275,20 @@ type SpecialistBundle = {
   editor: ReturnType<typeof createEditorAgent>;
 };
 
-/** 创建四专科 Agent（Supervisor / Sequential 共用） */
-function createSpecialistAgents(model: LanguageModelLike): SpecialistBundle {
+/** 创建四专科 Agent（Supervisor / Sequential / single_specialist 共用） */
+function createSpecialistAgents(
+  model: LanguageModelLike,
+  retrieverTools?: string[],
+): SpecialistBundle {
   const skills = loadEnabledSkills();
+  const retrieverAllowed =
+    retrieverTools && retrieverTools.length > 0
+      ? retrieverTools
+      : (["kb_search", "graph_search"] as string[]);
   return {
     retriever: createRetrieverAgent(model, {
       skillPrompt: formatSkillForPrompt(findSkill(skills, "kb-retrieval")),
+      allowedTools: retrieverAllowed,
     }),
     researcher: createResearcherAgent(model, {
       skillPrompt: formatSkillForPrompt(findSkill(skills, "web-research")),
@@ -180,14 +326,15 @@ export function ensureTerminalEditor(pipeline: SpecialistName[]): SpecialistName
 export function createSequentialPipelineWorkflow(
   model: LanguageModelLike,
   pipeline: SpecialistName[],
+  retrieverTools?: string[],
 ) {
   if (pipeline.length === 0) {
     throw new Error("sequential pipeline requires at least one specialist");
   }
   const ordered = ensureTerminalEditor(pipeline);
-  const agents = createSpecialistAgents(model);
-  // 动态节点名：用宽松 builder，避免 StateGraph 字面量联合类型卡住
-  let g: any = new StateGraph(MessagesAnnotation);
+  const agents = createSpecialistAgents(model, retrieverTools);
+  // 动态节点名：用宽松 builder；AgentState 含 todos/citations（D-22）
+  let g: any = new StateGraph(AgentState);
   for (const name of ordered) {
     g = g.addNode(name, agents[name].graph);
   }
@@ -200,9 +347,18 @@ export function createSequentialPipelineWorkflow(
 }
 
 /** 共用：专科 + Supervisor workflow（未 compile） */
-function createSupervisorWorkflow(model: LanguageModelLike, userText: string) {
+function createSupervisorWorkflow(
+  model: LanguageModelLike,
+  userText: string,
+  memoryContextBlock?: string,
+  retrieverTools?: string[],
+) {
   const skills = loadEnabledSkills();
-  const agents = createSpecialistAgents(model);
+  const agents = createSpecialistAgents(model, retrieverTools);
+  const basePrompt = buildSupervisorPrompt(formatSkillsOverview(skills), userText);
+  const prompt = memoryContextBlock?.trim()
+    ? `${basePrompt}\n\n${memoryContextBlock.trim()}`
+    : basePrompt;
 
   return createSupervisor({
     agents: [
@@ -212,21 +368,196 @@ function createSupervisorWorkflow(model: LanguageModelLike, userText: string) {
       agents.editor.graph,
     ],
     llm: model,
-    prompt: buildSupervisorPrompt(formatSkillsOverview(skills), userText),
+    prompt,
+    // D-22：与外层一致，checkpoint 含 messages + todos + citations
+    stateSchema: AgentState,
   });
 }
 
+/** D-11: server-side prefetch before synthesizer / Retriever in single_specialist path */
+export function buildPrefetchNode(plan: IntentPlan) {
+  return async (
+    state: AgentStateType,
+    config?: { configurable?: Record<string, unknown> },
+  ): Promise<{ messages: BaseMessage[] } | Record<string, never>> => {
+    const text = lastUserText(state.messages);
+    const workspaceId = String(config?.configurable?.workspaceId ?? "default");
+    const raceOpts = {
+      signal: config?.configurable?.abortSignal as AbortSignal | undefined,
+    };
+    const { enableKbGraphFallback } = readIntentRouterConfig();
+    const blocks: string[] = [];
+    const graphOnly =
+      plan.retrieverTools.includes("graph_search") && !plan.retrieverTools.includes("kb_search");
+
+    const allowGraphFallback =
+      enableKbGraphFallback &&
+      (plan.fallbackChain.includes("graph_search") || plan.graphSignal === true);
+
+    if (graphOnly) {
+      const graphOut = await raceExternalCall(invokeGraphSearch({ question: text }), raceOpts);
+      if (graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
+        blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+      } else if (graphOut && plan.fallbackChain.includes("kb_search")) {
+        const kbOut = await raceExternalCall(
+          invokeKbSearch({
+            query: extractKbSearchQuery(text),
+            userText: text,
+            workspaceId,
+          }),
+          raceOpts,
+        );
+        blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+        if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
+          blocks.push(`【知识库回退检索·工具结果·可信】\n${kbOut}`);
+        }
+      } else if (graphOut) {
+        blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+      }
+    } else if (plan.retrieverTools.includes("kb_search")) {
+      let graphInjected = false;
+      let graphOutCache: string | undefined;
+      const kbOut = await raceExternalCall(
+        invokeKbSearch({
+          query: extractKbSearchQuery(text),
+          userText: text,
+          workspaceId,
+        }),
+        raceOpts,
+      );
+      if (kbOut) {
+        const kbMiss = /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut);
+        if (kbMiss && allowGraphFallback) {
+          graphOutCache = await raceExternalCall(invokeGraphSearch({ question: text }), raceOpts);
+          if (graphOutCache && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOutCache)) {
+            blocks.push(
+              `【图谱回退检索·工具结果·可信】\nKB 未命中后按 fallbackChain 触发 graph_search；必须采信。\n${graphOutCache}`,
+            );
+            graphInjected = true;
+          } else {
+            blocks.push(`【知识库预检索·工具结果·可信】\n${kbOut}`);
+          }
+        } else {
+          blocks.push(`【知识库预检索·工具结果·可信】\n${kbOut}`);
+        }
+      }
+      if (
+        plan.primary === "kb_graph_hybrid" &&
+        plan.retrieverTools.includes("graph_search") &&
+        !graphInjected
+      ) {
+        const graphOut =
+          graphOutCache ??
+          (await raceExternalCall(invokeGraphSearch({ question: text }), raceOpts));
+        if (graphOut) {
+          blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+        }
+      }
+    }
+
+    if (blocks.length === 0) return {};
+    return {
+      messages: [
+        new SystemMessage(
+          [
+            "以下由服务端在成文层运行前直接调用工具得到；Synthesizer 必须采信，禁止编造相反结论。",
+            ...blocks,
+          ].join("\n\n"),
+        ),
+      ],
+    };
+  };
+}
+
 /**
- * 编译外层短路图 + 内层 Supervisor。默认进程单例 MemorySaver。
+ * D-11: single specialist — START → prefetch (optional) → synthesizer|specialist → END.
+ * kb/graph retriever 路径：prefetch → Synthesizer（rag_generate）；其余专科保持原样。
+ */
+export function createSingleSpecialistWorkflow(
+  model: LanguageModelLike,
+  plan: IntentPlan,
+  specialistName: SpecialistName,
+) {
+  const agents = createSpecialistAgents(model, plan.retrieverTools);
+  const specialist = agents[specialistName];
+  if (!specialist) {
+    throw new Error(`createSingleSpecialistWorkflow: unknown specialist ${specialistName}`);
+  }
+
+  const useSynthesis = specialistName === "retriever" && isRetrieverSynthesisPlan(plan);
+  const terminalNode = useSynthesis ? SINGLE_SPECIALIST_SYNTHESIZE_NODE : specialistName;
+  const needsPrefetch = specialistName === "retriever" && plan.retrieverTools.length > 0;
+
+  let g: any = new StateGraph(AgentState);
+  if (useSynthesis) {
+    g = g.addNode(SINGLE_SPECIALIST_SYNTHESIZE_NODE, createSynthesizerAgent(model, plan).graph);
+  } else {
+    g = g.addNode(specialistName, specialist.graph);
+  }
+
+  if (needsPrefetch) {
+    g = g
+      .addNode(SINGLE_SPECIALIST_PREFETCH_NODE, buildPrefetchNode(plan))
+      .addEdge(START, SINGLE_SPECIALIST_PREFETCH_NODE)
+      .addEdge(SINGLE_SPECIALIST_PREFETCH_NODE, terminalNode);
+  } else {
+    g = g.addEdge(START, terminalNode);
+  }
+  g = g.addEdge(terminalNode, END);
+  return g;
+}
+
+export type BuildExecutionGraphOptions = BuildAgentGraphOptions & {
+  plan: IntentPlan;
+};
+
+/**
+ * D-04: plan-driven subgraph selection — replaces unconditional buildSupervisorGraph when router on.
+ */
+export async function buildExecutionGraph(options: BuildExecutionGraphOptions) {
+  const model = options.model ?? createChatModel();
+  const checkpointer = await resolveCheckpointer(options.checkpointer);
+  const userText = options.userText ?? "";
+  const memoryContextBlock = options.memoryContextBlock;
+  const mode = resolveExecutionMode(options.plan);
+
+  let inner: ReturnType<typeof createSequentialPipelineWorkflow>;
+  if (mode === "sequential") {
+    inner = createSequentialPipelineWorkflow(
+      model,
+      options.plan.specialists as SpecialistName[],
+      options.plan.retrieverTools,
+    );
+  } else if (mode === "single_specialist") {
+    inner = createSingleSpecialistWorkflow(
+      model,
+      options.plan,
+      options.plan.specialists[0] as SpecialistName,
+    );
+  } else {
+    inner = createSupervisorWorkflow(
+      model,
+      userText,
+      memoryContextBlock,
+      options.plan.retrieverTools,
+    );
+  }
+
+  return inner.compile({ checkpointer });
+}
+
+/**
+ * 编译外层短路图 + 内层 Supervisor。默认 PostgresSaver（D-21）；可注入 override。
  */
 export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
   const model = options.model ?? createChatModel();
   const checkpointer = await resolveCheckpointer(options.checkpointer);
   const userText = options.userText ?? "";
+  const memoryContextBlock = options.memoryContextBlock;
   const required = inferRequiredSpecialists(userText);
   const collab = shouldUseSequentialPipeline(required)
     ? createSequentialPipelineWorkflow(model, required)
-    : createSupervisorWorkflow(model, userText);
+    : createSupervisorWorkflow(model, userText, memoryContextBlock);
   const supervisorSubgraph = collab.compile({ checkpointer });
 
   return new StateGraph(AgentState)
@@ -252,11 +583,14 @@ export async function buildSupervisorGraph(options: BuildAgentGraphOptions = {})
   const model = options.model ?? createChatModel();
   const checkpointer = await resolveCheckpointer(options.checkpointer);
   const userText = options.userText ?? "";
+  const memoryContextBlock = options.memoryContextBlock;
   const required = inferRequiredSpecialists(userText);
   if (shouldUseSequentialPipeline(required)) {
     return createSequentialPipelineWorkflow(model, required).compile({ checkpointer });
   }
-  return createSupervisorWorkflow(model, userText).compile({ checkpointer });
+  return createSupervisorWorkflow(model, userText, memoryContextBlock).compile({
+    checkpointer,
+  });
 }
 
 /** @deprecated 使用 buildAgentGraph；保留别名避免旧 smoke 误导 */

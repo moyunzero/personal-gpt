@@ -8,6 +8,13 @@ import type {
   AgentTraceEventKind,
 } from "@personal-gpt/shared/types/agent";
 
+function formatRouterLayers(layers: unknown): string {
+  if (!Array.isArray(layers) || !layers.every((layer) => typeof layer === "string")) {
+    return "";
+  }
+  return layers.length ? ` · ${layers.join("+")}` : "";
+}
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
@@ -21,8 +28,23 @@ function isTraceDocument(data: unknown): data is AgentTraceDocument {
   }
   if (!Array.isArray(data.citations)) return false;
   const route = data.intent.route;
-  if (route !== "short" && route !== "supervisor") return false;
+  if (
+    route !== "short" &&
+    route !== "supervisor" &&
+    route !== "sequential" &&
+    route !== "single_specialist"
+  ) {
+    return false;
+  }
   if (!Array.isArray(data.intent.requiredSpecialists)) return false;
+  if (
+    "routerLayers" in data.intent &&
+    data.intent.routerLayers !== undefined &&
+    (!Array.isArray(data.intent.routerLayers) ||
+      !data.intent.routerLayers.every((layer) => typeof layer === "string"))
+  ) {
+    return false;
+  }
   for (const item of data.plan) {
     if (!isRecord(item)) return false;
     if (typeof item.id !== "string" || typeof item.label !== "string") return false;
@@ -40,6 +62,9 @@ function isTraceDocument(data: unknown): data is AgentTraceDocument {
     ) {
       return false;
     }
+    if ("name" in ev && ev.name !== undefined && typeof ev.name !== "string") {
+      return false;
+    }
   }
   return true;
 }
@@ -54,6 +79,36 @@ export function extractAgentTrace(message: UIMessage): AgentTraceDocument | null
     if (isTraceDocument(data)) latest = data;
   }
   return latest;
+}
+
+function routeLabel(route: string): string {
+  switch (route) {
+    case "short":
+      return "闲聊短路";
+    case "single_specialist":
+      return "单专科";
+    case "sequential":
+      return "顺序流水线";
+    case "supervisor":
+      return "Supervisor 调度";
+    default:
+      return route;
+  }
+}
+
+function eventSummaryLabel(event: AgentTraceEvent): string {
+  const name = typeof event.name === "string" ? event.name.toLowerCase() : "";
+  if (event.kind === "tool") {
+    if (name === "graph_search" || /图谱/.test(event.summary)) return "图谱检索";
+    if (name === "kb_search" || /知识库|kb/i.test(event.summary)) return "知识库检索";
+    if (name === "web_search") return "联网检索";
+  }
+  if (event.kind === "intent") return "意图路由";
+  if (event.kind === "plan") return "任务拆解";
+  if (event.kind === "specialist") return "专科执行";
+  if (event.kind === "citation") return "引用汇总";
+  if (event.kind === "final") return "终稿";
+  return kindLabel(event.kind);
 }
 
 function kindLabel(kind: AgentTraceEventKind): string {
@@ -157,7 +212,7 @@ function TraceEventRow({ event }: { event: AgentTraceEvent }) {
         disabled={!hasDetail}
       >
         <span className={`agent-trace-kind agent-trace-kind-${event.kind}`}>
-          {kindLabel(event.kind)}
+          {eventSummaryLabel(event)}
         </span>
         <span className="agent-trace-summary">{event.summary}</span>
         {who ? <span className="agent-trace-who">{who}</span> : null}
@@ -173,6 +228,20 @@ function TraceEventRow({ event }: { event: AgentTraceEvent }) {
       </button>
       {open && event.detail ? <pre className="agent-trace-detail">{event.detail}</pre> : null}
     </li>
+  );
+}
+
+function IntentPlanBlock({ plan }: { plan: NonNullable<AgentTraceDocument["intent"]["plan"]> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details
+      className="agent-trace-intent-plan"
+      open={open}
+      onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
+    >
+      <summary className="agent-trace-intent-plan-summary">IntentPlan（开发者）</summary>
+      <pre className="agent-trace-detail">{JSON.stringify(plan, null, 2)}</pre>
+    </details>
   );
 }
 
@@ -215,12 +284,15 @@ export default function AgentTracePanel({ message }: { message: UIMessage }) {
         </div>
       </div>
       <p className="agent-trace-meta">
-        {doc.intent.route}
+        {routeLabel(doc.intent.route)}
+        {doc.intent.plan?.primary ? ` · ${doc.intent.plan.primary}` : ""}
         {doc.intent.requiredSpecialists.length
           ? ` · ${doc.intent.requiredSpecialists.join(" → ")}`
           : ""}
+        {formatRouterLayers(doc.intent.routerLayers)}
         {` · ${doc.events.length} 事件`}
       </p>
+      {doc.intent.plan ? <IntentPlanBlock plan={doc.intent.plan} /> : null}
       <ol className="agent-trace-list">
         {doc.events.map((e, i) => (
           <TraceEventRow key={`${e.ts}-${e.kind}-${i}`} event={e} />
