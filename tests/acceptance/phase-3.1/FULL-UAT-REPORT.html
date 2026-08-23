@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase 3.1 全量验收报告 · PASS</title>
+    <style>
+      :root {
+        --bg: #0c0e13;
+        --card: #141820;
+        --text: #e6edf7;
+        --muted: #8b95a8;
+        --ok: #3dd68c;
+        --bad: #ff6b6b;
+        --accent: #6ea8fe;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      header {
+        padding: 32px 24px 16px;
+        border-bottom: 1px solid #222834;
+        background: linear-gradient(180deg, #12151c, #0c0e13);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.75rem;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 13px;
+        margin-top: 12px;
+      }
+      .badge.pass {
+        background: rgba(61, 214, 140, 0.15);
+        color: var(--ok);
+      }
+      .badge.fail {
+        background: rgba(255, 107, 107, 0.15);
+        color: var(--bad);
+      }
+      main {
+        padding: 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid #1e2430;
+        font-size: 14px;
+      }
+      th {
+        background: #1a1f2a;
+        color: var(--muted);
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      .ok {
+        color: var(--ok);
+        font-weight: 600;
+      }
+      .bad {
+        color: var(--bad);
+        font-weight: 600;
+      }
+      .shot img {
+        max-width: 320px;
+        border-radius: 8px;
+        border: 1px solid #252a36;
+        display: block;
+        margin-top: 4px;
+      }
+      code {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      footer {
+        padding: 24px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Phase 3.1 全量验收报告（Ollama）</h1>
+      <p class="meta">
+        生成时间 2026-08-22T15:15:13.692Z · Web http://localhost:3000 · Agent
+        http://127.0.0.1:3002/health
+      </p>
+      <p class="meta">
+        LLM: Ollama qwen2:7b (Chat) + qwen2.5-coder:7b (Agent) @ http://127.0.0.1:11434
+      </p>
+      <p class="meta">通过 11 / 失败 0 / 共 11 步</p>
+      <span class="badge pass">PASS</span>
+    </header>
+    <main>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>环节</th>
+            <th>步骤</th>
+            <th>结果</th>
+            <th>说明</th>
+            <th>截图/产物</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>infra</code></td>
+            <td>Web 首页可访问</td>
+            <td class="ok">PASS</td>
+            <td>http://localhost:3000</td>
+            <td class="shot">—</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>infra</code></td>
+            <td>Agent /health</td>
+            <td class="ok">PASS</td>
+            <td>http://127.0.0.1:3002/health status=200</td>
+            <td class="shot">—</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>kb-api</code></td>
+            <td>GET /api/kb/documents</td>
+            <td class="ok">PASS</td>
+            <td>
+              status=200 · count=4 · 奥德赛计划书_全量验收2, Phase3 UAT smoke v2, Phase3 UAT smoke,
+              韶音手册2024
+            </td>
+            <td class="shot">—</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>agent-api</code></td>
+            <td>Agent API · graph_relation</td>
+            <td class="ok">PASS</td>
+            <td>events=22 · graph=true · text=true</td>
+            <td class="shot"><code>A-agent-stream.txt</code></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>agent-api</code></td>
+            <td>Agent API · kb_doc synthesis</td>
+            <td class="ok">PASS</td>
+            <td>kb_doc/citations=true</td>
+            <td class="shot"><code>B-kb-agent-stream.txt</code></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>chat-api</code></td>
+            <td>Chat API · data-graph-paths</td>
+            <td class="ok">PASS</td>
+            <td>paths=1 · noCypher=true</td>
+            <td class="shot"><code>C-chat-stream.txt</code></td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><code>ui</code></td>
+            <td>打开首页</td>
+            <td class="ok">PASS</td>
+            <td>http://localhost:3000</td>
+            <td class="shot">
+              <a href="screenshots/R01-home.png"
+                ><img src="screenshots/R01-home.png" alt="" loading="lazy"
+              /></a>
+            </td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><code>ui</code></td>
+            <td>Chat UI · 图谱/回答</td>
+            <td class="ok">PASS</td>
+            <td>页面含图谱或回答文本</td>
+            <td class="shot">
+              <a href="screenshots/R02-chat-graph-done.png"
+                ><img src="screenshots/R02-chat-graph-done.png" alt="" loading="lazy"
+              /></a>
+            </td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><code>ui</code></td>
+            <td>Agent UI · kb_doc + 引用</td>
+            <td class="ok">PASS</td>
+            <td>含奥德赛/引用轨迹</td>
+            <td class="shot">
+              <a href="screenshots/R03-agent-kb-done.png"
+                ><img src="screenshots/R03-agent-kb-done.png" alt="" loading="lazy"
+              /></a>
+            </td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><code>ui</code></td>
+            <td>Agent UI · graph_relation 成文</td>
+            <td class="ok">PASS</td>
+            <td>含图谱成文轨迹</td>
+            <td class="shot">
+              <a href="screenshots/R04-agent-graph-done.png"
+                ><img src="screenshots/R04-agent-graph-done.png" alt="" loading="lazy"
+              /></a>
+            </td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td><code>ui</code></td>
+            <td>知识库页面 · 列表加载</td>
+            <td class="ok">PASS</td>
+            <td>知识库页已渲染</td>
+            <td class="shot">
+              <a href="screenshots/R05-kb-page.png"
+                ><img src="screenshots/R05-kb-page.png" alt="" loading="lazy"
+              /></a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+    <footer>Runner: run-full-uat.mjs · JSON: UAT-FULL-RESULT.json</footer>
+  </body>
+</html>

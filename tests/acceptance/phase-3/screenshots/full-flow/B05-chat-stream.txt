@@ -1,0 +1,98 @@
+data: {"type":"text-start","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"\n\n","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"根据","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"文档","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"《","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"奥","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"德","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"赛","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"计划书","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"_","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"全","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"量","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"验收","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"2","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"》","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"中的","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"内容","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"奥","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"德","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"赛","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"计划书","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"给出的","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"三条","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"路径","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"分别是","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"\n\n","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"1","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":".","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"保守","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"2","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":".","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"平衡","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"3","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":".","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"进取","id":"msg-1787372021089"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787372021089"}
+
+data: {"type":"text-end","id":"msg-1787372021089"}
+
+data: {"type":"data-citations","id":"citations-msg-1787372021089","data":{"citations":[{"documentId":"05a85d01-c99e-4fa4-85de-50b1a2aaf8a0","title":"奥德赛计划书_全量验收2","similarity":0.91813606,"snippet":"# 奥德赛计划书_2026\n\n奥德赛计划书给出三条路径：保守、平衡、进取。本文件用于 Phase3 全量验收专有名词召回与 ES 双写。","source":"full-flow-odyssey.md","chunkIndex":0},{"documentId":"unknown-1","title":"未命名文档","similarity":0.039449755,"snippet":"---\n\n### **三、制定行动计划：从模糊到具体**\n将方向拆解为可操作的步骤：\n1. **设定阶段性目标**  \n   - 使用“3个月-1年-3年”框架：  \n     - 3个月：完成2门课程+3次信息访谈。  \n     - 1年：积累作品集/考取证书+兼职项目经验。  \n     - 3年：实现行业/岗位转型。\n2. **建立支持系统**  \n   - 加入行业社群（如微信/知识星球小组），寻找同行者。  \n   - 定期与职场导师复盘进展，避免闭门造车。\n3. **风险管理策略**  \n   - 如果考虑裸辞，确保有6-12个月的生活储备…","source":"psychology-qa","category":"psychology","chunkIndex":3},{"documentId":"unknown-2","title":"未命名文档","similarity":0.036703885,"snippet":"2. **ABZ计划理论**\n- A计划：现有路径优化方案\n- B计划：3年内可实现的转型目标\n- Z计划：保障基本生活的安全网\n\n### 四、行动实验方法论\n1. **最小可行性尝试**\n- 用20%时间试水新方向（如周末接咨询项目）\n- 参加行业快闪活动获取真实反馈\n- 制作原型作品集进行市场验证\n\n2. **决策平衡单技术**\n建立评分模型，从：\n- 经济回报（权重30%）\n- 成长空间（25%）\n- 工作弹性（20%）\n- 价值契合度（15%）\n- 风险系数（10%）\n多维度量化评估选项\n\n### 五、认知升级策略\n1. **反脆弱能力建设**\n…","source":"psychology-qa","category":"psychology","chunkIndex":2},{"documentId":"unknown-3","title":"未命名文档","similarity":0.015521277,"snippet":"**第四阶段：最小可行性测试**\n设计三个低成本验证方案：\n1. 用周末时间体验目标行业的实际工作（如职业见习日）\n2. 在现有工作中申请参与跨界项目（测试新领域适配度）\n3. 建立「职业实验室」笔记，持续记录不同选择带来的能量变化\n\n**第五阶段：构建决策坐标系**\n制作包含四个象限的决策矩阵：\n- 横轴：短期可行性 vs 长期愿景\n- 纵轴：风险承受度 vs 机会成本\n在每个象限中填入经过验证的选项，观察分布规律\n\n最后记住：职业生涯不是单行道，而是不断演化的生态系统。那些让你产生深度困惑的时刻，往往是认知升级的前奏。建议每月复盘这份自我分析报告，你…","source":"psychology-qa","category":"psychology","chunkIndex":1}]}}
+
+data: [DONE]
+

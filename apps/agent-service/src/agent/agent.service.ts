@@ -532,6 +532,7 @@ async function prefetchForSingleSpecialist(input: {
   abortSignal?: AbortSignal;
 }): Promise<SystemMessage[]> {
   const seeds: SystemMessage[] = [];
+  let kbSearchExecuted = false;
   if (input.plan.retrieverTools.includes("graph_search")) {
     const graphOut = await raceExternalCall(invokeGraphSearch({ question: input.userText }), {
       signal: input.abortSignal,
@@ -559,6 +560,7 @@ async function prefetchForSingleSpecialist(input: {
         ),
       );
     } else if (input.plan.fallbackChain.includes("kb_search")) {
+      kbSearchExecuted = true;
       const kbOut = await raceExternalCall(
         invokeKbSearch({
           query: extractKbSearchQuery(input.userText),
@@ -595,7 +597,8 @@ async function prefetchForSingleSpecialist(input: {
       }
     }
   }
-  if (input.plan.retrieverTools.includes("kb_search")) {
+  if (input.plan.retrieverTools.includes("kb_search") && !kbSearchExecuted) {
+    kbSearchExecuted = true;
     const kbOut = await raceExternalCall(
       invokeKbSearch({
         query: extractKbSearchQuery(input.userText),
@@ -1607,26 +1610,28 @@ export class AgentService {
                     }
                   }
                 };
-                // 先完整 drain LangGraph 流，确保 prefetch updates 写入 tracker/citationBag
-                const uiEvents: unknown[] = [];
-                for await (const event of lgStream) {
-                  const parsed = parseLgModeEvent(event);
-                  if (
-                    parsed?.mode === "updates" &&
-                    parsed.data &&
-                    typeof parsed.data === "object"
-                  ) {
-                    onGraphUpdate(parsed.data as Record<string, unknown>);
-                    continue;
+                const pending: unknown[] = [];
+                let resumeIter: (() => void) | null = null;
+                let lgDone = false;
+                const pokeIter = () => {
+                  const resume = resumeIter;
+                  resumeIter = null;
+                  resume?.();
+                };
+
+                async function* lgEventIter() {
+                  while (true) {
+                    while (pending.length > 0) {
+                      yield pending.shift()!;
+                    }
+                    if (lgDone) return;
+                    await new Promise<void>((resolve) => {
+                      resumeIter = resolve;
+                    });
                   }
-                  uiEvents.push(event);
                 }
-                async function* replayUiEvents() {
-                  for (const event of uiEvents) {
-                    yield event;
-                  }
-                }
-                const uiStream = toUIMessageStream(replayUiEvents() as any)
+
+                const uiStream = toUIMessageStream(lgEventIter() as any)
                   .pipeThrough(stripMergedStart())
                   .pipeThrough(dropOrphanToolOutputs())
                   .pipeThrough(deduplicateTextDeltas())
@@ -1643,6 +1648,24 @@ export class AgentService {
                     }),
                   )
                   .pipeThrough(dropHandoffNoiseText());
+
+                const producer = (async () => {
+                  for await (const event of lgStream) {
+                    const parsed = parseLgModeEvent(event);
+                    if (
+                      parsed?.mode === "updates" &&
+                      parsed.data &&
+                      typeof parsed.data === "object"
+                    ) {
+                      onGraphUpdate(parsed.data as Record<string, unknown>);
+                      continue;
+                    }
+                    pending.push(event);
+                    pokeIter();
+                  }
+                  lgDone = true;
+                  pokeIter();
+                })();
 
                 const reader = uiStream.getReader();
                 try {
@@ -1685,6 +1708,7 @@ export class AgentService {
                     /* ignore */
                   }
                 }
+                await producer;
               };
 
               await drainGraphStream({ messages: seededMessages });

@@ -14,8 +14,12 @@ import { logger } from "@/lib/logger";
 export type { MemoryDeps, MemoryScope };
 
 export function parseUserKey(raw: unknown): string {
-  if (typeof raw === "string" && raw.trim()) return raw.trim().slice(0, 128);
-  return "anonymous";
+  if (typeof raw !== "string") return "anonymous";
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.length > 128 || !/^[A-Za-z0-9._-]+$/.test(trimmed)) {
+    return "anonymous";
+  }
+  return trimmed;
 }
 
 export async function loadMemoryContextBlock(

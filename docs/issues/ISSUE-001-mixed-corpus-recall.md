@@ -128,13 +128,15 @@ Reference 对照：
 
 ## 推荐缓解方案（按优先级）
 
-### v1.x 小改（不破坏 Phase 1 封板定义）
+> **历史说明（2026-08-21）**：下列 v1.x / 产品层条目为 Phase 3 Wave 1 之前的缓解思路，**不再作为现行 runbook**。当前权威方案见本文「Wave 1 修复」与 `tests/regression/phase-3/01-hybrid-proper-noun.test.ts`。
+
+### v1.x 小改（历史 · 不破坏 Phase 1 封板定义）
 
 1. **双路检索**：Path A 过滤 `source` ∈ {用户上传 `.md/.pdf/…`, `prompt-suggestion`}；Path B 全库；A 优先 merge
 2. **source 差异化阈值**：`psychology-qa` 注入门槛提高到 0.72
 3. **开启 Reranker**：`.env` 设 `ENABLE_RERANKER=true`
 
-### 产品层
+### 产品层（历史）
 
 4. 问法贴近文档标题或上传后提供的「建议问法」
 5. 后续 Phase：KB 内 `@文档` 显式选源（未在 Phase 1 验收范围）

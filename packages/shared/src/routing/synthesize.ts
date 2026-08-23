@@ -225,5 +225,14 @@ export function synthesizeIntentPlan(input: SynthesizeInput): IntentPlan {
     plan.ambiguous = false;
   }
 
+  if (!neo4jOk && (plan.primary === "graph_relation" || plan.primary === "kb_graph_hybrid")) {
+    plan.primary = "kb_doc";
+    plan.channels = "kb";
+    plan.specialists = ["retriever"];
+    plan.retrieverTools = ["kb_search"];
+    plan.fallbackChain = [];
+    plan.reason = `${plan.reason};neo4j_unavailable`;
+  }
+
   return plan;
 }

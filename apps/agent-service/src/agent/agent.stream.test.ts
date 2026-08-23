@@ -607,12 +607,23 @@ describe("Agent SSE stream (AGENT-04)", () => {
     expect(invokeGraphSearchMock).not.toHaveBeenCalled();
   });
 
-  it("kb NO_HIT without graphSignal does NOT invokeGraphSearch (D-13 negative)", async () => {
+  it("kb prefetch without graphSignal invokes kb_search but NOT graph_search (D-13 negative)", async () => {
     resolveIntentPlanForAgentMock.mockResolvedValue({
-      plan: KB_PLAN_NO_GRAPH,
+      plan: {
+        primary: "general" as const,
+        channels: "kb" as const,
+        specialists: ["retriever"],
+        retrieverTools: ["kb_search"],
+        fallbackChain: [],
+        reason: "l1:kb_without_graph",
+        confidence: 0.8,
+        graphSignal: false,
+      },
       layers: ["L1"],
     });
+    invokeKbSearchMock.mockResolvedValue("KB_SEARCH_STATUS: HIT\n[citation documentId: doc-1]");
     invokeGraphSearchMock.mockClear();
+    invokeKbSearchMock.mockClear();
     toBaseMessagesMock.mockResolvedValue([{ content: "差旅报销政策有哪些条款？" }]);
     const { AgentService } = await import("./agent.service");
     const service = new AgentService();
@@ -634,6 +645,7 @@ describe("Agent SSE stream (AGENT-04)", () => {
       __ready?: Promise<void>;
     };
     await streamArg?.__ready;
+    expect(invokeKbSearchMock).toHaveBeenCalled();
     expect(invokeGraphSearchMock).not.toHaveBeenCalled();
   });
 

@@ -1,0 +1,21 @@
+{
+  "ENABLE_RERANKER": "true",
+  "hasUrl": true,
+  "hasKey": true,
+  "model": "cohere/rerank-v3.5",
+  "ranked": [
+    {
+      "index": 1,
+      "score": 0.7180613,
+      "source": "full-flow-odyssey.md"
+    },
+    {
+      "index": 0,
+      "score": 0.026802607,
+      "source": "noise"
+    }
+  ],
+  "mode": "dedicated",
+  "error": null,
+  "httpStatus": 200
+}

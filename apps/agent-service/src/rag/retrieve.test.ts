@@ -77,6 +77,7 @@ describe("retrieveKb via hybridSearch", () => {
   });
 
   it("calls hybridSearch with corpus=user by default", async () => {
+    let capturedCorpus: string | undefined;
     const search = vi.fn().mockResolvedValue([
       {
         text: "hit",
@@ -91,16 +92,20 @@ describe("retrieveKb via hybridSearch", () => {
       minSimilarity: 0,
       hybridDeps: {
         embed: vi.fn().mockResolvedValue([0.1]),
-        getStore: () => ({
-          search,
-          upsert: vi.fn(),
-          deleteByDocument: vi.fn(),
-        }),
+        getStore: (corpus) => {
+          capturedCorpus = corpus;
+          return {
+            search,
+            upsert: vi.fn(),
+            deleteByDocument: vi.fn(),
+          };
+        },
         esSearch: async () => [],
         rewriteQuery: async (q) => q,
         rerank: async (_q, hits) => hits,
       },
     });
+    expect(capturedCorpus).toBe("user");
     expect(search).toHaveBeenCalledWith(
       expect.objectContaining({ workspaceId: expect.any(String) }),
     );

@@ -5,7 +5,7 @@
 > **参考**：`reference/`（课程实战）+ 市面对标（下文）  
 > **最后更新**：2026-08-14（v2.x 加固 + Code Review 延期项落档）
 
-### 版本对照
+## 版本对照
 
 | 版本 | 主题 | 状态 |
 | --- | --- | --- |
@@ -13,7 +13,7 @@
 | **v1.0** | RAG 强化 + 企业知识库 | ✅ 已封板 |
 | **v2.0** | LangGraph 多 Agent（研究型） | ✅ MVP 关账 / 非生产（`tests/acceptance/phase-2-agent/CLOSEOUT.md`） |
 | **v2.x** | Agent 稳定性加固（配额/校验/BFF） | ✅ 2026-08-14（见 CLOSEOUT「v2.x」） |
-| **v3.0** | 检索可信度 + 记忆 + 评测 | 🔜 下一步（对标 RAGFlow/FastGPT 质量层） |
+| **v3.0** | 检索可信度 + 记忆 + 评测（Phase 3） | ✅ 2026-08-21 关账（`tests/acceptance/phase-3/CLOSEOUT.md` · Phase 3.1 UAT 2026-08-22） |
 | **v4.0** | 身份权限 + 可生产部署 | 规划中（对标 MaxKB/企业交付层） |
 | **v5.0** | 连接器 / HITL / 行动型 Agent | 持续演进（对标 Glean·Dify 的浅层子集） |
 

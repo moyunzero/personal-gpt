@@ -24,7 +24,9 @@ export function hasSubstantiveKbAnswer(text: string): boolean {
     .replace(/KB_SEARCH_STATUS[^\n]*/gi, "")
     .trim();
   const cjkOnly = stripped.replace(/[^\u4e00-\u9fff]/g, "");
-  return cjkOnly.length >= 15;
+  if (cjkOnly.length >= 15) return true;
+  const latinOnly = stripped.replace(/[^a-zA-Z0-9\s]/g, "").trim();
+  return latinOnly.length >= 40;
 }
 
 /** 从 citation 列表生成可读摘要；无 citation 返回空串 */

@@ -243,11 +243,7 @@ export const SharedEnvSchema = z
     }
     const needsAstra = data.VECTOR_BACKEND === "astra" || data.MILVUS_DUAL_WRITE === true;
     if (needsAstra) {
-      for (const field of [
-        "ASTRA_DB_COLLECTION",
-        "ASTRA_DB_API_ENDPOINT",
-        "ASTRA_DB_APPLICATION_TOKEN",
-      ] as const) {
+      for (const field of ["ASTRA_DB_API_ENDPOINT", "ASTRA_DB_APPLICATION_TOKEN"] as const) {
         if (!data[field]?.trim()) {
           ctx.addIssue({
             code: "custom",
@@ -255,6 +251,18 @@ export const SharedEnvSchema = z
             message: `VECTOR_BACKEND=astra 或 MILVUS_DUAL_WRITE=true 时必须设置 ${field}`,
           });
         }
+      }
+      const hasLegacyCollection = Boolean(data.ASTRA_DB_COLLECTION?.trim());
+      const hasCorpusCollections =
+        Boolean(data.ASTRA_DB_COLLECTION_USER?.trim()) &&
+        Boolean(data.ASTRA_DB_COLLECTION_SEED?.trim());
+      if (!hasLegacyCollection && !hasCorpusCollections) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["ASTRA_DB_COLLECTION"],
+          message:
+            "VECTOR_BACKEND=astra 或 MILVUS_DUAL_WRITE=true 时必须设置 ASTRA_DB_COLLECTION，或同时设置 ASTRA_DB_COLLECTION_USER 与 ASTRA_DB_COLLECTION_SEED",
+        });
       }
     }
   });

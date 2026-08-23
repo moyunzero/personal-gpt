@@ -40,19 +40,29 @@ export function assertAllowlistedCypher(cypher: string): void {
   if (!/\bRETURN\b/i.test(normalized)) {
     throw new CypherAllowlistError("Cypher rejected: must include RETURN");
   }
-  // Disallow multiple statements
-  if (normalized.includes(";") && !/;\s*$/.test(normalized)) {
+  // Disallow multiple statements (strip one optional trailing semicolon first)
+  let stmtBody = normalized;
+  if (stmtBody.endsWith(";")) {
+    stmtBody = stmtBody.slice(0, -1).trimEnd();
+  }
+  if (stmtBody.includes(";")) {
     throw new CypherAllowlistError("Cypher rejected: multiple statements not allowed");
   }
 
   const allowedLabels = new Set<string>(ALLOWED_LABELS);
   const allowedRels = new Set<string>(ALLOWED_REL_TYPES);
 
+  const matchClause = stmtBody.split(/\bRETURN\b/i)[0] ?? stmtBody;
   const nodeLabels: string[] = [];
-  const nodeLabelRe = /\(\s*(?:\w+\s*)?:([A-Za-z]\w*)/g;
-  let labelMatch: RegExpExecArray | null;
-  while ((labelMatch = nodeLabelRe.exec(normalized)) !== null) {
-    nodeLabels.push(labelMatch[1]!);
+  const nodePatternRe = /\([^)]*\)/g;
+  let patternMatch: RegExpExecArray | null;
+  while ((patternMatch = nodePatternRe.exec(matchClause)) !== null) {
+    const pattern = patternMatch[0]!;
+    const labels = [...pattern.matchAll(/:([A-Za-z]\w*)/g)].map((m) => m[1]!);
+    if (labels.length === 0) {
+      throw new CypherAllowlistError("Cypher rejected: unlabeled node pattern in MATCH");
+    }
+    nodeLabels.push(...labels);
   }
   if (nodeLabels.length === 0) {
     throw new CypherAllowlistError("Cypher rejected: no allowlisted node labels in MATCH");
@@ -68,6 +78,11 @@ export function assertAllowlistedCypher(cypher: string): void {
     const bracketMatch = relPattern.match(/\[([^\]]*)\]/);
     if (!bracketMatch) continue;
     const inner = bracketMatch[1]!.trim();
+    if (inner.includes("*")) {
+      throw new CypherAllowlistError(
+        "Cypher rejected: variable-length relationship not allowlisted",
+      );
+    }
     if (!inner.includes(":")) {
       throw new CypherAllowlistError("Cypher rejected: untyped relationship pattern");
     }

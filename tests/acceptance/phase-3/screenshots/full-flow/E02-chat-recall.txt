@@ -1,0 +1,173 @@
+data: {"type":"text-start","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"\n\n","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"目前","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"在我们的","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"对话","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"记录","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"中","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"我","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"还没有","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"接收到","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"您","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"关于","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"回答","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"风格的","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"明确","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"偏好","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"设置","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"。","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"不过","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"您可以","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"随时","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"告诉我","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"您的","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"习惯","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"我会","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"立即","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"调整","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"并在","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"后续","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"对话","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"中","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"严格","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"保持一致","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"。","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"例如","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"您","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"更","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"倾向","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"以下","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"哪种","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"？","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"\n\n","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"简洁","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"直接","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"型","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"只","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"给","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"核心","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"结论","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"，","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"少","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"铺垫","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"少","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"解释","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"\n","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"-","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":" **","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"详细","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"结构化","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"型","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"**","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"：","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"分","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"点","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"清晰","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"、","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"带","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"逻辑","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"推导","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"或","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"必要","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"引用","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"（","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"如","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"刚才","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"的回答","id":"msg-1787372057868"}
+
+data: {"type":"text-delta","delta":"）","id":"msg-1787372057868"}
+
+data

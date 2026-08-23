@@ -18,20 +18,25 @@ import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
 const MAX_CHAT_MESSAGES = 50;
 const GRAPH_RAG_TIMEOUT_MS = 12_000;
+const MEMORY_LOAD_TIMEOUT_MS = 1_500;
 
-async function withGraphRagTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("graph_rag_timeout")), ms);
+        timer = setTimeout(() => reject(new Error(`${label}_timeout`)), ms);
         timer.unref?.();
       }),
     ]);
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+async function withGraphRagTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return withTimeout(promise, ms, "graph_rag");
 }
 
 function isTrustedInternalProxy(req: Request): boolean {
@@ -242,10 +247,16 @@ export async function POST(req: Request) {
 
     const systemPromptBase = buildSystemPrompt(contextResult);
     const graphBlock = graphSummary ? `\n\n## 图谱知识\n${graphSummary}` : "";
-    const memoryBlock = await loadMemoryContextBlock(
-      { workspaceId: DEFAULT_WORKSPACE_ID, userKey },
-      lastContent,
-    );
+    let memoryBlock = "";
+    try {
+      memoryBlock = await withTimeout(
+        loadMemoryContextBlock({ workspaceId: DEFAULT_WORKSPACE_ID, userKey }, lastContent),
+        MEMORY_LOAD_TIMEOUT_MS,
+        "memory_load",
+      );
+    } catch {
+      memoryBlock = "";
+    }
     const systemPrompt = memoryBlock
       ? `${systemPromptBase}${graphBlock}\n\n${memoryBlock}`
       : `${systemPromptBase}${graphBlock}`;

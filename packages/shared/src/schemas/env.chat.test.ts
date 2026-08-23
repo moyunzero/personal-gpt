@@ -66,4 +66,18 @@ describe("parseSharedEnv chat keys", () => {
       } as NodeJS.ProcessEnv),
     ).toThrow(/ASTRA_DB_COLLECTION/);
   });
+
+  it("accepts USER+SEED corpus collections without legacy ASTRA_DB_COLLECTION", () => {
+    const env = parseSharedEnv({
+      GROQ_API_KEY: "gsk",
+      NIM_API_KEY: "nvapi-test",
+      VECTOR_BACKEND: "astra",
+      ASTRA_DB_API_ENDPOINT: "https://example.apps.astra.datastax.com",
+      ASTRA_DB_APPLICATION_TOKEN: "AstraCS:test",
+      ASTRA_DB_COLLECTION_USER: "user_col",
+      ASTRA_DB_COLLECTION_SEED: "seed_col",
+    } as NodeJS.ProcessEnv);
+    expect(env.ASTRA_DB_COLLECTION_USER).toBe("user_col");
+    expect(env.ASTRA_DB_COLLECTION_SEED).toBe("seed_col");
+  });
 });

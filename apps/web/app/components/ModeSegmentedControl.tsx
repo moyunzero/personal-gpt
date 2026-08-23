@@ -20,36 +20,40 @@ export default function ModeSegmentedControl({
   onNewThread,
 }: ModeSegmentedControlProps) {
   return (
-    <div className="mode-seg" role="group" aria-label="对话模式">
-      <button
-        type="button"
-        className="mode-seg-btn"
-        aria-pressed={mode === "chat"}
-        disabled={disabled}
-        onClick={() => onChange("chat")}
-      >
-        Chat
-      </button>
-      <button
-        type="button"
-        className="mode-seg-btn"
-        aria-pressed={mode === "agent"}
-        disabled={disabled}
-        onClick={() => onChange("agent")}
-      >
-        Agent
-      </button>
-      {onNewThread ? (
+    <div className="mode-seg">
+      <div role="group" aria-label="对话模式" className="mode-seg-group">
         <button
           type="button"
           className="mode-seg-btn"
+          aria-pressed={mode === "chat"}
           disabled={disabled}
-          onClick={onNewThread}
-          title="新会话"
-          aria-label="新会话"
+          onClick={() => onChange("chat")}
         >
-          新会话
+          Chat
         </button>
+        <button
+          type="button"
+          className="mode-seg-btn"
+          aria-pressed={mode === "agent"}
+          disabled={disabled}
+          onClick={() => onChange("agent")}
+        >
+          Agent
+        </button>
+      </div>
+      {onNewThread ? (
+        <div role="group" aria-label="会话操作" className="mode-seg-group">
+          <button
+            type="button"
+            className="mode-seg-btn"
+            disabled={disabled}
+            onClick={onNewThread}
+            title="新会话"
+            aria-label="新会话"
+          >
+            新会话
+          </button>
+        </div>
       ) : null}
     </div>
   );

@@ -191,18 +191,27 @@ export type GraphRagQueryOptions = {
 
 let cachedDriver: Driver | undefined;
 
+const NEO4J_TX_TIMEOUT_MS = 15_000;
+
 export function getNeo4jDriverFromEnv(): Driver {
   if (cachedDriver) return cachedDriver;
   const uri = process.env.NEO4J_URI?.trim() || "bolt://localhost:7687";
   const user = process.env.NEO4J_USER?.trim() || "neo4j";
-  const password = process.env.NEO4J_PASSWORD?.trim() || "personal_gpt_neo4j";
-  cachedDriver = neo4j.driver(uri, neo4j.auth.basic(user, password));
+  const password = process.env.NEO4J_PASSWORD?.trim();
+  if (!password && process.env.NODE_ENV === "production") {
+    throw new Error("NEO4J_PASSWORD is required in production");
+  }
+  const resolvedPassword = password || "personal_gpt_neo4j";
+  cachedDriver = neo4j.driver(uri, neo4j.auth.basic(user, resolvedPassword), {
+    connectionAcquisitionTimeout: NEO4J_TX_TIMEOUT_MS,
+    maxTransactionRetryTime: NEO4J_TX_TIMEOUT_MS,
+  });
   return cachedDriver;
 }
 
-export function resetNeo4jDriverForTests(): void {
+export async function resetNeo4jDriverForTests(): Promise<void> {
   if (cachedDriver) {
-    void cachedDriver.close();
+    await cachedDriver.close();
     cachedDriver = undefined;
   }
 }
@@ -215,7 +224,9 @@ async function defaultExecutor(
   const driver = getNeo4jDriverFromEnv();
   const session = driver.session({ defaultAccessMode: neo4j.session.READ });
   try {
-    const result = await session.executeRead(async (tx) => tx.run(cypher, params));
+    const result = await session.executeRead(async (tx) => tx.run(cypher, params), {
+      timeout: NEO4J_TX_TIMEOUT_MS,
+    });
     const paths: GraphPathTrace[] = [];
     for (const record of result.records) {
       const path = record.get("path") as Neo4jPath | undefined;

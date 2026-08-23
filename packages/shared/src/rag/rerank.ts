@@ -73,7 +73,7 @@ function mapDedicatedResults(
     const hit = hits[index]!;
     ranked.push({
       ...hit,
-      similarity: typeof row.relevance_score === "number" ? row.relevance_score : hit.similarity,
+      rerankScore: typeof row.relevance_score === "number" ? row.relevance_score : undefined,
     });
     if (ranked.length >= topN) break;
   }

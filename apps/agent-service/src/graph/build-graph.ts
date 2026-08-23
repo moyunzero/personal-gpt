@@ -400,10 +400,9 @@ function buildPrefetchNode(plan: IntentPlan) {
           userText: text,
           workspaceId,
         });
+        blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
         if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
-          blocks.push(`【知识库回退检索·工具结果·可信】\n${graphOut}\n\n${kbOut}`);
-        } else {
-          blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+          blocks.push(`【知识库回退检索·工具结果·可信】\n${kbOut}`);
         }
       } else {
         blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);

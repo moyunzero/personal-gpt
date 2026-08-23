@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import type { GraphPathDisplay } from "@/lib/chat/graph-path-display";
 
@@ -11,8 +11,9 @@ interface GraphPathCardsProps {
 }
 
 function GraphPathCard({ path, index }: { path: GraphPathDisplay; index: number }) {
+  const instanceId = useId();
   const [expanded, setExpanded] = useState(false);
-  const cardId = `graph-path-${index}`;
+  const cardId = `${instanceId}-graph-path-${index}`;
   const pathSummary = path.nodes.join(" → ");
   const relSummary = path.relationships.length > 0 ? path.relationships.join(" · ") : "";
 

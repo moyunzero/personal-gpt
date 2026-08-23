@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>Phase 3.1 Intent Routing — 验收截图墙</title>
+    <style>
+      body {
+        font-family: ui-sans-serif, system-ui;
+        background: #0f1115;
+        color: #e8eefc;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 22px;
+      }
+      section {
+        margin: 28px 0;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+      }
+      li {
+        background: #171b24;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .cap {
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      img {
+        width: 100%;
+        display: block;
+        border-top: 1px solid #252a36;
+      }
+      .ok {
+        color: #7dffb3;
+      }
+      .warn {
+        color: #ffb347;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Phase 3.1 Intent Routing — 截图索引</h1>
+    <p>详见 <code>MCP-ACCEPTANCE.md</code> · 结果 <code>UAT-AUTO-RESULT.json</code></p>
+
+    <section>
+      <h2>UI 壳</h2>
+      <ul>
+        <li>
+          <div class="cap warn">U01 首页</div>
+          <img src="U01-home.png" alt="U01" />
+        </li>
+        <li>
+          <div class="cap warn">U02 Agent 模式尝试</div>
+          <img src="U02-agent-mode-attempt.png" alt="U02" />
+        </li>
+        <li>
+          <div class="cap warn">U03 输入珍珠奶茶</div>
+          <img src="U03-agent-typed.png" alt="U03" />
+        </li>
+        <li>
+          <div class="cap">M01 MCP 首页</div>
+          <img src="M01-mcp-home.png" alt="M01" />
+        </li>
+        <li>
+          <div class="cap">M02 MCP Agent</div>
+          <img src="M02-mcp-agent-mode.png" alt="M02" />
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>API 旁证板</h2>
+      <ul>
+        <li>
+          <div class="cap ok">A Agent trace + IntentPlan</div>
+          <img
+            src="A-agent-trace-board.png"
+            alt="A board"
+            onerror="
+              this.parentElement.innerHTML +=
+                '<a href=A-agent-trace-board.html>A-agent-trace-board.html</a>'
+            "
+          />
+        </li>
+        <li>
+          <div class="cap ok">B KB synthesis</div>
+          <a href="B-kb-synthesis-board.html">B-kb-synthesis-board.html</a>
+        </li>
+        <li>
+          <div class="cap ok">C Chat 图谱路径 SSE</div>
+          <a href="C-chat-graph-board.html">C-chat-graph-board.html</a>
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>

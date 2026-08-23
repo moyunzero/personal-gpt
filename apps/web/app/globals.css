@@ -915,6 +915,10 @@ main {
   cursor: not-allowed;
 }
 
+.mode-seg-group {
+  display: contents;
+}
+
 /* Agent 待办 / 步骤（消息内嵌，对齐 citation-card） */
 .message-role-line {
   margin: 0 0 var(--space-xs);

@@ -137,6 +137,21 @@ describe("synthesizeIntentPlan (D-03/D-13/D-10)", () => {
     expect(plan.retrieverTools).toEqual(["kb_search"]);
   });
 
+  it("neo4jOk=false degrades L1 graph_relation pick to kb_doc", () => {
+    const plan = synthesizeIntentPlan({
+      query: "珍珠奶茶用了什么工艺",
+      l1: {
+        graphSignal: true,
+        kb: { probed: false },
+        reason: "l1:graph_signal",
+      },
+      neo4jOk: false,
+    });
+    expect(plan.primary).toBe("kb_doc");
+    expect(plan.retrieverTools).toEqual(["kb_search"]);
+    expect(plan.reason).toContain("neo4j_unavailable");
+  });
+
   it("kb_doc with graphSignal true → fallbackChain includes graph_search (D-13)", () => {
     const plan = synthesizeIntentPlan({
       query: "奶茶工艺",

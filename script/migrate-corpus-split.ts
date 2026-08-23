@@ -81,15 +81,39 @@ async function countByCorpus(
   let user = 0;
   let seed = 0;
   let scanned = 0;
-  // Prefer full scan via async cursor when available
-  const cursor = sourceCol.find({}, { limit: 50_000, projection: { source: 1, category: 1 } });
-  const docs = (await cursor.toArray()) as Record<string, unknown>[];
-  for (const doc of docs) {
+  await paginateSourceDocs(sourceCol, { source: 1, category: 1 }, async (doc) => {
     scanned += 1;
     if (classifyCorpus(doc) === "seed") seed += 1;
     else user += 1;
-  }
+  });
   return { user, seed, total: user + seed, scanned };
+}
+
+const MIGRATE_PAGE_SIZE = 1000;
+
+async function paginateSourceDocs(
+  sourceCol: ReturnType<typeof openCollection>,
+  projection: Record<string, 1>,
+  onDoc: (doc: Record<string, unknown>) => Promise<void>,
+): Promise<void> {
+  let pageState: string | undefined;
+  while (true) {
+    const findOpts: {
+      limit: number;
+      projection: Record<string, 1>;
+      pageState?: string;
+    } = { limit: MIGRATE_PAGE_SIZE, projection };
+    if (pageState) findOpts.pageState = pageState;
+    const cursor = sourceCol.find({}, findOpts);
+    const docs = (await cursor.toArray()) as Record<string, unknown>[];
+    if (docs.length === 0) break;
+    for (const doc of docs) {
+      await onDoc(doc);
+    }
+    const nextState = (cursor as { pageState?: string }).pageState;
+    if (!nextState || docs.length < MIGRATE_PAGE_SIZE) break;
+    pageState = nextState;
+  }
 }
 
 async function copyBatch(
@@ -102,47 +126,57 @@ async function copyBatch(
   let copiedSeed = 0;
   let skipped = 0;
 
-  const docs = (await sourceCol.find({}, { limit: 50_000 }).toArray()) as Record<string, unknown>[];
+  await paginateSourceDocs(
+    sourceCol,
+    {
+      $vector: 1,
+      content: 1,
+      text: 1,
+      workspaceId: 1,
+      documentId: 1,
+      chunkIndex: 1,
+      title: 1,
+      source: 1,
+      category: 1,
+    },
+    async (doc) => {
+      const kind = classifyCorpus(doc);
+      const target = kind === "seed" ? seedCol : userCol;
+      const id = doc._id;
 
-  for (const doc of docs) {
-    const kind = classifyCorpus(doc);
-    const target = kind === "seed" ? seedCol : userCol;
-    const id = doc._id;
-
-    if (id !== undefined && id !== null) {
-      const existing = await target.findOne({ _id: id } as Record<string, unknown>);
-      if (existing) {
-        skipped += 1;
-        continue;
+      if (id !== undefined && id !== null) {
+        const existing = await target.findOne({ _id: id } as Record<string, unknown>);
+        if (existing) {
+          skipped += 1;
+          return;
+        }
       }
-    }
 
-    await target.insertOne(doc as Record<string, unknown>);
-    if (kind === "seed") copiedSeed += 1;
-    else copiedUser += 1;
+      await target.insertOne(doc as Record<string, unknown>);
+      if (kind === "seed") copiedSeed += 1;
+      else copiedUser += 1;
 
-    if (withEs) {
-      const workspaceId = String(doc.workspaceId ?? "");
-      const documentId = String(doc.documentId ?? "");
-      const chunkIndex = Number(doc.chunkIndex ?? 0);
-      if (workspaceId && documentId) {
-        const { esIndex } = resolveCorpusTargets(kind);
-        // Idempotent per document: delete then index this chunk only via bulk
-        // Full-doc delete once per documentId would be better; do per-chunk safe upsert id
-        await indexChunks(esIndex, [
-          {
-            workspaceId,
-            documentId,
-            chunkIndex,
-            content: String(doc.content ?? doc.text ?? ""),
-            title: doc.title as string | undefined,
-            source: doc.source as string | undefined,
-            category: doc.category as string | undefined,
-          },
-        ]);
+      if (withEs) {
+        const workspaceId = String(doc.workspaceId ?? "");
+        const documentId = String(doc.documentId ?? "");
+        const chunkIndex = Number(doc.chunkIndex ?? 0);
+        if (workspaceId && documentId) {
+          const { esIndex } = resolveCorpusTargets(kind);
+          await indexChunks(esIndex, [
+            {
+              workspaceId,
+              documentId,
+              chunkIndex,
+              content: String(doc.content ?? doc.text ?? ""),
+              title: doc.title as string | undefined,
+              source: doc.source as string | undefined,
+              category: doc.category as string | undefined,
+            },
+          ]);
+        }
       }
-    }
-  }
+    },
+  );
 
   return { copiedUser, copiedSeed, skipped };
 }

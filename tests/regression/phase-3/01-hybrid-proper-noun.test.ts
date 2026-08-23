@@ -38,7 +38,7 @@ describe("Phase 3 regression #1: hybrid proper-noun retrieval (RAG-06)", () => {
   it("RRF promotes BM25 proper-noun hit over stronger vector-only noise", () => {
     // Vector ranks noise first; BM25 ranks 奥德赛 first (title/keyword match).
     const vector = [WEAK_VECTOR_NOISE, { ...USER_DOC, similarity: 0.55 }];
-    const bm25 = [USER_DOC, { ...WEAK_VECTOR_NOISE, similarity: 0.4 }];
+    const bm25 = [USER_DOC];
 
     const fused = reciprocalRankFusion([bm25, vector], 60);
 

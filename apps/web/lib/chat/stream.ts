@@ -111,7 +111,14 @@ export function createChatStream({
 
           if (onComplete && assistantText.trim()) {
             try {
-              await onComplete(assistantText);
+              const ON_COMPLETE_TIMEOUT_MS = 5_000;
+              await Promise.race([
+                onComplete(assistantText),
+                new Promise<void>((resolve) => {
+                  const timer = setTimeout(resolve, ON_COMPLETE_TIMEOUT_MS);
+                  timer.unref?.();
+                }),
+              ]);
             } catch (err) {
               log.warn("onComplete failed (ignored)", { err });
             }
