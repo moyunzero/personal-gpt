@@ -13,6 +13,7 @@ import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity"
 
 import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
+import { extractAndUpsertGraph } from "./pipeline/graph-extract";
 import { parseDocument } from "./pipeline/parse";
 import { splitText, toChunkRecords } from "./pipeline/split";
 import { traceIngestStep } from "./pipeline/tracing";
@@ -86,6 +87,12 @@ export class IngestProcessor extends WorkerHost {
       });
 
       await traceIngestStep("upsert", traceCtx, () => upsertChunks(records));
+      await job.updateProgress(90);
+      await this.updateIngestJob(ingestJob?.id, { progress: 90 });
+
+      await traceIngestStep("graph-extract", traceCtx, () =>
+        extractAndUpsertGraph({ workspaceId, documentId, chunks }),
+      );
       await job.updateProgress(100);
 
       await this.documentRepo.update(
