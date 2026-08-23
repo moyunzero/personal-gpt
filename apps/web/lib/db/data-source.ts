@@ -3,10 +3,18 @@ import "reflect-metadata";
 import { DataSource } from "typeorm";
 
 import { DocumentEntity } from "./entities/document.entity";
+import { EntityAclEntity } from "./entities/entity-acl.entity";
+import { EntityCatalogEntity } from "./entities/entity-catalog.entity";
 import { IngestJobEntity } from "./entities/ingest-job.entity";
 import { WorkspaceEntity } from "./entities/workspace.entity";
 
-const ENTITIES = [WorkspaceEntity, DocumentEntity, IngestJobEntity];
+const ENTITIES = [
+  WorkspaceEntity,
+  DocumentEntity,
+  IngestJobEntity,
+  EntityCatalogEntity,
+  EntityAclEntity,
+];
 const MIGRATIONS = [`${__dirname}/migrations/[0-9]*-*.{ts,js}`];
 
 function buildDataSource(): DataSource {
