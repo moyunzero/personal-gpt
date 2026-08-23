@@ -1,5 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
+
+const TEST_CTX = { userId: "user-test", workspaceId: DEFAULT_WORKSPACE_ID };
+
+vi.mock("@/lib/auth/workspace.service", () => ({
+  resolveDocumentAccessContext: vi.fn(async () => ({
+    userId: "user-test",
+    memberRole: "owner" as const,
+  })),
+}));
+
 vi.mock("@/lib/env", () => ({
   env: {
     ALLOWED_MIME_TYPES: [
@@ -174,7 +185,7 @@ describe("uploadDocument enqueue contract", () => {
   });
 
   it("returns pending document and ingest job id after enqueue", async () => {
-    const { document, job } = await uploadDocument(makeFile());
+    const { document, job } = await uploadDocument(makeFile(), TEST_CTX);
 
     expect(document.status).toBe("pending");
     expect(job?.id).toBe("job-uuid");
@@ -189,7 +200,7 @@ describe("uploadDocument enqueue contract", () => {
   });
 
   it("passes category and tags into ingest queue payload", async () => {
-    await uploadDocument(makeFile(), { category: "docs", tags: ["ai", "rag"] });
+    await uploadDocument(makeFile(), TEST_CTX, { category: "docs", tags: ["ai", "rag"] });
 
     expect(queueAddMock).toHaveBeenCalledWith(
       "ingest-doc-uuid",
@@ -259,7 +270,7 @@ describe("reindexDocument (INGEST-05)", () => {
   });
 
   it("sets status processing and enqueues BullMQ job", async () => {
-    const result = await reindexDocument("doc-reindex");
+    const result = await reindexDocument("doc-reindex", TEST_CTX);
 
     expect(result).not.toBeNull();
     expect(docUpdateMock).toHaveBeenCalledWith(
@@ -291,7 +302,7 @@ describe("reindexDocument (INGEST-05)", () => {
       mimeType: "application/pdf",
     });
 
-    const result = await reindexDocument("doc-no-path");
+    const result = await reindexDocument("doc-no-path", TEST_CTX);
 
     expect(result).toBeNull();
     expect(docUpdateMock).not.toHaveBeenCalled();
@@ -335,7 +346,7 @@ describe("updateDocumentMetadata (KB-02)", () => {
   });
 
   it("stores null when category is cleared", async () => {
-    const result = await updateDocumentMetadata("doc-meta", { category: null });
+    const result = await updateDocumentMetadata("doc-meta", TEST_CTX, { category: null });
 
     expect(result?.category).toBeNull();
     expect(saveMock).toHaveBeenCalledWith(expect.objectContaining({ category: null }));
@@ -392,7 +403,7 @@ describe("listDocuments tags filter (KB-03)", () => {
   });
 
   it("applies tags OR filter via query builder", async () => {
-    await listDocuments({ tags: ["python"] });
+    await listDocuments(TEST_CTX, { tags: ["python"] });
 
     expect(andWhereMock).toHaveBeenCalledWith("doc.tags ?| array[:...tags]", { tags: ["python"] });
   });

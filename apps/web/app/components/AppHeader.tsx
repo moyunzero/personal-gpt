@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import WorkspaceSwitcher from "@/components/workspace-switcher";
 import ModeSegmentedControl, { type ChatMode } from "./ModeSegmentedControl";
 
 /** Anthropic 风格 spike-mark（与 chat 页一致） */
@@ -39,6 +40,7 @@ export default function AppHeader({
         </Link>
 
         <div className="app-header-cluster">
+          <WorkspaceSwitcher />
           {activePage === "chat" && mode && onModeChange ? (
             <ModeSegmentedControl
               mode={mode}

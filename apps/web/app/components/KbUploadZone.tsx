@@ -12,6 +12,7 @@ type UploadMeta = {
   category: string;
   tags: string;
   title: string;
+  visibility: "workspace" | "private" | "restricted";
 };
 
 const ACCEPT_TYPES = [
@@ -21,7 +22,12 @@ const ACCEPT_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ].join(",");
 
-const EMPTY_META: UploadMeta = { category: "", tags: "", title: "" };
+const EMPTY_META: UploadMeta = {
+  category: "",
+  tags: "",
+  title: "",
+  visibility: "workspace",
+};
 
 /**
  * 两步上传：选文件 → 填属性（可选）→ 确认上传（D-10）。
@@ -62,6 +68,7 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
         if (category) formData.append("category", category);
         if (tags) formData.append("tags", tags);
         if (title) formData.append("title", title);
+        formData.append("visibility", uploadMeta.visibility);
 
         const res = await fetch("/api/kb/documents", {
           method: "POST",
@@ -188,6 +195,24 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
                 onChange={(e) => setMeta((m) => ({ ...m, tags: e.target.value }))}
                 disabled={uploading}
               />
+            </label>
+            <label className="kb-field">
+              <span className="kb-field-label">可见性</span>
+              <select
+                className="kb-field-input"
+                value={meta.visibility}
+                onChange={(e) =>
+                  setMeta((m) => ({
+                    ...m,
+                    visibility: e.target.value as UploadMeta["visibility"],
+                  }))
+                }
+                disabled={uploading}
+              >
+                <option value="workspace">工作区全员</option>
+                <option value="private">仅自己</option>
+                <option value="restricted">指定成员</option>
+              </select>
             </label>
           </div>
         </div>

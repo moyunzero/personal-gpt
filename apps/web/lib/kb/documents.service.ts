@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 
-import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import type { IngestJobPayload } from "@personal-gpt/shared/types/kb";
 import { normalizeUploadMime } from "@personal-gpt/shared/utils/ingest";
 import { getUploadsDir } from "@personal-gpt/shared/utils/paths";
@@ -19,8 +18,10 @@ import {
 } from "@personal-gpt/shared/stores/vector-store";
 import { createMilvusVectorStore } from "@personal-gpt/shared/stores/vector-store.milvus";
 
-import { DocumentEntity } from "@/lib/db/entities/document.entity";
+import { DocumentEntity, type DocumentVisibility } from "@/lib/db/entities/document.entity";
 import { IngestJobEntity } from "@/lib/db/entities/ingest-job.entity";
+import { canReadDocument, defaultDocumentVisibility } from "@/lib/auth/document-acl";
+import { resolveDocumentAccessContext } from "@/lib/auth/workspace.service";
 import { createEntityCatalogStore } from "@/lib/db/entity-catalog-store";
 import { getDataSource } from "@/lib/db/get-data-source";
 import { env } from "@/lib/env";
@@ -62,6 +63,11 @@ export interface UploadFileInput {
   type: string;
   size: number;
   arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+export interface DocumentsContext {
+  userId: string;
+  workspaceId: string;
 }
 
 export interface ListDocumentsParams {
@@ -134,6 +140,8 @@ export function serializeDocumentRow(document: DocumentEntity, job: IngestJobEnt
     status: document.status,
     chunkCount: document.chunkCount,
     mimeType: document.mimeType,
+    visibility: document.visibility,
+    ownerId: document.ownerId,
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
     latestJob: job
@@ -167,12 +175,13 @@ async function saveUpload(file: UploadFileInput, mimeType: string): Promise<stri
 async function enqueueIngestJob(
   document: DocumentEntity,
   payload: IngestJobPayload,
+  workspaceId: string,
 ): Promise<IngestJobEntity> {
   const ds = await getDataSource();
   const jobRepo = ds.getRepository(IngestJobEntity);
 
   const ingestJob = jobRepo.create({
-    workspaceId: DEFAULT_WORKSPACE_ID,
+    workspaceId,
     documentId: document.id,
     status: "queued",
     progress: 0,
@@ -192,7 +201,13 @@ async function enqueueIngestJob(
 /** 上传文件：落盘 → 建 document(pending) → 入队 BullMQ */
 export async function uploadDocument(
   file: UploadFileInput,
-  meta: { title?: string; category?: string; tags?: string[] } = {},
+  ctx: DocumentsContext,
+  meta: {
+    title?: string;
+    category?: string;
+    tags?: string[];
+    visibility?: DocumentVisibility;
+  } = {},
 ): Promise<DocumentWithJob> {
   const mimeType = normalizeUploadMime(file.name, file.type);
   validateUploadFile({ type: mimeType, size: file.size });
@@ -204,7 +219,10 @@ export async function uploadDocument(
   const docRepo = ds.getRepository(DocumentEntity);
 
   const document = docRepo.create({
-    workspaceId: DEFAULT_WORKSPACE_ID,
+    workspaceId: ctx.workspaceId,
+    ownerId: ctx.userId,
+    visibility: meta.visibility ?? defaultDocumentVisibility(),
+    restrictedUserIds: [],
     title,
     source: file.name,
     category: meta.category ?? null,
@@ -217,7 +235,7 @@ export async function uploadDocument(
   await docRepo.save(document);
 
   const payload: IngestJobPayload = {
-    workspaceId: DEFAULT_WORKSPACE_ID,
+    workspaceId: ctx.workspaceId,
     documentId: document.id,
     filePath,
     mimeType,
@@ -226,12 +244,12 @@ export async function uploadDocument(
     tags: document.tags,
   };
 
-  const job = await enqueueIngestJob(document, payload);
+  const job = await enqueueIngestJob(document, payload, ctx.workspaceId);
   return { document, job };
 }
 
-/** 分页列表 + category/tags/status/title 过滤（KB-03） */
-export async function listDocuments(params: ListDocumentsParams = {}) {
+/** 分页列表 + ACL security-trim（D-44） */
+export async function listDocuments(ctx: DocumentsContext, params: ListDocumentsParams = {}) {
   const page = Math.max(1, params.page ?? 1);
   const limit = Math.min(100, Math.max(1, params.limit ?? 20));
   const skip = (page - 1) * limit;
@@ -240,8 +258,13 @@ export async function listDocuments(params: ListDocumentsParams = {}) {
   const docRepo = ds.getRepository(DocumentEntity);
   const jobRepo = ds.getRepository(IngestJobEntity);
 
+  const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
+  if (!accessCtx) {
+    return { items: [], page, limit, total: 0 };
+  }
+
   const qb = docRepo.createQueryBuilder("doc").where("doc.workspace_id = :workspaceId", {
-    workspaceId: DEFAULT_WORKSPACE_ID,
+    workspaceId: ctx.workspaceId,
   });
 
   if (params.category) {
@@ -261,7 +284,9 @@ export async function listDocuments(params: ListDocumentsParams = {}) {
 
   qb.orderBy("doc.created_at", "DESC").skip(skip).take(limit);
 
-  const [documents, total] = await qb.getManyAndCount();
+  const [allDocs, totalBeforeAcl] = await qb.getManyAndCount();
+  const documents = allDocs.filter((doc) => canReadDocument(doc, accessCtx));
+  const total = documents.length < allDocs.length ? documents.length : totalBeforeAcl;
 
   const docIds = documents.map((d) => d.id);
   const jobs =
@@ -288,15 +313,21 @@ export async function listDocuments(params: ListDocumentsParams = {}) {
   };
 }
 
-export async function getDocumentById(documentId: string): Promise<DocumentWithJob | null> {
+export async function getDocumentById(
+  documentId: string,
+  ctx: DocumentsContext,
+): Promise<DocumentWithJob | null> {
   const ds = await getDataSource();
   const docRepo = ds.getRepository(DocumentEntity);
   const jobRepo = ds.getRepository(IngestJobEntity);
 
   const document = await docRepo.findOne({
-    where: { id: documentId, workspaceId: DEFAULT_WORKSPACE_ID },
+    where: { id: documentId, workspaceId: ctx.workspaceId },
   });
   if (!document) return null;
+
+  const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
+  if (!accessCtx || !canReadDocument(document, accessCtx)) return null;
 
   const job = await jobRepo.findOne({
     where: { documentId: document.id },
@@ -308,15 +339,19 @@ export async function getDocumentById(documentId: string): Promise<DocumentWithJ
 
 export async function updateDocumentMetadata(
   documentId: string,
+  ctx: DocumentsContext,
   patch: { title?: string; category?: string | null; tags?: string[] },
 ): Promise<DocumentEntity | null> {
   const ds = await getDataSource();
   const docRepo = ds.getRepository(DocumentEntity);
 
   const document = await docRepo.findOne({
-    where: { id: documentId, workspaceId: DEFAULT_WORKSPACE_ID },
+    where: { id: documentId, workspaceId: ctx.workspaceId },
   });
   if (!document) return null;
+
+  const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
+  if (!accessCtx || !canReadDocument(document, accessCtx)) return null;
 
   if (patch.title !== undefined) {
     const trimmed = patch.title.trim();
@@ -343,20 +378,23 @@ async function purgeGraphAndCatalog(workspaceId: string, documentId: string): Pr
  * 删除文档（INGEST-04 / Pitfall 5）：
  * 先删 Astra 向量 → 再删本地文件 → 最后删 PG 行。
  */
-export async function deleteDocument(documentId: string): Promise<boolean> {
+export async function deleteDocument(documentId: string, ctx: DocumentsContext): Promise<boolean> {
   const ds = await getDataSource();
   const docRepo = ds.getRepository(DocumentEntity);
 
   const document = await docRepo.findOne({
-    where: { id: documentId, workspaceId: DEFAULT_WORKSPACE_ID },
+    where: { id: documentId, workspaceId: ctx.workspaceId },
   });
   if (!document) return false;
+
+  const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
+  if (!accessCtx || !canReadDocument(document, accessCtx)) return false;
 
   const errors: Error[] = [];
   const tasks: Promise<void>[] = [];
 
   tasks.push(
-    purgeGraphAndCatalog(DEFAULT_WORKSPACE_ID, documentId).catch((err) => {
+    purgeGraphAndCatalog(ctx.workspaceId, documentId).catch((err) => {
       errors.push(err instanceof Error ? err : new Error(String(err)));
     }),
   );
@@ -364,7 +402,7 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   if (shouldWriteAstra()) {
     tasks.push(
       createVectorStore({ corpus: "user" })
-        .deleteByDocument(DEFAULT_WORKSPACE_ID, documentId)
+        .deleteByDocument(ctx.workspaceId, documentId)
         .catch((err) => {
           errors.push(err instanceof Error ? err : new Error(String(err)));
         }),
@@ -373,7 +411,7 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   if (shouldWriteMilvus()) {
     tasks.push(
       createMilvusVectorStore({ corpus: "user" })
-        .deleteByDocument(DEFAULT_WORKSPACE_ID, documentId)
+        .deleteByDocument(ctx.workspaceId, documentId)
         .catch((err) => {
           errors.push(err instanceof Error ? err : new Error(String(err)));
         }),
@@ -385,7 +423,7 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   try {
     await deleteByDocumentId(
       resolveCorpusTargets("user").esIndex,
-      DEFAULT_WORKSPACE_ID,
+      ctx.workspaceId,
       documentId,
     );
   } catch (err) {
@@ -404,36 +442,40 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
     }
   }
 
-  await docRepo.delete({ id: documentId, workspaceId: DEFAULT_WORKSPACE_ID });
+  await docRepo.delete({ id: documentId, workspaceId: ctx.workspaceId });
   return true;
 }
 
 /** 重新索引（INGEST-05 / D-21）：processing + 新 job + 同路径入队，无确认 */
 export async function reindexDocument(
   documentId: string,
+  ctx: DocumentsContext,
 ): Promise<{ document: DocumentEntity; job: IngestJobEntity } | null> {
   const ds = await getDataSource();
   const docRepo = ds.getRepository(DocumentEntity);
 
   const document = await docRepo.findOne({
-    where: { id: documentId, workspaceId: DEFAULT_WORKSPACE_ID },
+    where: { id: documentId, workspaceId: ctx.workspaceId },
   });
   if (!document?.filePath || !document.mimeType) return null;
+
+  const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
+  if (!accessCtx || !canReadDocument(document, accessCtx)) return null;
   if (document.status === "processing") {
     throw new ReindexBusyError();
   }
 
-  await purgeGraphAndCatalog(DEFAULT_WORKSPACE_ID, documentId);
+  await purgeGraphAndCatalog(ctx.workspaceId, documentId);
 
   await docRepo.update(
-    { id: documentId, workspaceId: DEFAULT_WORKSPACE_ID },
+    { id: documentId, workspaceId: ctx.workspaceId },
     { status: "processing", chunkCount: 0 },
   );
   document.status = "processing";
   document.chunkCount = 0;
 
   const payload: IngestJobPayload = {
-    workspaceId: DEFAULT_WORKSPACE_ID,
+    workspaceId: ctx.workspaceId,
     documentId: document.id,
     filePath: document.filePath,
     mimeType: document.mimeType,
@@ -442,7 +484,7 @@ export async function reindexDocument(
     tags: document.tags,
   };
 
-  const job = await enqueueIngestJob(document, payload);
+  const job = await enqueueIngestJob(document, payload, ctx.workspaceId);
   return { document, job };
 }
 

@@ -5,7 +5,9 @@ import {
   reindexDocument,
   serializeDocumentRow,
 } from "@/lib/kb/documents.service";
+import { documentsContextFromSession } from "@/lib/kb/request-context";
 import { guardKbRequest } from "@/lib/kb/route-guards";
+import { requireSession } from "@/lib/auth/session";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -14,9 +16,14 @@ export async function POST(req: Request, context: RouteContext) {
   const denied = await guardKbRequest(req);
   if (denied) return denied;
 
+  const authResult = await requireSession();
+  if (authResult.error) return authResult.error;
+
+  const ctx = documentsContextFromSession(authResult.session);
+
   try {
     const { id } = await context.params;
-    const result = await reindexDocument(id);
+    const result = await reindexDocument(id, ctx);
     if (!result) {
       return NextResponse.json({ error: "文档不存在或缺少源文件" }, { status: 404 });
     }

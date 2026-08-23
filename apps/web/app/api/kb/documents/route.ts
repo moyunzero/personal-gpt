@@ -7,16 +7,29 @@ import {
   uploadDocument,
   UploadValidationError,
 } from "@/lib/kb/documents.service";
+import { documentsContextFromSession } from "@/lib/kb/request-context";
 import { guardKbRequest } from "@/lib/kb/route-guards";
+import { requireSession } from "@/lib/auth/session";
+import type { DocumentVisibility } from "@/lib/db/entities/document.entity";
+
+async function kbContext(req: Request) {
+  const denied = await guardKbRequest(req);
+  if (denied) return { error: denied };
+
+  const authResult = await requireSession();
+  if (authResult.error) return { error: authResult.error };
+
+  return { ctx: documentsContextFromSession(authResult.session) };
+}
 
 /** GET /api/kb/documents — 分页列表 + 过滤 */
 export async function GET(req: Request) {
-  const denied = await guardKbRequest(req);
-  if (denied) return denied;
+  const gate = await kbContext(req);
+  if ("error" in gate && gate.error) return gate.error;
 
   try {
     const { searchParams } = new URL(req.url);
-    const result = await listDocuments({
+    const result = await listDocuments(gate.ctx!, {
       page: Number(searchParams.get("page") ?? 1),
       limit: Number(searchParams.get("limit") ?? 20),
       category: searchParams.get("category") ?? undefined,
@@ -33,8 +46,8 @@ export async function GET(req: Request) {
 
 /** POST /api/kb/documents — multipart 上传并入队 */
 export async function POST(req: Request) {
-  const denied = await guardKbRequest(req);
-  if (denied) return denied;
+  const gate = await kbContext(req);
+  if ("error" in gate && gate.error) return gate.error;
 
   try {
     const formData = await req.formData();
@@ -59,12 +72,25 @@ export async function POST(req: Request) {
         : undefined;
     const title =
       typeof formData.get("title") === "string" ? (formData.get("title") as string) : undefined;
+    const visibilityRaw = formData.get("visibility");
+    const visibility =
+      typeof visibilityRaw === "string" &&
+      (["workspace", "private", "restricted"] as DocumentVisibility[]).includes(
+        visibilityRaw as DocumentVisibility,
+      )
+        ? (visibilityRaw as DocumentVisibility)
+        : undefined;
 
-    const { document, job } = await uploadDocument(file, {
-      title,
-      category,
-      tags,
-    });
+    const { document, job } = await uploadDocument(
+      file,
+      gate.ctx!,
+      {
+        title,
+        category,
+        tags,
+        visibility,
+      },
+    );
 
     return NextResponse.json(
       {
