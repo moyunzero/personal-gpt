@@ -1,8 +1,11 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { getUploadsDir } from "@personal-gpt/shared/utils/paths";
 
 const statMock = vi.fn();
+const deleteByDocumentMock = vi.fn();
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
@@ -16,20 +19,50 @@ vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/tracing", () => ({
   traceIngestStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) => fn(),
 }));
 
+// Failure cleanup calls deleteDocument → Astra; keep CI off the dummy endpoint.
+vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
+  createAstraVectorStore: () => ({
+    search: vi.fn(),
+    upsert: vi.fn(),
+    deleteByDocument: (...args: unknown[]) => deleteByDocumentMock(...args),
+  }),
+  createVectorStore: () => ({
+    search: vi.fn(),
+    upsert: vi.fn(),
+    deleteByDocument: (...args: unknown[]) => deleteByDocumentMock(...args),
+  }),
+}));
+
+vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/es-upsert", () => ({
+  deleteDocumentFromEs: vi.fn().mockResolvedValue(undefined),
+  upsertChunksToEs: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { IngestProcessor } from "../../../apps/ingest-worker/src/ingest/ingest.processor";
 import { parseDocumentUnsafe } from "../../../apps/ingest-worker/src/ingest/pipeline/parse";
 
 const FIXTURE_DIR = path.join(__dirname, "fixtures");
 const CORRUPT_PDF = path.join(FIXTURE_DIR, "corrupt.pdf");
+const UPLOADS_CORRUPT_PDF = path.join(getUploadsDir(), "regression-phase1-corrupt.pdf");
 
 describe("Phase 1 regression #5: corrupt PDF → failed job with visible error", () => {
   let documentUpdateMock: ReturnType<typeof vi.fn>;
   let ingestJobUpdateMock: ReturnType<typeof vi.fn>;
   let processor: IngestProcessor;
 
+  beforeAll(async () => {
+    await fs.mkdir(getUploadsDir(), { recursive: true });
+    await fs.copyFile(CORRUPT_PDF, UPLOADS_CORRUPT_PDF);
+  });
+
+  afterAll(async () => {
+    await fs.unlink(UPLOADS_CORRUPT_PDF).catch(() => undefined);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
-    statMock.mockResolvedValue({ size: 1024 });
+    statMock.mockResolvedValue({ size: 1024, isFile: () => true });
+    deleteByDocumentMock.mockResolvedValue(undefined);
 
     documentUpdateMock = vi.fn().mockResolvedValue(undefined);
     ingestJobUpdateMock = vi.fn().mockResolvedValue(undefined);
@@ -63,7 +96,7 @@ describe("Phase 1 regression #5: corrupt PDF → failed job with visible error",
       data: {
         workspaceId,
         documentId,
-        filePath: CORRUPT_PDF,
+        filePath: UPLOADS_CORRUPT_PDF,
         mimeType: "application/pdf",
       },
       updateProgress: vi.fn().mockResolvedValue(undefined),

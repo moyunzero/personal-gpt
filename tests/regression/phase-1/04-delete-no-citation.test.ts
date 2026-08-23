@@ -6,11 +6,15 @@ const searchMock = vi.fn();
 const deleteByDocumentMock = vi.fn();
 const deleteByDocumentIdMock = vi.fn();
 
-vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
+// documents.service imports createVectorStore from the barrel, not .astra
+vi.mock("@personal-gpt/shared/stores/vector-store", () => ({
   createVectorStore: () => ({
     search: searchMock,
+    upsert: vi.fn(),
     deleteByDocument: deleteByDocumentMock,
   }),
+  shouldWriteAstra: () => true,
+  shouldWriteMilvus: () => false,
 }));
 
 vi.mock("@personal-gpt/shared", async (importOriginal) => {

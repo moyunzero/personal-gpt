@@ -69,7 +69,8 @@ describe("Phase 2 regression #2: KB summary triggers Retriever + KB citation", (
     expect(searchMock).toHaveBeenCalledTimes(1);
     const params = searchMock.mock.calls[0]![0] as { workspaceId: string; limit?: number };
     expect(params.workspaceId).toBeTruthy();
-    expect(params.limit).toBe(10); // hybrid CANDIDATE_LIMIT before slice
+    // hybridSearch: resolveCandidateLimit(topK) = min(max(topK*2, topK), 50)
+    expect(params.limit).toBe(6);
     expect(out).toMatch(/差旅报销政策|kb-doc-1|知识库/);
   });
 
