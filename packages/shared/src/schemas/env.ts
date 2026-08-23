@@ -219,6 +219,20 @@ export const SharedEnvSchema = z
           .map((s) => s.trim())
           .filter(Boolean),
       ),
+
+    /** MinIO / S3-compatible uploads (D-32); unset = local uploads/ dev fallback */
+    MINIO_ENDPOINT: z.string().url().optional(),
+    MINIO_ACCESS_KEY: z.string().min(1).optional(),
+    MINIO_SECRET_KEY: z.string().min(1).optional(),
+    MINIO_BUCKET: z.string().min(1).default("uploads"),
+
+    /** Auth.js magic link SMTP (D-34); required for production closeout in 04-05 */
+    EMAIL_SERVER: z.string().min(1).optional(),
+    EMAIL_FROM: z.string().email().optional(),
+
+    /** Grafana admin (compose bundled; rotate in production) */
+    GRAFANA_ADMIN_USER: z.string().min(1).optional(),
+    GRAFANA_ADMIN_PASSWORD: z.string().min(1).optional(),
   })
   .superRefine((data, ctx) => {
     const provider =

@@ -1,3 +1,16 @@
+x-app-environment: &app-env
+  DATABASE_URL: postgresql://personal_gpt:personal_gpt@postgres:5432/personal_gpt
+  REDIS_URL: redis://redis:6379
+  ES_NODE: http://elasticsearch:9200
+  NEO4J_URI: bolt://neo4j:7687
+  MILVUS_ADDRESS: milvus:19530
+  VECTOR_BACKEND: milvus
+  MINIO_ENDPOINT: http://app-minio:9000
+  MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-pgpt_minio}
+  MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-pgpt_minio_dev_secret}
+  MINIO_BUCKET: ${MINIO_BUCKET:-uploads}
+  ENABLE_GRAPH_RAG: "true"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -134,6 +147,140 @@ services:
       retries: 10
       start_period: 40s
 
+  # Application uploads (D-32); separate from milvus-minio (RESEARCH A5)
+  app-minio:
+    image: minio/minio:RELEASE.2024-05-28T17-19-04Z
+    container_name: personal_gpt_app_minio
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9003:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-pgpt_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-pgpt_minio_dev_secret}
+    volumes:
+      - app_minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: personal_gpt_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      <<: *app-env
+      NODE_ENV: production
+      WEB_URL: http://localhost:3000
+      AGENT_SERVICE_URL: http://agent-service:3002
+      MONOREPO_ROOT: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy
+      app-minio:
+        condition: service_healthy
+
+  agent-service:
+    build:
+      context: .
+      dockerfile: apps/agent-service/Dockerfile
+    container_name: personal_gpt_agent
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    env_file:
+      - .env
+    environment:
+      <<: *app-env
+      NODE_ENV: production
+      CORS_ORIGIN: http://localhost:3000
+      AGENT_SERVICE_PORT: "3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+  ingest-worker:
+    build:
+      context: .
+      dockerfile: apps/ingest-worker/Dockerfile
+    container_name: personal_gpt_ingest_worker
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      <<: *app-env
+      NODE_ENV: production
+      INGEST_WORKER_PORT: "3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy
+      app-minio:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    container_name: personal_gpt_prometheus
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: personal_gpt_grafana
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:
@@ -142,3 +289,6 @@ volumes:
   milvus_minio_data:
   milvus_data:
   neo4j_data:
+  app_minio_data:
+  prometheus_data:
+  grafana_data:
