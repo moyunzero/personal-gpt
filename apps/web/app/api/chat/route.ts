@@ -1,7 +1,9 @@
 import { graphRagQuery } from "@personal-gpt/shared";
-import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createUIMessageStreamResponse } from "ai";
 import { randomUUID } from "node:crypto";
+
+import { resolveRetrievalContext } from "@/lib/auth/acl-resolver";
+import { requireSession } from "@/lib/auth/session";
 
 import { graphPathsToDisplay } from "@/lib/chat/graph-path-display";
 import { type VectorSearchResult } from "@/lib/chat/context";
@@ -129,10 +131,19 @@ export async function POST(req: Request) {
   }
 
   try {
+    const authResult = await requireSession();
+    if (authResult.error) {
+      return new Response(JSON.stringify({ error: "Unauthorized", requestId }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+    const retrievalCtx = await resolveRetrievalContext(authResult.session);
+
     // ====================== 限流（C1） ======================
     // 按客户端 IP 限流 10 req / 60s 滑动窗口。
     // checkRateLimit 内部对 Upstash 故障已做 fail-open，不会抛错。
-    const rl = await checkRateLimit(getClientIp(req), requestId);
+    const rl = await checkRateLimit(authResult.session.user.id, requestId);
     if (!rl.success) {
       return new Response(
         JSON.stringify({
@@ -187,7 +198,7 @@ export async function POST(req: Request) {
     }
 
     const routeDecision = await decideQueryRoute(lastContent, {
-      workspaceId: DEFAULT_WORKSPACE_ID,
+      workspaceId: retrievalCtx.workspaceId,
       requestId,
       corpus,
     });
@@ -203,8 +214,9 @@ export async function POST(req: Request) {
     const graphOnlyRetrieve =
       routeDecision.intentPrimary === "graph_relation" && routeDecision.needsGraphContext;
     if (routeDecision.route === "retrieve" && !graphOnlyRetrieve) {
-      contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID, {
+      contextResult = await getRelevantContext(lastContent, requestId, retrievalCtx.workspaceId, {
         corpus,
+        documentIds: retrievalCtx.allowedDocumentIds,
       });
     }
 
@@ -213,7 +225,11 @@ export async function POST(req: Request) {
     if (routeDecision.needsGraphContext && corpus === "seed") {
       try {
         const graphResult = await withGraphRagTimeout(
-          graphRagQuery({ question: lastContent }),
+          graphRagQuery({
+            question: lastContent,
+            workspaceId: retrievalCtx.workspaceId,
+            documentIds: retrievalCtx.allowedDocumentIds,
+          }),
           GRAPH_RAG_TIMEOUT_MS,
         );
         if (graphResult.paths.length > 0) {
@@ -226,8 +242,9 @@ export async function POST(req: Request) {
     }
 
     if (graphOnlyRetrieve && graphPathsForUi.length === 0 && routeDecision.route === "retrieve") {
-      contextResult = await getRelevantContext(lastContent, requestId, DEFAULT_WORKSPACE_ID, {
+      contextResult = await getRelevantContext(lastContent, requestId, retrievalCtx.workspaceId, {
         corpus,
+        documentIds: retrievalCtx.allowedDocumentIds,
       });
     }
 
@@ -251,7 +268,7 @@ export async function POST(req: Request) {
     if (userKey) {
       try {
         memoryBlock = await withTimeout(
-          loadMemoryContextBlock({ workspaceId: DEFAULT_WORKSPACE_ID, userKey }, lastContent),
+          loadMemoryContextBlock({ workspaceId: retrievalCtx.workspaceId, userKey }, lastContent),
           MEMORY_LOAD_TIMEOUT_MS,
           "memory_load",
         );
@@ -272,7 +289,7 @@ export async function POST(req: Request) {
       onComplete: userKey
         ? async (assistantText) => {
             await persistTurnMemory(
-              { workspaceId: DEFAULT_WORKSPACE_ID, userKey },
+              { workspaceId: retrievalCtx.workspaceId, userKey },
               lastContent,
               assistantText,
             );

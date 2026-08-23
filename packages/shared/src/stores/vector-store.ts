@@ -36,6 +36,8 @@ export interface VectorSearchParams {
   vector: number[];
   limit?: number;
   similarityThreshold?: number;
+  /** Security trim by documentId (D-07). */
+  documentIds?: string[];
   /** Astra find 附加过滤（与 workspaceId 以 $and 合并） */
   filter?: Record<string, unknown>;
 }

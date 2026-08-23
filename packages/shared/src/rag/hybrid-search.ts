@@ -13,6 +13,8 @@ export type HybridSearchParams = {
   /** Vector embed text; defaults to `query`. HyDE uses hypothetical answer here only (WR-X-01). */
   embedQuery?: string;
   workspaceId: string;
+  /** Security trim: only these documentIds (D-07, D-17). */
+  documentIds?: string[];
   /** Default "user" (D-27) — seed must be explicit */
   corpus?: Corpus;
   limit?: number;
@@ -44,6 +46,15 @@ function isRerankerEnabled(): boolean {
   return process.env.ENABLE_RERANKER !== "false";
 }
 
+function filterByDocumentIds(
+  hits: RetrievedChunk[],
+  documentIds?: string[],
+): RetrievedChunk[] {
+  if (!documentIds?.length) return hits;
+  const allowed = new Set(documentIds);
+  return hits.filter((hit) => hit.documentId && allowed.has(hit.documentId));
+}
+
 async function hybridSearchOnce(
   params: HybridSearchParams,
   deps: HybridSearchDeps,
@@ -68,6 +79,7 @@ async function hybridSearchOnce(
     workspaceId: params.workspaceId,
     vector,
     limit: candidateLimit,
+    documentIds: params.documentIds,
   });
 
   const esPromise = esSearch({
@@ -75,6 +87,7 @@ async function hybridSearchOnce(
     workspaceId: params.workspaceId,
     corpus,
     limit: candidateLimit,
+    documentIds: params.documentIds,
   }).catch((err: unknown) => {
     logWarn("es unavailable; vector-only", { err });
     return [] as RetrievedChunk[];
@@ -83,6 +96,7 @@ async function hybridSearchOnce(
   const [vectorHits, esHits] = await Promise.all([vectorPromise, esPromise]);
 
   let fused = reciprocalRankFusion([esHits, vectorHits]);
+  fused = filterByDocumentIds(fused, params.documentIds);
 
   if (isRerankerEnabled() && fused.length > 0) {
     fused = await rerank(params.query, fused, limit);

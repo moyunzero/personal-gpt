@@ -6,6 +6,8 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
+import { retrievalContextHeaders, resolveRetrievalContext } from "@/lib/auth/acl-resolver";
+import { requireSession } from "@/lib/auth/session";
 import { logger } from "@/lib/logger";
 
 import {
@@ -121,11 +123,19 @@ export function pipeUpstreamBody(
 }
 
 export async function POST(req: Request) {
+  const authResult = await requireSession();
+  if (authResult.error) return authResult.error;
+
+  const retrievalCtx = await resolveRetrievalContext(authResult.session);
   const requestId = randomUUID();
   const upstream = agentUpstreamUrl();
   const headers = new Headers();
   const contentType = req.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
+
+  for (const [key, value] of Object.entries(retrievalContextHeaders(retrievalCtx))) {
+    headers.set(key, value);
+  }
 
   const token = process.env.AGENT_INTERNAL_TOKEN?.trim();
   if (token) {

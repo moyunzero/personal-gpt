@@ -205,7 +205,13 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
       await ensureCollection();
 
       const limit = params.limit ?? 5;
-      const filter = `workspaceId == "${escapeMilvusString(params.workspaceId)}"`;
+      let filter = `workspaceId == "${escapeMilvusString(params.workspaceId)}"`;
+      if (params.documentIds?.length) {
+        const ids = params.documentIds
+          .map((id) => `"${escapeMilvusString(id)}"`)
+          .join(", ");
+        filter += ` && documentId in [${ids}]`;
+      }
 
       const result = await client.search({
         collection_name: collectionName,

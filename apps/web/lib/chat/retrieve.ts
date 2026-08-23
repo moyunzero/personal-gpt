@@ -134,6 +134,7 @@ async function awaitSearchWithGrace(
 
 export type GetRelevantContextOptions = {
   corpus?: Corpus;
+  documentIds?: string[];
   /** 测试注入 hybridSearch deps */
   hybridDeps?: HybridSearchDeps;
 };
@@ -191,6 +192,7 @@ export async function getRelevantContext(
                 workspaceId,
                 corpus,
                 limit: RETRIEVAL_LIMIT,
+                documentIds: options.documentIds,
               },
               options.hybridDeps ?? {},
             ),

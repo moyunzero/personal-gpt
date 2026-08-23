@@ -17,6 +17,7 @@ export interface EsChunkDoc {
 export interface EsBm25SearchParams {
   query: string;
   workspaceId: string;
+  documentIds?: string[];
   corpus?: Corpus;
   limit?: number;
   index?: string;
@@ -135,12 +136,17 @@ export async function esBm25Search(params: EsBm25SearchParams): Promise<Retrieve
   const limit = params.limit ?? 10;
   const client = getEsClient();
 
+  const filters: Record<string, unknown>[] = [{ term: { workspaceId: params.workspaceId } }];
+  if (params.documentIds?.length) {
+    filters.push({ terms: { documentId: params.documentIds } });
+  }
+
   const result = await client.search({
     index,
     size: limit,
     query: {
       bool: {
-        filter: [{ term: { workspaceId: params.workspaceId } }],
+        filter: filters,
         must: [
           {
             multi_match: {

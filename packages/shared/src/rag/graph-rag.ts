@@ -234,6 +234,8 @@ export type GraphRagQueryOptions = {
   question: string;
   productName?: string;
   workspaceId?: string;
+  /** Security trim paths to allowed documents (D-07, D-17). */
+  documentIds?: string[];
   resolvedEntity?: ResolvedGraphEntity;
   templateId?: GraphCypherTemplateId;
   /** Inject for tests; default uses neo4j-driver read session from env */
@@ -293,6 +295,23 @@ async function defaultExecutor(
   }
 }
 
+function pathAllowed(path: GraphPathTrace, documentIds?: string[]): boolean {
+  if (!documentIds?.length) return true;
+  const allowed = new Set(documentIds);
+  for (const node of path.nodes) {
+    const docId = node.properties.documentId;
+    if (typeof docId === "string" && docId.trim() && !allowed.has(docId.trim())) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function filterPaths(paths: GraphPathTrace[], documentIds?: string[]): GraphPathTrace[] {
+  if (!documentIds?.length) return paths;
+  return paths.filter((path) => pathAllowed(path, documentIds));
+}
+
 /**
  * Narrow Graph RAG entry: template-selected entity-relation queries.
  * Always allowlists Cypher before execution.
@@ -303,7 +322,9 @@ export async function graphRagQuery(options: GraphRagQueryOptions): Promise<Grap
   let resolvedEntity = options.resolvedEntity;
   if (!resolvedEntity) {
     if (options.workspaceId) {
-      const resolved = await resolveGraphEntity(options.question, options.workspaceId);
+      const resolved = await resolveGraphEntity(options.question, options.workspaceId, {
+        allowedDocumentIds: options.documentIds,
+      });
       if (resolved) resolvedEntity = resolved;
     } else {
       const seedName = options.productName ?? resolveProductName(options.question);
@@ -349,7 +370,8 @@ export async function graphRagQuery(options: GraphRagQueryOptions): Promise<Grap
   assertAllowlistedCypher(cypher);
 
   const executor = options.executor ?? defaultExecutor;
-  const paths = await executor(cypher, params);
+  const rawPaths = await executor(cypher, params);
+  const paths = filterPaths(rawPaths, options.documentIds);
   return {
     cypher,
     params,

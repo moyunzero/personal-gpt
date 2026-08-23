@@ -16,6 +16,8 @@ export type ResolvedGraphEntity = {
 
 export type ResolveGraphEntityDeps = {
   catalogStore?: EntityCatalogStore;
+  /** Security trim: omit entities from forbidden documents (D-50). */
+  allowedDocumentIds?: string[];
 };
 
 let catalogStoreOverride: EntityCatalogStore | null = null;
@@ -34,8 +36,13 @@ export async function resolveGraphEntity(
   const store = deps.catalogStore ?? catalogStoreOverride;
   if (workspaceId && store) {
     const hits = await findCatalogEntitiesInQuery(workspaceId, query, store);
-    if (hits.length > 0) {
-      const hit = hits[0]!;
+    const allowed = deps.allowedDocumentIds;
+    const filtered =
+      allowed?.length && allowed.length > 0
+        ? hits.filter((hit) => allowed.includes(hit.sourceDocumentId))
+        : hits;
+    if (filtered.length > 0) {
+      const hit = filtered[0]!;
       return {
         source: "catalog",
         displayName: hit.displayName,
