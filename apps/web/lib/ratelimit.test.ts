@@ -15,7 +15,7 @@ vi.hoisted(() => {
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
 });
 
-import { buildLimiter, getClientIp } from "./ratelimit";
+import { buildLimiter, checkUserRateLimit, getClientIp, rateLimitJsonResponse } from "./ratelimit";
 
 describe("buildLimiter (fail-open 入口)", () => {
   it("url 缺失 → 返回 null", () => {
@@ -68,5 +68,26 @@ describe("getClientIp", () => {
 
   it("自动 trim 多余空格", () => {
     expect(getClientIp(makeReq({ "x-forwarded-for": "  203.0.113.7  " }))).toBe("203.0.113.7");
+  });
+});
+
+describe("checkUserRateLimit 429 shape", () => {
+  it("rateLimitJsonResponse exposes retryAfter", async () => {
+    const res = rateLimitJsonResponse({
+      success: false,
+      limit: 10,
+      remaining: 0,
+      reset: Date.now() + 5000,
+      retryAfterSeconds: 5,
+    });
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as { retryAfter: number };
+    expect(body.retryAfter).toBe(5);
+  });
+
+  it("fail-open when no redis configured", async () => {
+    delete process.env.REDIS_URL;
+    const result = await checkUserRateLimit("user-1", "req-1");
+    expect(result.success).toBe(true);
   });
 });

@@ -1,13 +1,33 @@
+import Redis from "ioredis";
 import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { Redis as UpstashRedis } from "@upstash/redis";
 
 import { env } from "./env";
 import { logger } from "./logger";
+import { rateLimitExceededTotal } from "./metrics";
 
+const WINDOW_SEC = 60;
 const WINDOW = "60 s" as const;
 
 const CHAT_LIMIT = 10;
 const KB_LIMIT = 30;
+
+let ioredisClient: Redis | null | undefined;
+
+function getIoRedis(): Redis | null {
+  if (ioredisClient !== undefined) return ioredisClient;
+  const url = process.env.REDIS_URL?.trim();
+  if (!url) {
+    ioredisClient = null;
+    return null;
+  }
+  try {
+    ioredisClient = new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true });
+  } catch {
+    ioredisClient = null;
+  }
+  return ioredisClient;
+}
 
 /**
  * 构造限流器单例。任一 cred 缺失 → 返回 null（fail-open 入口）。
@@ -20,7 +40,7 @@ export function buildLimiter(
 ): Ratelimit | null {
   if (!url || !token) return null;
   return new Ratelimit({
-    redis: new Redis({ url, token }),
+    redis: new UpstashRedis({ url, token }),
     limiter: Ratelimit.slidingWindow(limit, WINDOW),
     analytics: false,
     prefix,
@@ -61,6 +81,40 @@ function passThrough(limit: number): RateLimitResult {
   };
 }
 
+async function checkWithIoRedis(
+  userId: string,
+  scope: "chat" | "kb",
+  defaultLimit: number,
+): Promise<RateLimitResult | null> {
+  const client = getIoRedis();
+  if (!client) return null;
+
+  const key = `ratelimit:${scope}:${userId}`;
+  try {
+    if (client.status === "wait") {
+      await client.connect();
+    }
+    const count = await client.incr(key);
+    if (count === 1) {
+      await client.expire(key, WINDOW_SEC);
+    }
+    const ttl = await client.ttl(key);
+    const resetMs = Date.now() + Math.max(ttl, 1) * 1000;
+    const success = count <= defaultLimit;
+    const remaining = success ? Math.max(0, defaultLimit - count) : 0;
+    const retryAfterSeconds = success ? 0 : Math.max(1, ttl > 0 ? ttl : WINDOW_SEC);
+    return {
+      success,
+      limit: defaultLimit,
+      remaining,
+      reset: resetMs,
+      retryAfterSeconds,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function checkWithLimiter(
   limiter: Ratelimit | null,
   identifier: string,
@@ -83,6 +137,7 @@ async function checkWithLimiter(
       log.metric("ratelimit.allowed", { identifier, remaining });
     } else {
       log.metric("ratelimit.blocked", { identifier, remaining, retryAfterSeconds });
+      rateLimitExceededTotal.inc({ scope: scope.replace("ratelimit.", "") });
     }
 
     return { success, limit, remaining, reset, retryAfterSeconds };
@@ -92,12 +147,40 @@ async function checkWithLimiter(
   }
 }
 
-/** /api/chat 限流：10 req / 60s */
+/** D-35: primary path — Redis INCR+EXPIRE keyed by userId when REDIS_URL set */
+export async function checkUserRateLimit(
+  userId: string,
+  requestId: string,
+  scope: "chat" | "kb" = "chat",
+): Promise<RateLimitResult> {
+  const defaultLimit = scope === "chat" ? CHAT_LIMIT : KB_LIMIT;
+  const log = logger.child({ scope: `ratelimit.${scope}`, requestId });
+
+  const redisResult = await checkWithIoRedis(userId, scope, defaultLimit);
+  if (redisResult) {
+    if (redisResult.success) {
+      log.metric("ratelimit.allowed", { identifier: userId, remaining: redisResult.remaining });
+    } else {
+      rateLimitExceededTotal.inc({ scope });
+      log.metric("ratelimit.blocked", {
+        identifier: userId,
+        remaining: redisResult.remaining,
+        retryAfterSeconds: redisResult.retryAfterSeconds,
+      });
+    }
+    return redisResult;
+  }
+
+  const limiter = scope === "chat" ? chatLimiter : kbLimiter;
+  return checkWithLimiter(limiter, userId, requestId, `ratelimit.${scope}`, defaultLimit);
+}
+
+/** /api/chat 限流：10 req / 60s — prefers userId when authed (D-35) */
 export async function checkRateLimit(
   identifier: string,
   requestId: string,
 ): Promise<RateLimitResult> {
-  return checkWithLimiter(chatLimiter, identifier, requestId, "ratelimit", CHAT_LIMIT);
+  return checkUserRateLimit(identifier, requestId, "chat");
 }
 
 /** /api/kb/* 限流：30 req / 60s */
@@ -105,7 +188,7 @@ export async function checkKbRateLimit(
   identifier: string,
   requestId: string,
 ): Promise<RateLimitResult> {
-  return checkWithLimiter(kbLimiter, identifier, requestId, "ratelimit.kb", KB_LIMIT);
+  return checkUserRateLimit(identifier, requestId, "kb");
 }
 
 export function rateLimitJsonResponse(result: RateLimitResult): Response {
@@ -139,4 +222,12 @@ export function getClientIp(req: Request): string {
   const xri = req.headers.get("x-real-ip");
   if (xri) return xri.trim();
   return "local";
+}
+
+/** Test helper: reset lazy ioredis singleton */
+export function resetRateLimitRedisForTests(): void {
+  if (ioredisClient) {
+    void ioredisClient.quit().catch(() => {});
+  }
+  ioredisClient = undefined;
 }

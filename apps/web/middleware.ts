@@ -18,6 +18,10 @@ function isProtectedPath(pathname: string): boolean {
   return false;
 }
 
+function isApiPath(pathname: string): boolean {
+  return pathname.startsWith("/api/");
+}
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   if (!isProtectedPath(pathname)) {
@@ -33,9 +37,29 @@ export default auth((req) => {
     return NextResponse.redirect(signIn);
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  if (isApiPath(pathname)) {
+    response.headers.set("x-request-start", String(Date.now()));
+    response.headers.set("x-audit-path", pathname);
+    response.headers.set("x-audit-method", req.method);
+    if (req.auth.user.id) {
+      response.headers.set("x-audit-user-id", req.auth.user.id);
+    }
+    const workspaceId = req.auth.user.activeWorkspaceId;
+    if (workspaceId) {
+      response.headers.set("x-audit-workspace-id", workspaceId);
+    }
+  }
+  return response;
 });
 
 export const config = {
-  matcher: ["/", "/kb/:path*", "/api/chat", "/api/kb/:path*", "/api/agent/:path*"],
+  matcher: [
+    "/",
+    "/kb/:path*",
+    "/api/chat",
+    "/api/chat/:path*",
+    "/api/kb/:path*",
+    "/api/agent/:path*",
+  ],
 };
