@@ -645,7 +645,7 @@ describe("Agent SSE stream (AGENT-04)", () => {
       __ready?: Promise<void>;
     };
     await streamArg?.__ready;
-    expect(invokeKbSearchMock).toHaveBeenCalled();
+    expect(invokeKbSearchMock).toHaveBeenCalledTimes(1);
     expect(invokeGraphSearchMock).not.toHaveBeenCalled();
   });
 

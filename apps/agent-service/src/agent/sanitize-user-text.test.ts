@@ -80,6 +80,15 @@ describe("sanitizeUserFacingAgentText", () => {
     expect(out).not.toMatch(/graph_search/);
   });
 
+  it("strips GRAPH_SEARCH_STATUS ERROR and EMPTY_QUERY", () => {
+    expect(sanitizeUserFacingAgentText("GRAPH_SEARCH_STATUS: ERROR\n服务异常")).not.toMatch(
+      /GRAPH_SEARCH_STATUS|ERROR/i,
+    );
+    expect(sanitizeUserFacingAgentText("GRAPH_SEARCH_STATUS: EMPTY_QUERY\n请提供问题")).not.toMatch(
+      /GRAPH_SEARCH_STATUS|EMPTY_QUERY/i,
+    );
+  });
+
   it("strips GRAPH_SEARCH_STATUS protocol markers", () => {
     const raw = "图谱检索结果 GRAPH_SEARCH_STATUS: NO_PATH 无可用路径。";
     const out = sanitizeUserFacingAgentText(raw);

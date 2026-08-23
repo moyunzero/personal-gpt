@@ -375,8 +375,8 @@ const loadPromptSuggestions = async () => {
     const embeddings = await getEmbeddingsBatch(chunks);
     console.log(`  ✔ 向量生成完成`);
 
-    // 准备插入数据
-    const docId = `prompt-${doc.category}-${Date.now()}`;
+    // 准备插入数据 — stable documentId from fileName (re-runs do not orphan chunks)
+    const docId = `prompt-${crypto.createHash("sha256").update(doc.fileName).digest("hex").slice(0, 16)}`;
     const insertPromises: Promise<unknown>[] = [];
 
     for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {

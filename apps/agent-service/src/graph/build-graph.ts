@@ -409,6 +409,7 @@ function buildPrefetchNode(plan: IntentPlan) {
       }
     } else if (plan.retrieverTools.includes("kb_search")) {
       let graphInjected = false;
+      let graphOutCache: string | undefined;
       const kbOut = await invokeKbSearch({
         query: extractKbSearchQuery(text),
         userText: text,
@@ -417,10 +418,10 @@ function buildPrefetchNode(plan: IntentPlan) {
       if (kbOut) {
         const kbMiss = /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut);
         if (kbMiss && allowGraphFallback) {
-          const graphOut = await invokeGraphSearch({ question: text });
-          if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
+          graphOutCache = await invokeGraphSearch({ question: text });
+          if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOutCache)) {
             blocks.push(
-              `【图谱回退检索·工具结果·可信】\nKB 未命中后按 fallbackChain 触发 graph_search；必须采信。\n${graphOut}`,
+              `【图谱回退检索·工具结果·可信】\nKB 未命中后按 fallbackChain 触发 graph_search；必须采信。\n${graphOutCache}`,
             );
             graphInjected = true;
           } else {
@@ -435,7 +436,7 @@ function buildPrefetchNode(plan: IntentPlan) {
         plan.retrieverTools.includes("graph_search") &&
         !graphInjected
       ) {
-        const graphOut = await invokeGraphSearch({ question: text });
+        const graphOut = graphOutCache ?? (await invokeGraphSearch({ question: text }));
         blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
       }
     }

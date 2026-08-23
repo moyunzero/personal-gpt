@@ -47,13 +47,6 @@ function hasFlag(argv: string[], flag: string): boolean {
 function classifyCorpus(doc: Record<string, unknown>): CorpusKind {
   const source = String(doc.source ?? "");
   if (SEED_SOURCES.has(source)) return "seed";
-  if (source.includes("prompt-suggestion") || source.includes("psychology")) {
-    return "seed";
-  }
-  const category = String(doc.category ?? "");
-  if (category === "psychology" || category.startsWith("legacy-psychology")) {
-    return "seed";
-  }
   return "user";
 }
 
@@ -148,13 +141,16 @@ async function copyBatch(
         const existing = await target.findOne({ _id: id } as Record<string, unknown>);
         if (existing) {
           skipped += 1;
-          return;
+        } else {
+          await target.insertOne(doc as Record<string, unknown>);
+          if (kind === "seed") copiedSeed += 1;
+          else copiedUser += 1;
         }
+      } else {
+        await target.insertOne(doc as Record<string, unknown>);
+        if (kind === "seed") copiedSeed += 1;
+        else copiedUser += 1;
       }
-
-      await target.insertOne(doc as Record<string, unknown>);
-      if (kind === "seed") copiedSeed += 1;
-      else copiedUser += 1;
 
       if (withEs) {
         const workspaceId = String(doc.workspaceId ?? "");

@@ -62,10 +62,17 @@ function chunkPrimaryKey(documentId: string, chunkIndex: number): string {
   return `${documentId}#${chunkIndex}`;
 }
 
+function normalizeMilvusCosineScore(score: number): number {
+  if (!Number.isFinite(score)) return 0;
+  if (score >= 0 && score <= 1) return score;
+  if (score >= -1 && score <= 1) return (score + 1) / 2;
+  return Math.max(0, Math.min(1, score));
+}
+
 function mapMilvusHit(hit: Record<string, unknown> & { score?: number }): RetrievedChunk {
   return {
     text: String(hit.content ?? hit.text ?? ""),
-    similarity: Number(hit.score ?? 0),
+    similarity: normalizeMilvusCosineScore(Number(hit.score ?? 0)),
     title: hit.title as string | undefined,
     source: hit.source as string | undefined,
     category: hit.category as string | undefined,
@@ -88,45 +95,57 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
     options.client ?? (new MilvusClient({ address }) as unknown as MilvusClientLike);
 
   let ensured = Boolean(options.skipEnsure);
+  let ensurePromise: Promise<void> | null = null;
 
   async function ensureCollection(): Promise<void> {
     if (ensured) return;
-    if (client.connectPromise) {
-      await client.connectPromise;
+    if (ensurePromise) {
+      await ensurePromise;
+      return;
     }
-    const exists = hasCollectionValue(
-      await client.hasCollection({ collection_name: collectionName }),
-    );
-    if (!exists) {
-      await client.createCollection({
-        collection_name: collectionName,
-        fields: [
-          {
-            name: "id",
-            data_type: DataType.VarChar,
-            max_length: 256,
-            is_primary_key: true,
-          },
-          { name: "vector", data_type: DataType.FloatVector, dim },
-          { name: "content", data_type: DataType.VarChar, max_length: 65535 },
-          { name: "workspaceId", data_type: DataType.VarChar, max_length: 64 },
-          { name: "documentId", data_type: DataType.VarChar, max_length: 256 },
-          { name: "chunkIndex", data_type: DataType.Int64 },
-          { name: "title", data_type: DataType.VarChar, max_length: 512 },
-          { name: "source", data_type: DataType.VarChar, max_length: 1024 },
-          { name: "category", data_type: DataType.VarChar, max_length: 256 },
-        ],
-      });
-      await client.createIndex({
-        collection_name: collectionName,
-        field_name: "vector",
-        index_type: IndexType.IVF_FLAT,
-        metric_type: MetricType.COSINE,
-        params: { nlist: 128 },
-      });
+    ensurePromise = (async () => {
+      if (client.connectPromise) {
+        await client.connectPromise;
+      }
+      const exists = hasCollectionValue(
+        await client.hasCollection({ collection_name: collectionName }),
+      );
+      if (!exists) {
+        await client.createCollection({
+          collection_name: collectionName,
+          fields: [
+            {
+              name: "id",
+              data_type: DataType.VarChar,
+              max_length: 256,
+              is_primary_key: true,
+            },
+            { name: "vector", data_type: DataType.FloatVector, dim },
+            { name: "content", data_type: DataType.VarChar, max_length: 65535 },
+            { name: "workspaceId", data_type: DataType.VarChar, max_length: 64 },
+            { name: "documentId", data_type: DataType.VarChar, max_length: 256 },
+            { name: "chunkIndex", data_type: DataType.Int64 },
+            { name: "title", data_type: DataType.VarChar, max_length: 512 },
+            { name: "source", data_type: DataType.VarChar, max_length: 1024 },
+            { name: "category", data_type: DataType.VarChar, max_length: 256 },
+          ],
+        });
+        await client.createIndex({
+          collection_name: collectionName,
+          field_name: "vector",
+          index_type: IndexType.IVF_FLAT,
+          metric_type: MetricType.COSINE,
+          params: { nlist: 128 },
+        });
+      }
+      await client.loadCollection({ collection_name: collectionName });
+      ensured = true;
+    })();
+    try {
+      await ensurePromise;
+    } finally {
+      ensurePromise = null;
     }
-    await client.loadCollection({ collection_name: collectionName });
-    ensured = true;
   }
 
   return {
@@ -189,10 +208,11 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
 
       const result = await client.search({
         collection_name: collectionName,
-        vector: params.vector,
+        data: [params.vector],
         limit,
         filter,
         metric_type: MetricType.COSINE,
+        consistency_level: "Strong",
         output_fields: [
           "content",
           "title",

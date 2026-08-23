@@ -210,7 +210,7 @@ export async function POST(req: Request) {
 
     let graphSummary = "";
     let graphPathsForUi = graphPathsToDisplay([]);
-    if (routeDecision.needsGraphContext) {
+    if (routeDecision.needsGraphContext && corpus === "seed") {
       try {
         const graphResult = await withGraphRagTimeout(
           graphRagQuery({ question: lastContent }),
@@ -248,14 +248,16 @@ export async function POST(req: Request) {
     const systemPromptBase = buildSystemPrompt(contextResult);
     const graphBlock = graphSummary ? `\n\n## 图谱知识\n${graphSummary}` : "";
     let memoryBlock = "";
-    try {
-      memoryBlock = await withTimeout(
-        loadMemoryContextBlock({ workspaceId: DEFAULT_WORKSPACE_ID, userKey }, lastContent),
-        MEMORY_LOAD_TIMEOUT_MS,
-        "memory_load",
-      );
-    } catch {
-      memoryBlock = "";
+    if (userKey) {
+      try {
+        memoryBlock = await withTimeout(
+          loadMemoryContextBlock({ workspaceId: DEFAULT_WORKSPACE_ID, userKey }, lastContent),
+          MEMORY_LOAD_TIMEOUT_MS,
+          "memory_load",
+        );
+      } catch {
+        memoryBlock = "";
+      }
     }
     const systemPrompt = memoryBlock
       ? `${systemPromptBase}${graphBlock}\n\n${memoryBlock}`
@@ -267,13 +269,15 @@ export async function POST(req: Request) {
       requestId,
       citations,
       graphPaths: graphPathsForUi,
-      onComplete: async (assistantText) => {
-        await persistTurnMemory(
-          { workspaceId: DEFAULT_WORKSPACE_ID, userKey },
-          lastContent,
-          assistantText,
-        );
-      },
+      onComplete: userKey
+        ? async (assistantText) => {
+            await persistTurnMemory(
+              { workspaceId: DEFAULT_WORKSPACE_ID, userKey },
+              lastContent,
+              assistantText,
+            );
+          }
+        : undefined,
     });
 
     // SSE 响应默认只有 text/event-stream，需要手动注入 CORS 头（空值的不写）

@@ -208,6 +208,7 @@ export class ShortTermRedisMemory {
 }
 
 let singleton: ShortTermRedisMemory | undefined;
+let initPromise: Promise<ShortTermRedisMemory> | undefined;
 
 /**
  * 从 env 创建单例。无 REDIS_URL 时返回 fail-open 实例（redis=null）。
@@ -215,42 +216,49 @@ let singleton: ShortTermRedisMemory | undefined;
  */
 export async function getShortTermRedisMemory(): Promise<ShortTermRedisMemory> {
   if (singleton) return singleton;
+  if (initPromise) return initPromise;
 
-  const keyPrefix = process.env.MEMORY_KEY_PREFIX?.trim() || DEFAULT_PREFIX;
-  const nRaw = Number(process.env.SHORT_MEMORY_N ?? DEFAULT_N);
-  const n = Number.isFinite(nRaw) && nRaw >= 1 ? Math.floor(nRaw) : DEFAULT_N;
-  const url = process.env.REDIS_URL?.trim();
+  initPromise = (async () => {
+    const keyPrefix = process.env.MEMORY_KEY_PREFIX?.trim() || DEFAULT_PREFIX;
+    const nRaw = Number(process.env.SHORT_MEMORY_N ?? DEFAULT_N);
+    const n = Number.isFinite(nRaw) && nRaw >= 1 ? Math.floor(nRaw) : DEFAULT_N;
+    const url = process.env.REDIS_URL?.trim();
 
-  if (!url) {
-    singleton = new ShortTermRedisMemory({ redis: null, keyPrefix, n });
-    return singleton;
-  }
+    if (!url) {
+      return new ShortTermRedisMemory({ redis: null, keyPrefix, n });
+    }
+
+    try {
+      const { default: Redis } = await import("ioredis");
+      const client = new Redis(url, {
+        maxRetriesPerRequest: 1,
+        enableReadyCheck: false,
+        lazyConnect: true,
+      });
+      client.on("error", (err: Error) => {
+        console.warn("[short-term-redis] redis error", err.message);
+      });
+      try {
+        await client.connect();
+      } catch {
+        // ioredis 某些版本 connect 已自动；忽略
+      }
+      return new ShortTermRedisMemory({
+        redis: client as RedisLike,
+        keyPrefix,
+        n,
+      });
+    } catch (err) {
+      console.warn("[short-term-redis] init failed (fail-open)", err);
+      return new ShortTermRedisMemory({ redis: null, keyPrefix, n });
+    }
+  })();
 
   try {
-    const { default: Redis } = await import("ioredis");
-    const client = new Redis(url, {
-      maxRetriesPerRequest: 1,
-      enableReadyCheck: false,
-      lazyConnect: true,
-    });
-    client.on("error", (err: Error) => {
-      console.warn("[short-term-redis] redis error", err.message);
-    });
-    try {
-      await client.connect();
-    } catch {
-      // ioredis 某些版本 connect 已自动；忽略
-    }
-    singleton = new ShortTermRedisMemory({
-      redis: client as RedisLike,
-      keyPrefix,
-      n,
-    });
+    singleton = await initPromise;
     return singleton;
-  } catch (err) {
-    console.warn("[short-term-redis] init failed (fail-open)", err);
-    singleton = new ShortTermRedisMemory({ redis: null, keyPrefix, n });
-    return singleton;
+  } finally {
+    initPromise = undefined;
   }
 }
 

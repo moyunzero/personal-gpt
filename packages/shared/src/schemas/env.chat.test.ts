@@ -10,6 +10,7 @@ const base = {
   ASTRA_DB_API_ENDPOINT: "https://example.apps.astra.datastax.com",
   ASTRA_DB_APPLICATION_TOKEN: "AstraCS:test",
   NIM_API_KEY: "nvapi-test",
+  NEO4J_PASSWORD: "test-neo4j-password",
 };
 
 describe("parseSharedEnv chat keys", () => {
@@ -58,19 +59,25 @@ describe("parseSharedEnv chat keys", () => {
   });
 
   it("requires Astra credentials when VECTOR_BACKEND=astra", () => {
-    expect(() =>
+    try {
       parseSharedEnv({
         GROQ_API_KEY: "gsk",
         NIM_API_KEY: "nvapi-test",
+        NEO4J_PASSWORD: "test-neo4j-password",
         VECTOR_BACKEND: "astra",
-      } as NodeJS.ProcessEnv),
-    ).toThrow(/ASTRA_DB_COLLECTION/);
+      } as NodeJS.ProcessEnv);
+      expect.fail("expected parseSharedEnv to throw");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      expect(message).toContain("- ASTRA_DB_COLLECTION:");
+    }
   });
 
   it("accepts USER+SEED corpus collections without legacy ASTRA_DB_COLLECTION", () => {
     const env = parseSharedEnv({
       GROQ_API_KEY: "gsk",
       NIM_API_KEY: "nvapi-test",
+      NEO4J_PASSWORD: "test-neo4j-password",
       VECTOR_BACKEND: "astra",
       ASTRA_DB_API_ENDPOINT: "https://example.apps.astra.datastax.com",
       ASTRA_DB_APPLICATION_TOKEN: "AstraCS:test",

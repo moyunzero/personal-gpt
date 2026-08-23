@@ -131,8 +131,11 @@ export function sanitizeUserFacingAgentText(text: string): string {
   out = out.replace(/\bNO_RELEVANT_HIT\b/gi, "未找到足够依据");
   out = out.replace(/GRAPH_SEARCH_STATUS\s*[:：=为]?\s*NO_PATH/gi, "图谱未找到相关路径");
   out = out.replace(/GRAPH_SEARCH_STATUS\s*[:：=为]?\s*HIT/gi, "");
+  out = out.replace(/GRAPH_SEARCH_STATUS\s*[:：=为]?\s*ERROR/gi, "");
+  out = out.replace(/GRAPH_SEARCH_STATUS\s*[:：=为]?\s*EMPTY_QUERY/gi, "");
   out = out.replace(/\bGRAPH_SEARCH_STATUS\b/gi, "");
   out = out.replace(/\bNO_PATH\b/gi, "未找到相关路径");
+  out = out.replace(/\bEMPTY_QUERY\b/gi, "");
   // 清理空括号；空白折叠避开 fenced code（含未闭合 fence），避免破坏 Markdown 结构
   out = out.replace(/[（(]\s*[）)]/g, "");
   out = splitFenceAware(out)

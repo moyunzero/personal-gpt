@@ -198,8 +198,12 @@ export function getNeo4jDriverFromEnv(): Driver {
   const uri = process.env.NEO4J_URI?.trim() || "bolt://localhost:7687";
   const user = process.env.NEO4J_USER?.trim() || "neo4j";
   const password = process.env.NEO4J_PASSWORD?.trim();
-  if (!password && process.env.NODE_ENV === "production") {
-    throw new Error("NEO4J_PASSWORD is required in production");
+  const isTestRuntime =
+    process.env.VITEST === "true" ||
+    process.env.NODE_ENV === "test" ||
+    process.env.JEST_WORKER_ID !== undefined;
+  if (!password && !isTestRuntime) {
+    throw new Error("NEO4J_PASSWORD is required");
   }
   const resolvedPassword = password || "personal_gpt_neo4j";
   cachedDriver = neo4j.driver(uri, neo4j.auth.basic(user, resolvedPassword), {

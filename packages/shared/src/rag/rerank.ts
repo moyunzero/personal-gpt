@@ -56,7 +56,14 @@ export async function rerankDedicated(
     }
   }
 
-  return rerankWithLlmFallback(query, hits, topN);
+  if (allowRerankLlmFallback()) {
+    return rerankWithLlmFallback(query, hits, topN);
+  }
+  return hits.slice(0, topN);
+}
+
+function allowRerankLlmFallback(): boolean {
+  return process.env.RERANK_LLM_FALLBACK === "true";
 }
 
 function mapDedicatedResults(

@@ -530,36 +530,40 @@ async function prefetchForSingleSpecialist(input: {
   trace: AgentTraceCollector;
   tracker?: ProgressTracker;
   abortSignal?: AbortSignal;
+  kbSearchPrefetched?: boolean;
 }): Promise<SystemMessage[]> {
   const seeds: SystemMessage[] = [];
-  let kbSearchExecuted = false;
+  let kbSearchExecuted = input.kbSearchPrefetched ?? false;
   if (input.plan.retrieverTools.includes("graph_search")) {
     const graphOut = await raceExternalCall(invokeGraphSearch({ question: input.userText }), {
       signal: input.abortSignal,
     });
     if (input.abortSignal?.aborted) return seeds;
-    if (!graphOut) return seeds;
-    input.trace.recordTool({
-      name: "graph_search",
-      agent: "system",
-      summary: summarizeGraphToolOutput(graphOut),
-      detail: graphOut,
-    });
-    if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
-      if (input.tracker) {
-        input.tracker.graphSearchHit = true;
-        input.tracker.graphPrefetchOutput = graphOut;
+    const graphHit = Boolean(graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut));
+    if (graphOut) {
+      input.trace.recordTool({
+        name: "graph_search",
+        agent: "system",
+        summary: summarizeGraphToolOutput(graphOut),
+        detail: graphOut,
+      });
+      if (graphHit) {
+        if (input.tracker) {
+          input.tracker.graphSearchHit = true;
+          input.tracker.graphPrefetchOutput = graphOut;
+        }
+        seeds.push(
+          new SystemMessage(
+            [
+              "【图谱预检索·工具结果·可信】",
+              "以下由服务端在 Retriever 运行前直接调用 graph_search 得到；必须采信。",
+              graphOut,
+            ].join("\n"),
+          ),
+        );
       }
-      seeds.push(
-        new SystemMessage(
-          [
-            "【图谱预检索·工具结果·可信】",
-            "以下由服务端在 Retriever 运行前直接调用 graph_search 得到；必须采信。",
-            graphOut,
-          ].join("\n"),
-        ),
-      );
-    } else if (input.plan.fallbackChain.includes("kb_search")) {
+    }
+    if (!graphHit && input.plan.fallbackChain.includes("kb_search")) {
       kbSearchExecuted = true;
       const kbOut = await raceExternalCall(
         invokeKbSearch({
@@ -1466,7 +1470,9 @@ export class AgentService {
                   ];
                 }
               }
+              let serviceKbPrefetched = false;
               if (shouldPrefetchKb && !skipKbPrefetchForSingleGraph) {
+                serviceKbPrefetched = true;
                 const KB_PREFETCH_TIMEOUT_MS = 8_000;
                 let timer: ReturnType<typeof setTimeout> | undefined;
                 let onAbort: (() => void) | undefined;
@@ -1570,6 +1576,7 @@ export class AgentService {
                   trace,
                   tracker,
                   abortSignal,
+                  kbSearchPrefetched: serviceKbPrefetched,
                 });
                 if (prefetchSeeds.length) {
                   seededMessages = [...prefetchSeeds, ...seededMessages];
@@ -1649,22 +1656,28 @@ export class AgentService {
                   )
                   .pipeThrough(dropHandoffNoiseText());
 
+                let lgStreamError: unknown;
                 const producer = (async () => {
-                  for await (const event of lgStream) {
-                    const parsed = parseLgModeEvent(event);
-                    if (
-                      parsed?.mode === "updates" &&
-                      parsed.data &&
-                      typeof parsed.data === "object"
-                    ) {
-                      onGraphUpdate(parsed.data as Record<string, unknown>);
-                      continue;
+                  try {
+                    for await (const event of lgStream) {
+                      const parsed = parseLgModeEvent(event);
+                      if (
+                        parsed?.mode === "updates" &&
+                        parsed.data &&
+                        typeof parsed.data === "object"
+                      ) {
+                        onGraphUpdate(parsed.data as Record<string, unknown>);
+                        continue;
+                      }
+                      pending.push(event);
+                      pokeIter();
                     }
-                    pending.push(event);
+                  } catch (err) {
+                    lgStreamError = err;
+                  } finally {
+                    lgDone = true;
                     pokeIter();
                   }
-                  lgDone = true;
-                  pokeIter();
                 })();
 
                 const reader = uiStream.getReader();
@@ -1708,6 +1721,7 @@ export class AgentService {
                     /* ignore */
                   }
                 }
+                if (lgStreamError) throw lgStreamError;
                 await producer;
               };
 

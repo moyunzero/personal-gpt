@@ -21,9 +21,10 @@ export type MemoryDeps = {
   mem0?: ScopedMem0Client;
 };
 
-function normalizeUserKey(raw: string): string {
+function resolveUserKey(raw: string): string | null {
   const t = raw.trim();
-  return t ? t.slice(0, 128) : "anonymous";
+  if (!t || t.length > 128 || !/^[A-Za-z0-9._-]+$/.test(t)) return null;
+  return t;
 }
 
 export async function loadMemoryContextBlock(
@@ -31,7 +32,8 @@ export async function loadMemoryContextBlock(
   query: string,
   deps?: MemoryDeps,
 ): Promise<string> {
-  const userKey = normalizeUserKey(scope.userKey);
+  const userKey = resolveUserKey(scope.userKey);
+  if (!userKey) return "";
   const workspaceId = scope.workspaceId.trim() || "default";
   const MEMORY_LOAD_TIMEOUT_MS = 3_000;
 
@@ -70,7 +72,8 @@ export async function persistTurnMemory(
   assistantText: string,
   deps?: MemoryDeps,
 ): Promise<void> {
-  const userKey = normalizeUserKey(scope.userKey);
+  const userKey = resolveUserKey(scope.userKey);
+  if (!userKey) return;
   const workspaceId = scope.workspaceId.trim() || "default";
 
   try {

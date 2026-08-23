@@ -140,13 +140,13 @@ export function matchMultiStepL0(query: string): L0Hit | null {
     retrieverTools = ["kb_search", "graph_search"];
   } else if (hasKb) {
     retrieverTools = ["kb_search"];
-  } else if (hasGraph) {
-    retrieverTools = ["graph_search"];
   }
+
+  const channels = hasWeb ? "web" : hasKb && hasGraph ? "kb+graph" : hasGraph ? "graph" : "kb";
 
   return {
     primary: "multi_step",
-    channels: hasWeb ? "web" : hasGraph ? "graph" : "kb",
+    channels,
     specialists,
     retrieverTools,
     reason: "l0:multi_step:keyword_order",

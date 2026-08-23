@@ -28,4 +28,11 @@ describe("resolveCorpusTargets seed fallback", () => {
 
     expect(resolveCorpusTargets("seed").astraCollection).toBe("kb_seed");
   });
+
+  it("user corpus does not fall back to legacy ASTRA_DB_COLLECTION", () => {
+    process.env.ASTRA_DB_COLLECTION = "db_emotion";
+    delete process.env.ASTRA_DB_COLLECTION_USER;
+
+    expect(resolveCorpusTargets("user").astraCollection).toBe("kb_user");
+  });
 });

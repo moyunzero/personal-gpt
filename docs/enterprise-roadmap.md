@@ -3,7 +3,7 @@
 > **基线**：v0.1 RAG 聊天原型（已完成）  
 > **愿景**：可演示 → 可信任检索 → 可生产治理 的企业知识库；Chat 稳定问答，Agent 负责研究型任务（非一开始做跨系统「办事」）  
 > **参考**：`reference/`（课程实战）+ 市面对标（下文）  
-> **最后更新**：2026-08-14（v2.x 加固 + Code Review 延期项落档）
+> **最后更新**：2026-08-23（v3.0 关账后能力表对齐 · Milvus loopback）
 
 ## 版本对照
 
@@ -43,12 +43,12 @@
 
 | 市场能力 | 现状 | 落点 |
 | --- | --- | --- |
-| 默认混合检索 / 重排 / 自纠 RAG | 可选开关默认关；无 Corrective 环 | **v3** |
-| 复杂文档理解（表/扫描 PDF） | 基础 PDF/DOCX | **v3**（增强解析，参考 RAGFlow 思路） |
-| 会话/长期记忆 | 默认无跨会话 | **v3** |
-| 评测与质量门禁 | mock + 少量 live smoke | **v3** |
+| 默认混合检索 / 重排 / 自纠 RAG | Phase 3：hybrid + rerank + corrective 已落地；部分路径仍可按 env 降级 | **v3 ✅** |
+| 复杂文档理解（表/扫描 PDF） | 基础 PDF/DOCX；深度版面解析仍弱 | **v3**（增强解析，参考 RAGFlow 思路） |
+| 会话/长期记忆 | Mem0 + Redis 短期记忆；无登录时跳过跨会话桶 | **v3 ✅** |
+| 评测与质量门禁 | Phase 3 回归 + Phase 3.1 UAT；非持续 CI 门禁 | **v3 ✅** |
 | SSO / 成员 / **ACL 裁剪检索** | 无登录 | **v4** |
-| Postgres checkpointer、全栈 Docker | MemorySaver；agent 未入 Compose | **v4** |
+| Postgres checkpointer、全栈 Docker | MemorySaver；Neo4j/Milvus/ES 已入 Compose；Postgres checkpointer 仍缺 | **v4** |
 | 审计、配额、会话历史 | 弱 | **v4** |
 | 连接器（Notion/飞书/Web 同步） | 仅上传 | **v5** |
 | HITL 审批、HTTP 业务工具 | 无 | **v5** |
