@@ -10,6 +10,9 @@ export const THREAD_STORAGE_KEYS = {
   agent: "pgpt.thread.agent",
 } as const;
 
+/** Server-side validation pattern (aligned with agent-service SAFE_THREAD_ID). */
+export const SAFE_THREAD_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/;
+
 /** 生成 opaque thread_id（与 agent-service SAFE_THREAD_ID 对齐） */
 export function createThreadId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {

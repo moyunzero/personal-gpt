@@ -4,6 +4,12 @@ import { randomUUID } from "node:crypto";
 
 import { resolveRetrievalContext } from "@/lib/auth/acl-resolver";
 import { requireSession } from "@/lib/auth/session";
+import {
+  ensureChatSession,
+  persistChatTurn,
+  ThreadOwnershipError,
+} from "@/lib/chat/chat-session.service";
+import { createThreadId } from "@/lib/chat/thread-id";
 
 import { graphPathsToDisplay } from "@/lib/chat/graph-path-display";
 import { type VectorSearchResult } from "@/lib/chat/context";
@@ -169,6 +175,7 @@ export async function POST(req: Request) {
       messages?: unknown;
       corpus?: unknown;
       userKey?: unknown;
+      thread_id?: unknown;
     };
     const { messages } = body;
     // D-27/D-28 / T-03-seed: default user; seed only when explicit
@@ -186,6 +193,28 @@ export async function POST(req: Request) {
       messages.length > MAX_CHAT_MESSAGES ? messages.slice(-MAX_CHAT_MESSAGES) : messages;
 
     const formattedMessages = formatMessages(trimmedMessages as InputMessage[]);
+
+    const rawThreadId =
+      typeof body.thread_id === "string" && body.thread_id.trim()
+        ? body.thread_id.trim()
+        : createThreadId();
+    let chatSession;
+    try {
+      chatSession = await ensureChatSession({
+        threadId: rawThreadId,
+        userId: retrievalCtx.userId,
+        workspaceId: retrievalCtx.workspaceId,
+        mode: "chat",
+      });
+    } catch (err) {
+      if (err instanceof ThreadOwnershipError) {
+        return new Response(JSON.stringify({ error: "Forbidden thread_id", requestId }), {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      throw err;
+    }
 
     // 取最后一条做向量搜索 + 长度校验
     const lastContent = formattedMessages[formattedMessages.length - 1]?.content || "";
@@ -286,15 +315,20 @@ export async function POST(req: Request) {
       requestId,
       citations,
       graphPaths: graphPathsForUi,
-      onComplete: userKey
-        ? async (assistantText) => {
-            await persistTurnMemory(
-              { workspaceId: retrievalCtx.workspaceId, userKey },
-              lastContent,
-              assistantText,
-            );
-          }
-        : undefined,
+      onComplete: async (assistantText) => {
+        await persistChatTurn({
+          session: chatSession,
+          userContent: lastContent,
+          assistantContent: assistantText,
+        });
+        if (userKey) {
+          await persistTurnMemory(
+            { workspaceId: retrievalCtx.workspaceId, userKey },
+            lastContent,
+            assistantText,
+          );
+        }
+      },
     });
 
     // SSE 响应默认只有 text/event-stream，需要手动注入 CORS 头（空值的不写）

@@ -97,4 +97,62 @@ describe("Phase 3 regression #4: checkpointer resume same thread_id (CP-01)", ()
     expect(values.todos?.some((t) => t.id === "t1" && t.content.includes("检索"))).toBe(true);
     expect(values.citations?.some((c) => c.documentId === "doc-policy")).toBe(true);
   });
+
+  it.skipIf(!process.env.DATABASE_URL?.trim())(
+    "two logical replicas share thread_id via PostgresSaver (CP-01 / D-27)",
+    async () => {
+      const prevMode = process.env.AGENT_CHECKPOINTER;
+      process.env.AGENT_CHECKPOINTER = "postgres";
+      const { resetCheckpointerSingletonsForTests, ensureCheckpointerSetup, resolveCheckpointer } =
+        await import("../../../apps/agent-service/src/graph/build-graph");
+
+      resetCheckpointerSingletonsForTests();
+      await ensureCheckpointerSetup();
+      const checkpointer = await resolveCheckpointer();
+
+      const threadId = createThreadId();
+      const buildGraph = () =>
+        new StateGraph(AgentState)
+          .addNode("seed", (state) => ({
+            messages: state.messages,
+            todos: state.todos,
+            citations: state.citations,
+            workspaceId: state.workspaceId,
+          }))
+          .addEdge(START, "seed")
+          .addEdge("seed", END)
+          .compile({ checkpointer });
+
+      const graphReplicaA = buildGraph();
+      await graphReplicaA.invoke(
+        {
+          messages: [new HumanMessage("multi-instance resume")],
+          todos: [{ id: "t-replica", content: "shared checkpoint", status: "completed" as const }],
+          citations: [],
+          workspaceId: "default",
+        },
+        getAgentRunConfig(threadId),
+      );
+
+      resetCheckpointerSingletonsForTests();
+      await ensureCheckpointerSetup();
+      const checkpointerB = await resolveCheckpointer();
+      expect(checkpointerB).toBeTruthy();
+
+      const graphReplicaB = buildGraph();
+      const snapped = await graphReplicaB.getState(getAgentRunConfig(threadId));
+      const values = snapped.values as {
+        messages?: unknown[];
+        todos?: { id: string; content: string }[];
+      };
+
+      expect(values.messages?.length).toBeGreaterThan(0);
+      expect(values.todos?.some((t) => t.id === "t-replica")).toBe(true);
+
+      if (prevMode === undefined) delete process.env.AGENT_CHECKPOINTER;
+      else process.env.AGENT_CHECKPOINTER = prevMode;
+      resetCheckpointerSingletonsForTests();
+    },
+    30_000,
+  );
 });

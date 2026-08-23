@@ -2,9 +2,12 @@ import "dotenv/config";
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 
+import { AuditLogEntity } from "./entities/audit-log.entity";
 import { AuthAccountEntity } from "./entities/auth-account.entity";
 import { AuthSessionEntity } from "./entities/auth-session.entity";
 import { AuthVerificationTokenEntity } from "./entities/auth-verification-token.entity";
+import { ChatMessageEntity } from "./entities/chat-message.entity";
+import { ChatSessionEntity } from "./entities/chat-session.entity";
 import { DocumentEntity } from "./entities/document.entity";
 import { EntityAclEntity } from "./entities/entity-acl.entity";
 import { EntityCatalogEntity } from "./entities/entity-catalog.entity";
@@ -26,6 +29,9 @@ const ENTITIES = [
   IngestJobEntity,
   EntityCatalogEntity,
   EntityAclEntity,
+  ChatSessionEntity,
+  ChatMessageEntity,
+  AuditLogEntity,
 ];
 const MIGRATIONS = [`${__dirname}/migrations/[0-9]*-*.{ts,js}`];
 

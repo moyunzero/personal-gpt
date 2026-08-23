@@ -8,6 +8,11 @@ import { NextResponse } from "next/server";
 
 import { retrievalContextHeaders, resolveRetrievalContext } from "@/lib/auth/acl-resolver";
 import { requireSession } from "@/lib/auth/session";
+import {
+  ensureChatSession,
+  ThreadOwnershipError,
+} from "@/lib/chat/chat-session.service";
+import { createThreadId, SAFE_THREAD_ID_PATTERN } from "@/lib/chat/thread-id";
 import { logger } from "@/lib/logger";
 
 import {
@@ -157,20 +162,63 @@ export async function POST(req: Request) {
     }
   }
 
+  let bodyBuf: ArrayBuffer;
+  try {
+    bodyBuf = await req.arrayBuffer();
+  } catch {
+    timeout.clear();
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  if (bodyBuf.byteLength > MAX_AGENT_BFF_BODY_BYTES) {
+    timeout.clear();
+    return NextResponse.json(
+      { error: `请求体过大（上限 ${MAX_AGENT_BFF_BODY_BYTES} 字节）` },
+      { status: 413 },
+    );
+  }
+
+  let parsedBody: Record<string, unknown> = {};
+  try {
+    parsedBody = JSON.parse(new TextDecoder().decode(bodyBuf)) as Record<string, unknown>;
+  } catch {
+    timeout.clear();
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const rawThread =
+    typeof parsedBody.thread_id === "string" && parsedBody.thread_id.trim()
+      ? parsedBody.thread_id.trim()
+      : createThreadId();
+  if (!SAFE_THREAD_ID_PATTERN.test(rawThread)) {
+    timeout.clear();
+    return NextResponse.json({ error: "Invalid thread_id" }, { status: 400 });
+  }
+
+  try {
+    await ensureChatSession({
+      threadId: rawThread,
+      userId: retrievalCtx.userId,
+      workspaceId: retrievalCtx.workspaceId,
+      mode: "agent",
+    });
+  } catch (err) {
+    if (err instanceof ThreadOwnershipError) {
+      timeout.clear();
+      return NextResponse.json({ error: "Forbidden thread_id" }, { status: 403 });
+    }
+    throw err;
+  }
+
+  parsedBody.thread_id = rawThread;
+  const outboundBody = JSON.stringify(parsedBody);
+
   let upstreamRes: Response;
   try {
-    const bodyBuf = await req.arrayBuffer();
-    if (bodyBuf.byteLength > MAX_AGENT_BFF_BODY_BYTES) {
-      timeout.clear();
-      return NextResponse.json(
-        { error: `请求体过大（上限 ${MAX_AGENT_BFF_BODY_BYTES} 字节）` },
-        { status: 413 },
-      );
-    }
     upstreamRes = await fetch(upstream, {
       method: "POST",
       headers,
-      body: bodyBuf,
+      body: outboundBody,
       signal,
     });
   } catch (err) {
