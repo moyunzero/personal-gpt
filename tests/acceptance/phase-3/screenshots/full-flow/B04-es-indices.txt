@@ -1,2 +1,0 @@
-health status index   uuid                   pri rep docs.count docs.deleted store.size pri.store.size dataset.size
-yellow open   kb_user i1oWGYS3RAqFnFx05MOTVA   1   1          1            0        7kb            7kb          7kb

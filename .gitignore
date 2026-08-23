@@ -37,16 +37,11 @@ tests/acceptance/**/*export.md
 tests/acceptance/**/*export.json
 tests/acceptance/**/*RETEST*.md
 tests/acceptance/**/*FIX-ACCEPTANCE*.md
-# 保留验收说明文档与 Phase 3/3.1 审阅证据（截图、报告、stream 日志）
+# 保留验收说明文档（截图/stream/报告仍走 .gitignore，不入库）
 !tests/acceptance/**/README.md
 !tests/acceptance/**/CLOSEOUT.md
 !tests/acceptance/**/ACCEPTANCE.md
 !tests/acceptance/**/MCP-ACCEPTANCE.md
-!tests/acceptance/**/UI-MCP-RESULT.md
-!tests/acceptance/**/FULL-UAT-REPORT.html
-!tests/acceptance/**/*-stream.txt
-!tests/acceptance/**/screenshots/
-!tests/acceptance/**/screenshots/**
 
 # next.js
 /.next/
