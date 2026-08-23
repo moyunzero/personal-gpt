@@ -126,11 +126,14 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
     await processor.process(job as never);
 
     expect(traceSteps.indexOf("upsert")).toBeLessThan(traceSteps.indexOf("graph-extract"));
-    expect(graphExtractMock).toHaveBeenCalledWith({
-      workspaceId,
-      documentId,
-      chunks,
-    });
+    expect(graphExtractMock).toHaveBeenCalledWith(
+      {
+        workspaceId,
+        documentId,
+        chunks,
+      },
+      { dataSource: expect.anything() },
+    );
     expect(jobProgressMock.mock.calls.map((call) => call[0])).toEqual([0, 25, 50, 75, 90, 100]);
 
     const readyUpdate = documentUpdateMock.mock.calls.find((call) => call[1]?.status === "ready");
@@ -155,7 +158,9 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
 
     await expect(processor.process(job as never)).rejects.toThrow("neo4j unavailable");
 
-    expect(deleteDocumentMock).toHaveBeenCalledWith(workspaceId, documentId, "user");
+    expect(deleteDocumentMock).toHaveBeenCalledWith(workspaceId, documentId, "user", {
+      dataSource: expect.anything(),
+    });
     const failedDocUpdate = documentUpdateMock.mock.calls.find(
       (call) => call[1]?.status === "failed",
     );

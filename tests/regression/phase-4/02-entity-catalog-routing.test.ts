@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { EntityCatalogStore } from "@personal-gpt/shared";
 import {
   matchGraphRelationL0,
   matchL0Rules,
