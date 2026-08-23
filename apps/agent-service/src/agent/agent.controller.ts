@@ -12,6 +12,7 @@ import type { Response } from "express";
 
 import { AgentService, InvalidAgentBodyError, ModelConfigError } from "./agent.service";
 import { bearerMatchesInternalToken } from "./internal-token";
+import { parseRetrievalContextFromHeaders } from "./retrieval-context";
 
 /**
  * AGENT-04：POST /agent/chat → LangGraph UIMessage SSE。
@@ -26,6 +27,9 @@ export class AgentController {
   async chat(
     @Body() body: unknown,
     @Headers("authorization") authorization: string | undefined,
+    @Headers("x-user-id") xUserId: string | undefined,
+    @Headers("x-workspace-id") xWorkspaceId: string | undefined,
+    @Headers("x-allowed-document-ids") xAllowedDocumentIds: string | undefined,
     @Res({ passthrough: false }) res: Response,
   ): Promise<void> {
     const expected = process.env.AGENT_INTERNAL_TOKEN?.trim();
@@ -38,8 +42,22 @@ export class AgentController {
       throw new UnauthorizedException("Unauthorized: missing or invalid AGENT_INTERNAL_TOKEN");
     }
 
+    const bodyRecord = (body ?? {}) as Record<string, unknown>;
+    const fallbackWorkspace =
+      typeof bodyRecord.workspaceId === "string" ? bodyRecord.workspaceId : undefined;
+    const fallbackUserKey =
+      typeof bodyRecord.userKey === "string" ? bodyRecord.userKey : undefined;
+    const retrievalCtx = parseRetrievalContextFromHeaders(
+      {
+        "x-user-id": xUserId,
+        "x-workspace-id": xWorkspaceId,
+        "x-allowed-document-ids": xAllowedDocumentIds,
+      },
+      { workspaceId: fallbackWorkspace, userId: fallbackUserKey },
+    );
+
     try {
-      await this.agentService.streamChat((body ?? {}) as Record<string, unknown>, res);
+      await this.agentService.streamChat(bodyRecord, res, retrievalCtx);
     } catch (err) {
       if (err instanceof InvalidAgentBodyError) {
         throw new BadRequestException(err.message);

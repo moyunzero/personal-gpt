@@ -5,6 +5,7 @@
 export type KbSearchContext = {
   userText?: string;
   workspaceId?: string;
+  allowedDocumentIds?: string[];
 };
 
 /** 防漏清时无界增长；Map 保持插入序，超限淘汰最旧条目 */
