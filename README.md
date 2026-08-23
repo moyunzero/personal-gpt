@@ -82,18 +82,18 @@ flowchart TB
 
 ## 技术栈
 
-| 层级           | 选型                                                                    |
-| -------------- | ----------------------------------------------------------------------- |
-| Web            | Next.js 16.2 · React 19 · Tailwind CSS 4                                |
-| AI             | Vercel AI SDK 6 · `@ai-sdk/openai-compatible`（Groq OpenAI 兼容端点）   |
-| 聊天模型       | Groq：`qwen/qwen3.6-27b` → `openai/gpt-oss-120b` → `openai/gpt-oss-20b` |
-| Embedding      | NVIDIA NIM `nvidia/llama-nemotron-embed-1b-v2`（2048 维）               |
-| 向量库         | DataStax Astra DB（默认）；可选 Milvus（`VECTOR_BACKEND=milvus`）       |
+| 层级           | 选型                                                                     |
+| -------------- | ------------------------------------------------------------------------ |
+| Web            | Next.js 16.2 · React 19 · Tailwind CSS 4                                 |
+| AI             | Vercel AI SDK 6 · `@ai-sdk/openai-compatible`（Groq OpenAI 兼容端点）    |
+| 聊天模型       | Groq：`qwen/qwen3.6-27b` → `openai/gpt-oss-120b` → `openai/gpt-oss-20b`  |
+| Embedding      | NVIDIA NIM `nvidia/llama-nemotron-embed-1b-v2`（2048 维）                |
+| 向量库         | DataStax Astra DB（默认）；可选 Milvus（`VECTOR_BACKEND=milvus`）        |
 | 检索增强（v3） | Elasticsearch BM25 · Neo4j Graph RAG（seed demo）· Redis 短期记忆 · Mem0 |
-| 元数据 / 队列  | PostgreSQL 16 + TypeORM 0.3 · Redis 7 + BullMQ 5                        |
-| Worker / Agent | NestJS 11（ingest-worker :3001 · agent-service :3002）                  |
-| 质量           | TypeScript · Zod · Vitest · ESLint · Prettier                           |
-| 切块           | `@langchain/textsplitters`（ingest-worker + 部分 seed 脚本）            |
+| 元数据 / 队列  | PostgreSQL 16 + TypeORM 0.3 · Redis 7 + BullMQ 5                         |
+| Worker / Agent | NestJS 11（ingest-worker :3001 · agent-service :3002）                   |
+| 质量           | TypeScript · Zod · Vitest · ESLint · Prettier                            |
+| 切块           | `@langchain/textsplitters`（ingest-worker + 部分 seed 脚本）             |
 
 > 聊天与 Agent 默认栈：**Groq + NIM + Astra**；混合检索 / Graph 需本地 `docker compose` 拉起 ES、Neo4j 等（见 `.env.example`）。
 
@@ -233,9 +233,9 @@ personal-gpt/
 
 Chat 检索落在 `apps/web/lib/chat/`（`query-router.ts` · `retrieve.ts`），底层统一调用 `packages/shared` 的 `hybridSearch`：
 
-| 路由       | 含义            | 行为                                                    |
-| ---------- | --------------- | ------------------------------------------------------- |
-| `direct`   | 通用知识 / 闲聊 | 不检索，模型直接答；不发 citations                      |
+| 路由       | 含义            | 行为                                                        |
+| ---------- | --------------- | ----------------------------------------------------------- |
+| `direct`   | 通用知识 / 闲聊 | 不检索，模型直接答；不发 citations                          |
 | `retrieve` | 需要私有资料    | hybridSearch → 有命中则注入 context + 流末 `data-citations` |
 
 **三层路由**（`query-router.ts`）：
@@ -363,16 +363,16 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 以下文件**在 Git 仓库中可访问**（产品与开发笔记目录 `docs/`、GSD 目录 `.planning/` 为本地 gitignore，克隆后不在仓库内，故不在此列出）。
 
-| 文档 | 说明 |
-| --- | --- |
-| [AGENTS.md](./AGENTS.md) | 本仓库 Agent / 贡献约定 |
-| [.env.example](./.env.example) | 环境变量说明（含 v3 混合检索 / Neo4j） |
-| [tests/acceptance/phase-1/ACCEPTANCE.md](./tests/acceptance/phase-1/ACCEPTANCE.md) | Phase 1 验收 |
-| [tests/acceptance/phase-2-agent/CLOSEOUT.md](./tests/acceptance/phase-2-agent/CLOSEOUT.md) | Phase 2 / v2.0 MVP 关账 |
-| [tests/acceptance/phase-2-agent/README.md](./tests/acceptance/phase-2-agent/README.md) | Phase 2 验收与 smoke 说明 |
-| [tests/acceptance/phase-3/ACCEPTANCE.md](./tests/acceptance/phase-3/ACCEPTANCE.md) | Phase 3 验收 |
-| [tests/acceptance/phase-3/MCP-ACCEPTANCE.md](./tests/acceptance/phase-3/MCP-ACCEPTANCE.md) | Phase 3 Playwright MCP 记录 |
-| [tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md](./tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md) | Phase 3.1 意图路由 UAT |
+| 文档                                                                                           | 说明                                   |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------- |
+| [AGENTS.md](./AGENTS.md)                                                                       | 本仓库 Agent / 贡献约定                |
+| [.env.example](./.env.example)                                                                 | 环境变量说明（含 v3 混合检索 / Neo4j） |
+| [tests/acceptance/phase-1/ACCEPTANCE.md](./tests/acceptance/phase-1/ACCEPTANCE.md)             | Phase 1 验收                           |
+| [tests/acceptance/phase-2-agent/CLOSEOUT.md](./tests/acceptance/phase-2-agent/CLOSEOUT.md)     | Phase 2 / v2.0 MVP 关账                |
+| [tests/acceptance/phase-2-agent/README.md](./tests/acceptance/phase-2-agent/README.md)         | Phase 2 验收与 smoke 说明              |
+| [tests/acceptance/phase-3/ACCEPTANCE.md](./tests/acceptance/phase-3/ACCEPTANCE.md)             | Phase 3 验收                           |
+| [tests/acceptance/phase-3/MCP-ACCEPTANCE.md](./tests/acceptance/phase-3/MCP-ACCEPTANCE.md)     | Phase 3 Playwright MCP 记录            |
+| [tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md](./tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md) | Phase 3.1 意图路由 UAT                 |
 
 ## 产品路线图 (Product Roadmap)
 
