@@ -3,9 +3,12 @@ import { collectL1Signals } from "./l1-signals";
 import { matchL0Rules } from "./l0-rules";
 import { classifyIntentL2, needsL2 } from "./l2-classifier";
 import { synthesizeIntentPlan } from "./synthesize";
+import type { EntityCatalogStore } from "../graph/entity-catalog";
 import type { IntentPlan, KbProbeResult, RouterLayer } from "./types";
 
 export interface ResolveIntentPlanDeps {
+  workspaceId?: string;
+  catalogStore?: EntityCatalogStore;
   probeKb?: (query: string) => Promise<KbProbeResult>;
   classifyL2?: (query: string) => Promise<Partial<IntentPlan> | null>;
   neo4jAvailable?: () => boolean;
@@ -27,12 +30,19 @@ export async function resolveIntentPlan(
   const layers: RouterLayer[] = [];
   const neo4jOk = deps.neo4jAvailable?.() ?? true;
 
-  const l0 = matchL0Rules(query);
+  const routingCtx = {
+    workspaceId: deps.workspaceId,
+    catalogStore: deps.catalogStore,
+  };
+
+  const l0 = await matchL0Rules(query, routingCtx);
   if (l0) layers.push("L0");
 
   let l1;
   if (!l0?.terminal) {
     l1 = await collectL1Signals(query, {
+      workspaceId: deps.workspaceId,
+      catalogStore: deps.catalogStore,
       probeKb: deps.probeKb,
       routeRetrieveSimilarity: config.routeRetrieveSimilarity,
       routeDirectSimilarity: config.routeDirectSimilarity,

@@ -14,12 +14,19 @@ export {
 } from "./l1-signals";
 export { classifyIntentL2, needsL2, type ClassifyL2Fn } from "./l2-classifier";
 export {
+  resolveGraphEntity,
+  setEntityCatalogStoreForTests,
+  type ResolvedGraphEntity,
+  type ResolveGraphEntityDeps,
+} from "./entity-resolve";
+export {
   GRAPH_RELATION_RE,
   isGreetingOnly,
   isPureMathExpression,
   matchGraphRelationL0,
   matchL0Rules,
   orderSpecialistsByKeywordAppearance,
+  type L0RoutingContext,
 } from "./l0-rules";
 export {
   resolveIntentPlan,
