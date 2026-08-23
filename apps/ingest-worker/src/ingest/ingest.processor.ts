@@ -1,9 +1,9 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Injectable, Logger } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
+import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
 import type { Job } from "bullmq";
 import * as fs from "node:fs/promises";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 
 import { INGEST_QUEUE_NAME } from "@personal-gpt/shared";
 import type { IngestJobPayload } from "@personal-gpt/shared";
@@ -29,6 +29,8 @@ export class IngestProcessor extends WorkerHost {
     private readonly documentRepo: Repository<DocumentEntity>,
     @InjectRepository(IngestJobEntity)
     private readonly ingestJobRepo: Repository<IngestJobEntity>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {
     super();
   }
@@ -91,7 +93,10 @@ export class IngestProcessor extends WorkerHost {
       await this.updateIngestJob(ingestJob?.id, { progress: 90 });
 
       await traceIngestStep("graph-extract", traceCtx, () =>
-        extractAndUpsertGraph({ workspaceId, documentId, chunks }),
+        extractAndUpsertGraph(
+          { workspaceId, documentId, chunks },
+          { dataSource: this.dataSource },
+        ),
       );
       await job.updateProgress(100);
 

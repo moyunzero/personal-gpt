@@ -93,6 +93,14 @@ export {
   type UpsertDocumentGraphParams,
 } from "./graph/neo4j-upsert";
 export {
+  upsertCatalogEntries,
+  deleteCatalogForDocument,
+  findCatalogEntitiesInQuery,
+  type EntityCatalogRecord,
+  type EntityCatalogStore,
+  type UpsertCatalogEntriesParams,
+} from "./graph/entity-catalog";
+export {
   graphRagQuery,
   seedMilkTeaSubgraph,
   createSeededMilkTeaFixtureExecutor,

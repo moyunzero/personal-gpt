@@ -1,8 +1,12 @@
 import {
   ensureNeo4jGraphConstraintsFromEnv,
   extractGraphFromChunks,
+  upsertCatalogEntries,
   upsertDocumentGraph,
 } from "@personal-gpt/shared";
+import type { DataSource } from "typeorm";
+
+import { createEntityCatalogStore } from "../entity-catalog-store";
 
 export type ExtractAndUpsertGraphParams = {
   workspaceId: string;
@@ -10,8 +14,15 @@ export type ExtractAndUpsertGraphParams = {
   chunks: string[];
 };
 
-/** Ingest graph step: LLM extract all chunks → Neo4j upsert (D-08, D-11). */
-export async function extractAndUpsertGraph(params: ExtractAndUpsertGraphParams): Promise<void> {
+export type ExtractAndUpsertGraphOptions = {
+  dataSource?: DataSource;
+};
+
+/** Ingest graph step: LLM extract → Neo4j upsert → PG catalog sync (D-08, D-48). */
+export async function extractAndUpsertGraph(
+  params: ExtractAndUpsertGraphParams,
+  options: ExtractAndUpsertGraphOptions = {},
+): Promise<void> {
   const { entities, relations } = await extractGraphFromChunks(params.chunks);
   await ensureNeo4jGraphConstraintsFromEnv();
   await upsertDocumentGraph({
@@ -20,4 +31,18 @@ export async function extractAndUpsertGraph(params: ExtractAndUpsertGraphParams)
     entities,
     relations,
   });
+
+  if (!options.dataSource) {
+    throw new Error("extractAndUpsertGraph requires dataSource for catalog sync (D-48)");
+  }
+
+  const store = createEntityCatalogStore(options.dataSource);
+  await upsertCatalogEntries(
+    {
+      workspaceId: params.workspaceId,
+      documentId: params.documentId,
+      entities,
+    },
+    store,
+  );
 }

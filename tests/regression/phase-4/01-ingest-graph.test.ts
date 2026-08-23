@@ -105,6 +105,7 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
         findOne: vi.fn().mockResolvedValue({ id: "job-graph-1" }),
         update: ingestJobUpdateMock,
       } as never,
+      {} as never,
     );
   });
 
