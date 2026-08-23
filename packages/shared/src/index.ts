@@ -85,6 +85,14 @@ export {
   type ExtractedRelation,
 } from "./graph/extract-entities";
 export {
+  upsertDocumentGraph,
+  ensureNeo4jGraphConstraintsFromEnv,
+  ensureNeo4jGraphConstraints,
+  resetNeo4jGraphConstraintsForTests,
+  stableEntityId,
+  type UpsertDocumentGraphParams,
+} from "./graph/neo4j-upsert";
+export {
   graphRagQuery,
   seedMilkTeaSubgraph,
   createSeededMilkTeaFixtureExecutor,
