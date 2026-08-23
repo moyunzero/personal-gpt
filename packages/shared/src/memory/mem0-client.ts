@@ -161,7 +161,7 @@ export function extractStableFactsFromUserText(userText: string): string[] {
     /请记住[：:\s]*(.+)/,
     /记住[：:\s]+(.+)/,
     /我(?:喜欢|偏好|习惯)(.+)/,
-    /我希望你(.+)/,
+    /我希望你(?:以后|总是|在|用|以|默认|尽量|记住)(.+)/,
     /以后请(.+)/,
     /我的(?:名字|姓名)(?:是|叫)\s*(.+)/,
   ];
@@ -170,7 +170,10 @@ export function extractStableFactsFromUserText(userText: string): string[] {
   for (const re of patterns) {
     const m = text.match(re);
     if (m?.[1]?.trim()) {
-      facts.push(m[1].trim().slice(0, MAX_STABLE_FACT_LENGTH));
+      const fact = m[1].trim().slice(0, MAX_STABLE_FACT_LENGTH);
+      if (!/\b(password|api[_ -]?key|secret|token|sk-[a-z0-9-]+)\b/i.test(fact)) {
+        facts.push(fact);
+      }
       break;
     }
   }

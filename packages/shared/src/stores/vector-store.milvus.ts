@@ -21,6 +21,10 @@ export interface MilvusClientLike {
     collection_name: string;
     data: Record<string, unknown>[];
   }) => Promise<unknown>;
+  upsert?: (params: {
+    collection_name: string;
+    data: Record<string, unknown>[];
+  }) => Promise<unknown>;
   delete: (params: { collection_name: string; filter: string }) => Promise<unknown>;
   search: (params: Record<string, unknown>) => Promise<{
     results: Array<Record<string, unknown> & { score?: number }>;
@@ -64,9 +68,9 @@ function chunkPrimaryKey(documentId: string, chunkIndex: number): string {
 
 function normalizeMilvusCosineScore(score: number): number {
   if (!Number.isFinite(score)) return 0;
-  if (score >= 0 && score <= 1) return score;
-  if (score >= -1 && score <= 1) return (score + 1) / 2;
-  return Math.max(0, Math.min(1, score));
+  if (score <= -1) return 0;
+  if (score >= 1) return 1;
+  return (score + 1) / 2;
 }
 
 function mapMilvusHit(hit: Record<string, unknown> & { score?: number }): RetrievedChunk {
@@ -157,17 +161,15 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
       await ensureCollection();
 
       const workspaceId = chunks[0]!.workspaceId;
-      const documentIds = [...new Set(chunks.map((c) => c.documentId))];
-
-      for (const documentId of documentIds) {
-        await client.delete({
-          collection_name: collectionName,
-          filter: `workspaceId == "${escapeMilvusString(workspaceId)}" && documentId == "${escapeMilvusString(documentId)}"`,
-        });
+      const byDocument = new Map<string, typeof chunks>();
+      for (const chunk of chunks) {
+        const list = byDocument.get(chunk.documentId) ?? [];
+        list.push(chunk);
+        byDocument.set(chunk.documentId, list);
       }
 
-      try {
-        const data = chunks.map((chunk) => ({
+      for (const [documentId, docChunks] of byDocument) {
+        const data = docChunks.map((chunk) => ({
           id: chunkPrimaryKey(chunk.documentId, chunk.chunkIndex),
           vector: chunk.vector,
           content: chunk.text,
@@ -178,15 +180,14 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
           source: chunk.source ?? "",
           category: chunk.category ?? "",
         }));
-        await client.insert({ collection_name: collectionName, data });
-      } catch (error) {
-        for (const documentId of documentIds) {
-          await client.delete({
-            collection_name: collectionName,
-            filter: `workspaceId == "${escapeMilvusString(workspaceId)}" && documentId == "${escapeMilvusString(documentId)}"`,
-          });
-        }
-        throw error;
+        const write = client.upsert ?? client.insert;
+        await write({ collection_name: collectionName, data });
+
+        const maxChunkIndex = Math.max(...docChunks.map((c) => c.chunkIndex));
+        await client.delete({
+          collection_name: collectionName,
+          filter: `workspaceId == "${escapeMilvusString(workspaceId)}" && documentId == "${escapeMilvusString(documentId)}" && chunkIndex > ${maxChunkIndex}`,
+        });
       }
     },
 

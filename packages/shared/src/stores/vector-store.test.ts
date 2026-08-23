@@ -32,13 +32,29 @@ describe("VectorStore corpus collection targeting (D-24)", () => {
     else process.env.ASTRA_DB_COLLECTION = prev.LEGACY;
   });
 
-  it("user corpus uses kb_user default when USER unset (no legacy fallback)", () => {
+  it("user corpus falls back to legacy ASTRA_DB_COLLECTION when USER unset", () => {
     const prev = {
       USER: process.env.ASTRA_DB_COLLECTION_USER,
       LEGACY: process.env.ASTRA_DB_COLLECTION,
     };
     delete process.env.ASTRA_DB_COLLECTION_USER;
     process.env.ASTRA_DB_COLLECTION = "db_emotion";
+
+    expect(resolveAstraCollectionName({ corpus: "user" })).toBe("db_emotion");
+
+    if (prev.USER === undefined) delete process.env.ASTRA_DB_COLLECTION_USER;
+    else process.env.ASTRA_DB_COLLECTION_USER = prev.USER;
+    if (prev.LEGACY === undefined) delete process.env.ASTRA_DB_COLLECTION;
+    else process.env.ASTRA_DB_COLLECTION = prev.LEGACY;
+  });
+
+  it("user corpus uses kb_user default when USER and legacy unset", () => {
+    const prev = {
+      USER: process.env.ASTRA_DB_COLLECTION_USER,
+      LEGACY: process.env.ASTRA_DB_COLLECTION,
+    };
+    delete process.env.ASTRA_DB_COLLECTION_USER;
+    delete process.env.ASTRA_DB_COLLECTION;
 
     expect(resolveAstraCollectionName({ corpus: "user" })).toBe("kb_user");
 

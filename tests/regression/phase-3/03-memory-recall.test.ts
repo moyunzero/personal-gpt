@@ -91,15 +91,19 @@ describe("Phase 3 regression #3: memory recall session A→B (MEM-02)", () => {
     expect(other).not.toContain("简洁回答");
   });
 
-  it("Chat and Agent request shapes include userKey (contract)", () => {
-    // 前端 page + agent parseAgentChatBody 均接受 userKey；此处锁契约字段名
-    const chatBody = { messages: [], corpus: "user", userKey: "uk-1" };
-    const agentBody = {
+  it("Chat and Agent request shapes preserve userKey (contract)", async () => {
+    const { parseUserKey } = await import("../../../apps/web/lib/chat/memory-context");
+    const { parseAgentChatBody } = await import(
+      "../../../apps/agent-service/src/agent/agent.service"
+    );
+
+    expect(parseUserKey("uk-1")).toBe("uk-1");
+    expect(parseUserKey("bad key!")).toBeNull();
+
+    const parsed = parseAgentChatBody({
       messages: [{ role: "user", content: "hi" }],
-      workspaceId: "default",
       userKey: "uk-1",
-    };
-    expect(chatBody.userKey).toBe("uk-1");
-    expect(agentBody.userKey).toBe("uk-1");
+    });
+    expect(parsed.userKey).toBe("uk-1");
   });
 });

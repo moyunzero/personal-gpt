@@ -114,10 +114,11 @@ async function copyBatch(
   userCol: ReturnType<typeof openCollection>,
   seedCol: ReturnType<typeof openCollection>,
   withEs: boolean,
-): Promise<{ copiedUser: number; copiedSeed: number; skipped: number }> {
+): Promise<{ copiedUser: number; copiedSeed: number; skipped: number; esSkippedInvalid: number }> {
   let copiedUser = 0;
   let copiedSeed = 0;
   let skipped = 0;
+  let esSkippedInvalid = 0;
 
   await paginateSourceDocs(
     sourceCol,
@@ -153,10 +154,15 @@ async function copyBatch(
       }
 
       if (withEs) {
-        const workspaceId = String(doc.workspaceId ?? "");
-        const documentId = String(doc.documentId ?? "");
+        const workspaceId = String(doc.workspaceId ?? "").trim();
+        const documentId = String(doc.documentId ?? "").trim();
         const chunkIndex = Number(doc.chunkIndex ?? 0);
-        if (workspaceId && documentId) {
+        if (!workspaceId || !documentId) {
+          esSkippedInvalid += 1;
+          console.warn(
+            `[migrate-corpus-split] ES skip: missing workspaceId/documentId (_id=${String(id)})`,
+          );
+        } else {
           const { esIndex } = resolveCorpusTargets(kind);
           await indexChunks(esIndex, [
             {
@@ -174,7 +180,7 @@ async function copyBatch(
     },
   );
 
-  return { copiedUser, copiedSeed, skipped };
+  return { copiedUser, copiedSeed, skipped, esSkippedInvalid };
 }
 
 async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
@@ -263,7 +269,7 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
 
   const result = await copyBatch(sourceCol, userCol, seedCol, withEs);
   console.log(
-    `[migrate-corpus-split] execute complete: copiedUser=${result.copiedUser} copiedSeed=${result.copiedSeed} skipped=${result.skipped}`,
+    `[migrate-corpus-split] execute complete: copiedUser=${result.copiedUser} copiedSeed=${result.copiedSeed} skipped=${result.skipped} esSkippedInvalid=${result.esSkippedInvalid}`,
   );
   console.log(
     "[migrate-corpus-split] next: point app env at USER/SEED; keep legacy read-only until ISSUE-001 regression green (03-03b)",

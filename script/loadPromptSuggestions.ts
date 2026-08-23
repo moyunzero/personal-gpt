@@ -56,6 +56,7 @@ interface VectorDocument {
   author: string;
   fileHash: string;
   docId: string;
+  documentId: string;
 }
 
 // ====================== 配置 ======================

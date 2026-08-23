@@ -30,7 +30,7 @@ export function resolveCorpusTargets(corpus: Corpus): CorpusTargets {
   }
 
   return {
-    astraCollection: requireEnv("ASTRA_DB_COLLECTION_USER", "kb_user"),
+    astraCollection: requireEnv("ASTRA_DB_COLLECTION_USER", legacyCollection ?? "kb_user"),
     esIndex: requireEnv("ES_INDEX_USER", "kb_user"),
   };
 }

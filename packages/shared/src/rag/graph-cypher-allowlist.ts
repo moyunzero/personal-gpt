@@ -19,6 +19,38 @@ export class CypherAllowlistError extends Error {
   }
 }
 
+function extractMatchSegment(stmtBody: string): string {
+  const upper = stmtBody.toUpperCase();
+  const matchStart = upper.indexOf("MATCH");
+  if (matchStart < 0) return "";
+  let end = stmtBody.length;
+  for (const keyword of [" WHERE ", " WITH ", " UNWIND ", " CALL ", " RETURN "]) {
+    const idx = upper.indexOf(keyword, matchStart + 5);
+    if (idx >= 0) end = Math.min(end, idx);
+  }
+  return stmtBody.slice(matchStart, end);
+}
+
+function extractNodePatterns(segment: string): string[] {
+  const patterns: string[] = [];
+  for (let i = 0; i < segment.length; i++) {
+    if (segment[i] !== "(") continue;
+    let depth = 0;
+    let j = i;
+    for (; j < segment.length; j++) {
+      const ch = segment[j]!;
+      if (ch === "(") depth++;
+      else if (ch === ")") {
+        depth--;
+        if (depth === 0) break;
+      }
+    }
+    if (depth === 0) patterns.push(segment.slice(i, j + 1));
+    i = j;
+  }
+  return patterns;
+}
+
 /**
  * Assert Cypher is read-only and structurally safe for Graph RAG.
  * Does not execute; call before any Neo4j session.run.
@@ -52,12 +84,9 @@ export function assertAllowlistedCypher(cypher: string): void {
   const allowedLabels = new Set<string>(ALLOWED_LABELS);
   const allowedRels = new Set<string>(ALLOWED_REL_TYPES);
 
-  const matchClause = stmtBody.split(/\bRETURN\b/i)[0] ?? stmtBody;
+  const matchSegment = extractMatchSegment(stmtBody);
   const nodeLabels: string[] = [];
-  const nodePatternRe = /\([^)]*\)/g;
-  let patternMatch: RegExpExecArray | null;
-  while ((patternMatch = nodePatternRe.exec(matchClause)) !== null) {
-    const pattern = patternMatch[0]!;
+  for (const pattern of extractNodePatterns(matchSegment)) {
     const labels = [...pattern.matchAll(/:([A-Za-z]\w*)/g)].map((m) => m[1]!);
     if (labels.length === 0) {
       throw new CypherAllowlistError("Cypher rejected: unlabeled node pattern in MATCH");

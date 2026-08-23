@@ -8,6 +8,13 @@ import type {
   AgentTraceEventKind,
 } from "@personal-gpt/shared/types/agent";
 
+function formatRouterLayers(layers: unknown): string {
+  if (!Array.isArray(layers) || !layers.every((layer) => typeof layer === "string")) {
+    return "";
+  }
+  return layers.length ? ` · ${layers.join("+")}` : "";
+}
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
@@ -30,6 +37,14 @@ function isTraceDocument(data: unknown): data is AgentTraceDocument {
     return false;
   }
   if (!Array.isArray(data.intent.requiredSpecialists)) return false;
+  if (
+    "routerLayers" in data.intent &&
+    data.intent.routerLayers !== undefined &&
+    (!Array.isArray(data.intent.routerLayers) ||
+      !data.intent.routerLayers.every((layer) => typeof layer === "string"))
+  ) {
+    return false;
+  }
   for (const item of data.plan) {
     if (!isRecord(item)) return false;
     if (typeof item.id !== "string" || typeof item.label !== "string") return false;
@@ -274,7 +289,7 @@ export default function AgentTracePanel({ message }: { message: UIMessage }) {
         {doc.intent.requiredSpecialists.length
           ? ` · ${doc.intent.requiredSpecialists.join(" → ")}`
           : ""}
-        {doc.intent.routerLayers?.length ? ` · ${doc.intent.routerLayers.join("+")}` : ""}
+        {formatRouterLayers(doc.intent.routerLayers)}
         {` · ${doc.events.length} 事件`}
       </p>
       {doc.intent.plan ? <IntentPlanBlock plan={doc.intent.plan} /> : null}

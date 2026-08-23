@@ -31,4 +31,16 @@ describe("formatGraphAnswerFromToolOutput", () => {
   it("returns empty for NO_PATH", () => {
     expect(formatGraphAnswerFromToolOutput("GRAPH_SEARCH_STATUS: NO_PATH", "q")).toBe("");
   });
+
+  it("formats multiline path blocks when structured nodes are absent", () => {
+    const raw = [
+      "GRAPH_SEARCH_STATUS: HIT",
+      "[path 1]",
+      "nodes:",
+      "  product:pearl-milk-tea -[CONTAINS]-> ingredient:tapioca",
+    ].join("\n");
+    const out = formatGraphAnswerFromToolOutput(raw, "珍珠奶茶有哪些原料？");
+    expect(out).toContain("product:pearl-milk-tea");
+    expect(out).toContain("CONTAINS");
+  });
 });

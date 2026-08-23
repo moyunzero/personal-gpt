@@ -28,12 +28,17 @@ vi.mock("@personal-gpt/shared", () => ({
   ensureEsIndexes: (...args: unknown[]) => ensureEsIndexes(...args),
 }));
 
-vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
-  createAstraVectorStore: () => ({
-    upsert: (...args: unknown[]) => astraUpsert(...args),
-    deleteByDocument: (...args: unknown[]) => astraDeleteByDocument(...args),
-  }),
-}));
+vi.mock("@personal-gpt/shared/stores/vector-store.astra", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@personal-gpt/shared/stores/vector-store.astra")>();
+  return {
+    ...actual,
+    createAstraVectorStore: () => ({
+      upsert: (...args: unknown[]) => astraUpsert(...args),
+      deleteByDocument: (...args: unknown[]) => astraDeleteByDocument(...args),
+    }),
+  };
+});
 
 import { deleteDocumentFromEs, upsertChunksToEs } from "./es-upsert";
 import { upsertChunks } from "./upsert";
@@ -80,6 +85,19 @@ describe("es dual-write fail-closed (D-10)", () => {
         }),
       ]),
     );
+  });
+
+  it("upsertChunksToEs rejects mixed workspaceId batches", async () => {
+    await expect(
+      upsertChunksToEs(
+        [
+          sampleChunk,
+          { ...sampleChunk, workspaceId: "00000000-0000-4000-8000-000000000002" },
+        ],
+        "user",
+      ),
+    ).rejects.toThrow(/workspaceId/i);
+    expect(indexChunks).not.toHaveBeenCalled();
   });
 
   it("upsertChunks rejects when ES indexChunks throws (fail-closed)", async () => {

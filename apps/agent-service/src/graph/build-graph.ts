@@ -37,6 +37,7 @@ import {
   formatSkillsOverview,
   loadEnabledSkills,
 } from "../skills/load-skills";
+import { raceExternalCall } from "../agent/race-external-call";
 import { extractKbSearchQuery } from "../tools/extract-kb-query";
 import { invokeGraphSearch } from "../tools/graph-search.tool";
 import { invokeKbSearch } from "../tools/kb-search.tool";
@@ -374,13 +375,16 @@ function createSupervisorWorkflow(
 }
 
 /** D-11: server-side prefetch before synthesizer / Retriever in single_specialist path */
-function buildPrefetchNode(plan: IntentPlan) {
+export function buildPrefetchNode(plan: IntentPlan) {
   return async (
     state: AgentStateType,
     config?: { configurable?: Record<string, unknown> },
   ): Promise<{ messages: BaseMessage[] } | Record<string, never>> => {
     const text = lastUserText(state.messages);
     const workspaceId = String(config?.configurable?.workspaceId ?? "default");
+    const raceOpts = {
+      signal: config?.configurable?.abortSignal as AbortSignal | undefined,
+    };
     const { enableKbGraphFallback } = readIntentRouterConfig();
     const blocks: string[] = [];
     const graphOnly =
@@ -391,35 +395,41 @@ function buildPrefetchNode(plan: IntentPlan) {
       (plan.fallbackChain.includes("graph_search") || plan.graphSignal === true);
 
     if (graphOnly) {
-      const graphOut = await invokeGraphSearch({ question: text });
-      if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
+      const graphOut = await raceExternalCall(invokeGraphSearch({ question: text }), raceOpts);
+      if (graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
         blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
-      } else if (plan.fallbackChain.includes("kb_search")) {
-        const kbOut = await invokeKbSearch({
-          query: extractKbSearchQuery(text),
-          userText: text,
-          workspaceId,
-        });
+      } else if (graphOut && plan.fallbackChain.includes("kb_search")) {
+        const kbOut = await raceExternalCall(
+          invokeKbSearch({
+            query: extractKbSearchQuery(text),
+            userText: text,
+            workspaceId,
+          }),
+          raceOpts,
+        );
         blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
         if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
           blocks.push(`【知识库回退检索·工具结果·可信】\n${kbOut}`);
         }
-      } else {
+      } else if (graphOut) {
         blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
       }
     } else if (plan.retrieverTools.includes("kb_search")) {
       let graphInjected = false;
       let graphOutCache: string | undefined;
-      const kbOut = await invokeKbSearch({
-        query: extractKbSearchQuery(text),
-        userText: text,
-        workspaceId,
-      });
+      const kbOut = await raceExternalCall(
+        invokeKbSearch({
+          query: extractKbSearchQuery(text),
+          userText: text,
+          workspaceId,
+        }),
+        raceOpts,
+      );
       if (kbOut) {
         const kbMiss = /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut);
         if (kbMiss && allowGraphFallback) {
-          graphOutCache = await invokeGraphSearch({ question: text });
-          if (/GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOutCache)) {
+          graphOutCache = await raceExternalCall(invokeGraphSearch({ question: text }), raceOpts);
+          if (graphOutCache && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOutCache)) {
             blocks.push(
               `【图谱回退检索·工具结果·可信】\nKB 未命中后按 fallbackChain 触发 graph_search；必须采信。\n${graphOutCache}`,
             );
@@ -436,8 +446,12 @@ function buildPrefetchNode(plan: IntentPlan) {
         plan.retrieverTools.includes("graph_search") &&
         !graphInjected
       ) {
-        const graphOut = graphOutCache ?? (await invokeGraphSearch({ question: text }));
-        blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+        const graphOut =
+          graphOutCache ??
+          (await raceExternalCall(invokeGraphSearch({ question: text }), raceOpts));
+        if (graphOut) {
+          blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
+        }
       }
     }
 

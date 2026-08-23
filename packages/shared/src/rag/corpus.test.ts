@@ -6,6 +6,7 @@ describe("resolveCorpusTargets seed fallback", () => {
   const saved = {
     legacy: process.env.ASTRA_DB_COLLECTION,
     seed: process.env.ASTRA_DB_COLLECTION_SEED,
+    user: process.env.ASTRA_DB_COLLECTION_USER,
   };
 
   afterEach(() => {
@@ -13,6 +14,8 @@ describe("resolveCorpusTargets seed fallback", () => {
     else process.env.ASTRA_DB_COLLECTION = saved.legacy;
     if (saved.seed === undefined) delete process.env.ASTRA_DB_COLLECTION_SEED;
     else process.env.ASTRA_DB_COLLECTION_SEED = saved.seed;
+    if (saved.user === undefined) delete process.env.ASTRA_DB_COLLECTION_USER;
+    else process.env.ASTRA_DB_COLLECTION_USER = saved.user;
   });
 
   it("uses legacy ASTRA_DB_COLLECTION directly for seed when SEED unset", () => {
@@ -29,8 +32,15 @@ describe("resolveCorpusTargets seed fallback", () => {
     expect(resolveCorpusTargets("seed").astraCollection).toBe("kb_seed");
   });
 
-  it("user corpus does not fall back to legacy ASTRA_DB_COLLECTION", () => {
+  it("user corpus falls back to legacy ASTRA_DB_COLLECTION when USER unset", () => {
     process.env.ASTRA_DB_COLLECTION = "db_emotion";
+    delete process.env.ASTRA_DB_COLLECTION_USER;
+
+    expect(resolveCorpusTargets("user").astraCollection).toBe("db_emotion");
+  });
+
+  it("user corpus uses kb_user default when legacy and USER unset", () => {
+    delete process.env.ASTRA_DB_COLLECTION;
     delete process.env.ASTRA_DB_COLLECTION_USER;
 
     expect(resolveCorpusTargets("user").astraCollection).toBe("kb_user");

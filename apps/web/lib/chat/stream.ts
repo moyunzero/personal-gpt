@@ -51,6 +51,7 @@ export function createChatStream({
       }
 
       const models = resolveChatModels();
+      let assistantText = "";
       for (let i = 0; i < models.length; i++) {
         const modelName = models[i]!;
         try {
@@ -63,7 +64,6 @@ export function createChatStream({
           });
 
           const thinkFilter = new ThinkStripFilter();
-          let assistantText = "";
 
           for await (const part of result.fullStream) {
             if (part.type === "text-delta") {

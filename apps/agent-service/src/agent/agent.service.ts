@@ -14,6 +14,7 @@ import type { Citation } from "@personal-gpt/shared";
 import { loadMemoryContextBlock, persistTurnMemory } from "@personal-gpt/shared";
 import { z } from "zod";
 
+import { raceExternalCall } from "./race-external-call";
 import {
   buildExecutionGraph,
   buildSupervisorGraph,
@@ -201,39 +202,8 @@ export function attachResponseAbortSignal(res: Response): AbortSignal {
   return ac.signal;
 }
 
-const EXTERNAL_TOOL_TIMEOUT_MS = 8_000;
 const INTENT_RESOLVE_TIMEOUT_MS = 5_000;
 const MEMORY_LOAD_TIMEOUT_MS = 3_000;
-
-async function raceExternalCall<T>(
-  promise: Promise<T>,
-  opts: { signal?: AbortSignal; timeoutMs?: number },
-): Promise<T | undefined> {
-  const timeoutMs = opts.timeoutMs ?? EXTERNAL_TOOL_TIMEOUT_MS;
-  const { signal } = opts;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let onAbort: (() => void) | undefined;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<undefined>((resolve) => {
-        timer = setTimeout(() => resolve(undefined), timeoutMs);
-        timer.unref?.();
-      }),
-      new Promise<undefined>((resolve) => {
-        if (signal?.aborted) {
-          resolve(undefined);
-          return;
-        }
-        onAbort = () => resolve(undefined);
-        signal?.addEventListener("abort", onAbort, { once: true });
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-    if (onAbort) signal?.removeEventListener("abort", onAbort);
-  }
-}
 
 async function withBoundedTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;

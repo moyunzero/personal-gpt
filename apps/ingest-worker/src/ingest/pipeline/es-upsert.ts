@@ -9,6 +9,7 @@ import {
   resolveCorpusTargets,
   type Corpus,
 } from "@personal-gpt/shared";
+import { assertChunkWorkspaceId } from "@personal-gpt/shared/stores/vector-store.astra";
 import type { ChunkRecord } from "@personal-gpt/shared/stores/vector-store";
 
 /** Idempotent: delete-by-documentId then bulk index into corpus ES index. */
@@ -17,6 +18,14 @@ export async function upsertChunksToEs(
   corpus: Corpus = "user",
 ): Promise<void> {
   if (chunks.length === 0) return;
+
+  for (const chunk of chunks) {
+    assertChunkWorkspaceId(chunk);
+  }
+  const workspaceIds = new Set(chunks.map((c) => c.workspaceId));
+  if (workspaceIds.size !== 1) {
+    throw new Error("upsertChunksToEs requires all chunks to share the same workspaceId");
+  }
 
   const { esIndex } = resolveCorpusTargets(corpus);
   await ensureEsIndexes([esIndex]);

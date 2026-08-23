@@ -36,6 +36,17 @@ function extractCitations(message: UIMessage): Citation[] {
   return [];
 }
 
+function isValidGraphPath(value: unknown): value is GraphPathDisplay {
+  if (!value || typeof value !== "object") return false;
+  const path = value as GraphPathDisplay;
+  return (
+    Array.isArray(path.nodes) &&
+    path.nodes.every((n) => typeof n === "string") &&
+    Array.isArray(path.relationships) &&
+    path.relationships.every((r) => typeof r === "string")
+  );
+}
+
 function extractGraphPaths(message: UIMessage): GraphPathDisplay[] {
   for (const part of message.parts) {
     if (
@@ -47,7 +58,7 @@ function extractGraphPaths(message: UIMessage): GraphPathDisplay[] {
       "paths" in part.data &&
       Array.isArray((part.data as { paths: unknown }).paths)
     ) {
-      return (part.data as { paths: GraphPathDisplay[] }).paths;
+      return (part.data as { paths: unknown[] }).paths.filter(isValidGraphPath);
     }
   }
   return [];

@@ -42,7 +42,11 @@ export const SharedEnvSchema = z
     /** Neo4j Bolt URI（Wave4 Graph RAG；Compose 默认 bolt://localhost:7687） */
     NEO4J_URI: z.string().min(1).default("bolt://localhost:7687"),
     NEO4J_USER: z.string().min(1).default("neo4j"),
-    NEO4J_PASSWORD: z.string().min(1),
+    NEO4J_PASSWORD: z.string().min(1).optional(),
+    ENABLE_GRAPH_RAG: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((v) => v === "true"),
 
     /** App-layer RRF rank constant k（经典 ≈60） */
     RRF_K: z.coerce.number().int().min(1).max(200).default(60),
@@ -264,6 +268,13 @@ export const SharedEnvSchema = z
             "VECTOR_BACKEND=astra 或 MILVUS_DUAL_WRITE=true 时必须设置 ASTRA_DB_COLLECTION，或同时设置 ASTRA_DB_COLLECTION_USER 与 ASTRA_DB_COLLECTION_SEED",
         });
       }
+    }
+    if (data.ENABLE_GRAPH_RAG === true && !data.NEO4J_PASSWORD?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["NEO4J_PASSWORD"],
+        message: "ENABLE_GRAPH_RAG=true 时必须设置 NEO4J_PASSWORD",
+      });
     }
   });
 

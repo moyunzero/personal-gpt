@@ -17,8 +17,9 @@ const { ASTRA_DB_NAMESPACE, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN } 
 /** Seed corpus physical collection (D-24/D-25); not the legacy mixed ASTRA_DB_COLLECTION */
 const ASTRA_DB_COLLECTION = resolveCorpusTargets("seed").astraCollection;
 
-function stableQaDocumentId(input: string): string {
-  return createHash("md5").update(input).digest("hex");
+function stableQaDocumentId(input: string, qaId?: string): string {
+  const key = qaId ? `${qaId}:${input}` : input;
+  return createHash("md5").update(key).digest("hex");
 }
 
 if (!ASTRA_DB_API_ENDPOINT || !ASTRA_DB_APPLICATION_TOKEN) {
@@ -283,7 +284,7 @@ const loadPsychologyData = async () => {
           source: "psychology-qa",
           question: mapping.qa.input,
           category: "psychology",
-          documentId: stableQaDocumentId(mapping.qa.input),
+          documentId: stableQaDocumentId(mapping.qa.input, mapping.qaId),
           chunkIndex: mapping.chunkIndex, // 添加块索引
           qaId: mapping.qaId,
           // fullAnswer 只在第一个块存储，其他块不存储

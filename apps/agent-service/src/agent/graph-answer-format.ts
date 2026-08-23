@@ -69,8 +69,11 @@ export function formatGraphAnswerFromToolOutput(graphOut: string, _userText: str
   const rels = parseGraphToolRelationships(graphOut);
 
   if (nodes.length === 0) {
-    const pathLine = graphOut.match(/\[path \d+\] nodes:\s*([^\n]+)/i)?.[1];
-    if (!pathLine) return "";
+    const pathBlock = graphOut.match(/\[path \d+\][\s\S]*?(?=\n\[path \d+\]|\n*$)/i)?.[0];
+    const pathLine =
+      pathBlock?.match(/nodes:\s*([^\n]+)/i)?.[1] ??
+      graphOut.match(/\[path \d+\]\s*nodes:\s*([^\n]+)/i)?.[1];
+    if (!pathLine?.trim()) return "";
     return ["根据企业内部知识图谱，找到以下关联路径：", "", pathLine.trim()].join("\n");
   }
 

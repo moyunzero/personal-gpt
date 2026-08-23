@@ -1,8 +1,6 @@
 /**
- * Phase 3 GOLDEN-01 CI smoke (deterministic — no live LLM judge).
- *
- * Nightly (full g01–g25 retrieval + intent cases):
- *   yarn eval:phase-3:nightly
+ * Phase 3 GOLDEN-01 nightly — full deterministic golden set (g01–g25).
+ * Smoke subset remains in smoke.test.ts (eval:phase-3).
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -25,11 +23,9 @@ type GoldenItem = {
 };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const goldenPath = join(__dirname, "golden.json");
-const golden = JSON.parse(readFileSync(goldenPath, "utf8")) as GoldenItem[];
-
-/** CI smoke subset: first 5 user-corpus items (deterministic citation checks). */
-const SMOKE_IDS = new Set(["g01", "g02", "g03", "g04", "g05"]);
+const golden = JSON.parse(
+  readFileSync(join(__dirname, "golden.json"), "utf8"),
+) as GoldenItem[];
 
 function mockStore(hits: RetrievedChunk[]): VectorStore {
   return {
@@ -50,36 +46,20 @@ function hitFor(item: GoldenItem): RetrievedChunk {
   };
 }
 
-describe("Phase 3 GOLDEN-01 CI smoke (deterministic)", () => {
-  it("golden.json has ≥20 items with corpus + citation constraints", () => {
-    expect(golden.length).toBeGreaterThanOrEqual(20);
-    for (const item of golden) {
-      expect(item.id).toBeTruthy();
-      expect(item.query.length).toBeGreaterThan(0);
-      expect(["user", "seed"]).toContain(item.corpus);
-      if (item.expectCitationSource) {
-        expect(item.expectCitationSource.length).toBeGreaterThan(0);
-      }
-    }
-    // Must not reuse Phase 5 EVAL-01 naming in this artifact set
-    const raw = readFileSync(goldenPath, "utf8");
-    expect(raw).not.toMatch(/EVAL-01/);
-    expect(raw).not.toMatch(/RAGAS/i);
-  });
-
-  it("smoke subset: corpus=user hybridSearch citations match expected source", async () => {
+describe("Phase 3 GOLDEN-01 nightly (full set)", () => {
+  it("runs hybridSearch for every golden item with corpus constraints", async () => {
     process.env.ENABLE_RERANKER = "false";
     process.env.CORRECTIVE_MIN_SCORE = "0";
 
-    const smokeItems = golden.filter((g) => SMOKE_IDS.has(g.id));
-    expect(smokeItems.length).toBe(SMOKE_IDS.size);
+    const retrievalItems = golden.filter((g) => g.expectCitationSource);
+    expect(retrievalItems.length).toBeGreaterThanOrEqual(20);
 
-    for (const item of smokeItems) {
+    for (const item of retrievalItems) {
       const hit = hitFor(item);
       const result = await hybridSearch(
         {
           query: item.query,
-          workspaceId: "ws-golden-smoke",
+          workspaceId: "ws-golden-nightly",
           corpus: item.corpus,
           limit: 3,
         },
@@ -99,10 +79,10 @@ describe("Phase 3 GOLDEN-01 CI smoke (deterministic)", () => {
     }
   });
 
-  it("intent golden g23–g25: resolveIntentPlan primary + retrieverTools (D-09)", async () => {
+  it("runs intent golden g23–g25 for every nightly build", async () => {
     const intentIds = new Set(["g23", "g24", "g25"]);
     const intentItems = golden.filter((g) => intentIds.has(g.id));
-    expect(intentItems.length).toBe(3);
+    expect(intentItems).toHaveLength(3);
 
     for (const item of intentItems) {
       const probeKb = vi.fn().mockResolvedValue({
@@ -113,7 +93,6 @@ describe("Phase 3 GOLDEN-01 CI smoke (deterministic)", () => {
 
       const { plan } = await resolveIntentPlan(item.query, { probeKb });
       expect(plan.primary).toBe(item.expectIntentPrimary);
-
       if (item.expectTool) {
         expect(plan.retrieverTools).toContain(item.expectTool);
       } else {
