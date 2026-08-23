@@ -70,6 +70,21 @@ export {
   ALLOWED_LABELS,
 } from "./rag/graph-cypher-allowlist";
 export {
+  EntityTypeEnum,
+  RelationTypeEnum,
+  ChunkGraphSchema,
+  type EntityType,
+  type RelationType,
+  type ChunkGraph,
+} from "./graph/extract-schema";
+export { normalizeEntityName } from "./graph/normalize-entity";
+export {
+  extractGraphFromChunk,
+  extractGraphFromChunks,
+  type ExtractedEntity,
+  type ExtractedRelation,
+} from "./graph/extract-entities";
+export {
   graphRagQuery,
   seedMilkTeaSubgraph,
   createSeededMilkTeaFixtureExecutor,
