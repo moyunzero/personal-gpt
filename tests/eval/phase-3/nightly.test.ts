@@ -23,9 +23,7 @@ type GoldenItem = {
 };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const golden = JSON.parse(
-  readFileSync(join(__dirname, "golden.json"), "utf8"),
-) as GoldenItem[];
+const golden = JSON.parse(readFileSync(join(__dirname, "golden.json"), "utf8")) as GoldenItem[];
 
 function mockStore(hits: RetrievedChunk[]): VectorStore {
   return {

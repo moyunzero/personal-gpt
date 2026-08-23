@@ -93,9 +93,8 @@ describe("Phase 3 regression #3: memory recall session A→B (MEM-02)", () => {
 
   it("Chat and Agent request shapes preserve userKey (contract)", async () => {
     const { parseUserKey } = await import("../../../apps/web/lib/chat/memory-context");
-    const { parseAgentChatBody } = await import(
-      "../../../apps/agent-service/src/agent/agent.service"
-    );
+    const { parseAgentChatBody } =
+      await import("../../../apps/agent-service/src/agent/agent.service");
 
     expect(parseUserKey("uk-1")).toBe("uk-1");
     expect(parseUserKey("bad key!")).toBeNull();

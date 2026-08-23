@@ -90,10 +90,7 @@ describe("es dual-write fail-closed (D-10)", () => {
   it("upsertChunksToEs rejects mixed workspaceId batches", async () => {
     await expect(
       upsertChunksToEs(
-        [
-          sampleChunk,
-          { ...sampleChunk, workspaceId: "00000000-0000-4000-8000-000000000002" },
-        ],
+        [sampleChunk, { ...sampleChunk, workspaceId: "00000000-0000-4000-8000-000000000002" }],
         "user",
       ),
     ).rejects.toThrow(/workspaceId/i);

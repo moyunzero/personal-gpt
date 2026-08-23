@@ -9,7 +9,9 @@ const invokeKbSearchMock = vi.fn();
 
 vi.mock("../../../apps/agent-service/src/tools/graph-search.tool", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../../apps/agent-service/src/tools/graph-search.tool")>();
+    await importOriginal<
+      typeof import("../../../apps/agent-service/src/tools/graph-search.tool")
+    >();
   return {
     ...actual,
     invokeGraphSearch: (...args: unknown[]) => invokeGraphSearchMock(...args),
