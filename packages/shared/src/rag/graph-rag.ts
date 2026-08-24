@@ -296,7 +296,8 @@ async function defaultExecutor(
 }
 
 function pathAllowed(path: GraphPathTrace, documentIds?: string[]): boolean {
-  if (!documentIds?.length) return true;
+  if (documentIds === undefined) return true;
+  if (documentIds.length === 0) return false;
   const allowed = new Set(documentIds);
   for (const node of path.nodes) {
     const docId = node.properties.documentId;
@@ -308,7 +309,8 @@ function pathAllowed(path: GraphPathTrace, documentIds?: string[]): boolean {
 }
 
 function filterPaths(paths: GraphPathTrace[], documentIds?: string[]): GraphPathTrace[] {
-  if (!documentIds?.length) return paths;
+  if (documentIds === undefined) return paths;
+  if (documentIds.length === 0) return [];
   return paths.filter((path) => pathAllowed(path, documentIds));
 }
 

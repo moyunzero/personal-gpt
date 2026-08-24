@@ -68,6 +68,9 @@ export class AgentController {
       // SSE 已写出后勿再交给 Nest 异常过滤器（会二次写头 / 破坏流）
       if (res.headersSent) {
         console.error("[agent] streamChat failed after headers sent", err);
+        if (!res.writableEnded) {
+          res.end();
+        }
         return;
       }
       throw err;

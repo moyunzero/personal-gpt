@@ -383,10 +383,11 @@ export function buildPrefetchNode(plan: IntentPlan) {
     const text = lastUserText(state.messages);
     const workspaceId = String(config?.configurable?.workspaceId ?? "default");
     const allowedRaw = config?.configurable?.allowedDocumentIds;
-    const documentIds =
-      Array.isArray(allowedRaw) && allowedRaw.length
-        ? allowedRaw.filter((id): id is string => typeof id === "string" && id.trim()).map((id) => id.trim())
-        : undefined;
+    const documentIds = Array.isArray(allowedRaw)
+      ? allowedRaw
+          .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+          .map((id) => id.trim())
+      : undefined;
     const raceOpts = {
       signal: config?.configurable?.abortSignal as AbortSignal | undefined,
     };

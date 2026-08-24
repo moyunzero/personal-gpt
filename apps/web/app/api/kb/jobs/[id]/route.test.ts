@@ -1,23 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const getIngestJobByIdMock = vi.fn();
+const getIngestJobForContextMock = vi.fn();
 
 vi.mock("@/lib/kb/ingest-jobs.service", () => ({
-  getIngestJobById: (...args: unknown[]) => getIngestJobByIdMock(...args),
+  getIngestJobForContext: (...args: unknown[]) => getIngestJobForContextMock(...args),
+}));
+
+vi.mock("@/lib/kb/route-guards", () => ({
+  runKbGuards: (_req: Request, handler: () => Promise<Response>) => handler(),
+}));
+
+vi.mock("@/lib/auth/session", () => ({
+  requireSession: vi.fn(async () => ({
+    session: { user: { id: "user-1" } },
+  })),
+}));
+
+vi.mock("@/lib/kb/request-context", () => ({
+  documentsContextFromSession: vi.fn(async () => ({
+    userId: "user-1",
+    workspaceId: "ws-1",
+  })),
 }));
 
 import { GET } from "./route";
 
 describe("GET /api/kb/jobs/:id", () => {
   beforeEach(() => {
-    getIngestJobByIdMock.mockReset();
+    getIngestJobForContextMock.mockReset();
   });
 
   it("returns job progress JSON for existing job", async () => {
     const createdAt = new Date("2026-07-01T10:00:00.000Z");
     const updatedAt = new Date("2026-07-01T10:05:00.000Z");
 
-    getIngestJobByIdMock.mockResolvedValue({
+    getIngestJobForContextMock.mockResolvedValue({
       id: "job-42",
       documentId: "doc-42",
       status: "processing",
@@ -32,7 +49,10 @@ describe("GET /api/kb/jobs/:id", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(getIngestJobByIdMock).toHaveBeenCalledWith("job-42");
+    expect(getIngestJobForContextMock).toHaveBeenCalledWith("job-42", {
+      userId: "user-1",
+      workspaceId: "ws-1",
+    });
 
     const body = await response.json();
     expect(body).toEqual({
@@ -47,7 +67,7 @@ describe("GET /api/kb/jobs/:id", () => {
   });
 
   it("returns 404 when job does not exist", async () => {
-    getIngestJobByIdMock.mockResolvedValue(null);
+    getIngestJobForContextMock.mockResolvedValue(null);
 
     const response = await GET(new Request("http://localhost/api/kb/jobs/missing"), {
       params: Promise.resolve({ id: "missing" }),

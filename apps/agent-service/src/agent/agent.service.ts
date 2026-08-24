@@ -505,11 +505,15 @@ async function prefetchForSingleSpecialist(input: {
   kbSearchPrefetched?: boolean;
 }): Promise<SystemMessage[]> {
   const seeds: SystemMessage[] = [];
-  const documentIds = input.allowedDocumentIds?.length ? input.allowedDocumentIds : undefined;
+  const documentIds = input.allowedDocumentIds;
   let kbSearchExecuted = input.kbSearchPrefetched ?? false;
   if (input.plan.retrieverTools.includes("graph_search")) {
     const graphOut = await raceExternalCall(
-      invokeGraphSearch({ question: input.userText, documentIds }),
+      invokeGraphSearch({
+        question: input.userText,
+        workspaceId: input.workspaceId,
+        documentIds,
+      }),
       { signal: input.abortSignal },
     );
     if (input.abortSignal?.aborted) return seeds;
@@ -1243,7 +1247,7 @@ export class AgentService {
       ? resolveWorkspaceId(headerWorkspace)
       : parsed.workspaceId;
     const allowedDocumentIds = retrievalCtx?.allowedDocumentIds ?? [];
-    const documentIds = allowedDocumentIds.length ? allowedDocumentIds : undefined;
+    const documentIds = allowedDocumentIds;
     const lcMessages = await toBaseMessages(parsed.messages);
     const userText = lastUserText(lcMessages);
     const routerConfig = readIntentRouterConfig();

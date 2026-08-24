@@ -84,8 +84,7 @@ export async function retrieveKb(params: RetrieveKbParams): Promise<KbRetrieveRe
   const corpus = params.corpus ?? "user";
   const minSimilarity = resolveKbMinSimilarity(params.minSimilarity);
 
-  const documentIds =
-    params.documentIds?.length ? params.documentIds : undefined;
+  const documentIds = params.documentIds;
 
   const raw = await hybridSearch(
     {

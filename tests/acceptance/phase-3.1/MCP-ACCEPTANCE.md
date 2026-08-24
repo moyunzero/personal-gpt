@@ -1,6 +1,6 @@
 # Phase 3.1 — Intent Routing 浏览器/MCP 验收（含截图）
 
-**When:** 2026-08-22（KB synthesis 复验 18:47 UTC+8 · UI MCP 19:05–19:09 · 全量 Ollama UAT 23:15 UTC+8）  
+**When:** 2026-08-23（全量 Ollama UAT 12:08–12:20 UTC+8 · MCP 复验 12:24–12:30）  
 **Tools:** Playwright MCP + `run-browser-uat.mjs` + `run-full-uat.mjs`  
 **Base:** http://localhost:3000 · agent http://127.0.0.1:3002/health
 
@@ -78,15 +78,18 @@
 
 ## Test 5 — 全量 Ollama UAT（API + Playwright UI）
 
-**Report:** [FULL-UAT-REPORT.html](./FULL-UAT-REPORT.html) · **11/11 PASS** · 2026-08-22T15:15:13Z
+**Report:** [FULL-UAT-REPORT.html](./FULL-UAT-REPORT.html) · [FULL-UAT-REPORT-2026-08-23.html](./FULL-UAT-REPORT-2026-08-23.html) · **15/15 PASS** · 2026-08-23
 
 | 环节      | 步骤概要                          | 产物                |
 | --------- | --------------------------------- | ------------------- |
 | infra     | Web + Agent health                | —                   |
 | kb-api    | GET `/api/kb/documents`           | —                   |
 | agent-api | graph_relation + kb_doc synthesis | `A/B-*-stream.txt`  |
-| chat-api  | `data-graph-paths`                | `C-chat-stream.txt` |
+| chat-api  | `data-graph-paths` (seed+Neo4j)   | `C-chat-stream.txt` |
 | ui        | 首页 / Chat / Agent / KB 页       | `R01`–`R05.png`     |
+| ui-mcp    | Cursor Playwright MCP             | `M01`/`M02`/`M05`   |
+
+> **2026-08-23 复验：** chat-api 首次失败因 Web 进程未注入 `NEO4J_PASSWORD`；重启 Web + `corpus=seed` 后 PASS。全程 Ollama 避免 Groq 限流。
 
 ## 总评
 
@@ -97,5 +100,5 @@
 | Chat graph path SSE + UI cards         | **PASS**（Test 2）                                   |
 | Browser composer Send                  | **PASS**（输入文字后可发送；空输入 disabled 为预期） |
 | Cursor Browser MCP UI（Test 4）        | **PASS**                                             |
-| 全量 Ollama UAT（Test 5）              | **PASS**（11/11）                                    |
-| Phase 3.1 UAT overall                  | **PASS**（API + UI MCP + 全量报告）                  |
+| 全量 Ollama UAT（Test 5）              | **PASS**（15/15）                                    |
+| Phase 3.1 UAT overall                  | **PASS**（API + UI Playwright + MCP + HTML 报告）    |

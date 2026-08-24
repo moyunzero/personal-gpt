@@ -7,18 +7,27 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
-  # Full prom-client metrics wired in 04-06 (D-52); targets registered for compose readiness.
+  # Full prom-client metrics wired in 04-06 (D-52); bearer matches METRICS_SCRAPE_TOKEN in compose.
   - job_name: web
-    metrics_path: /metrics
+    metrics_path: /api/metrics
+    authorization:
+      type: Bearer
+      credentials: pgpt_metrics_dev
     static_configs:
       - targets: ["web:3000"]
 
   - job_name: agent-service
     metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials: pgpt_metrics_dev
     static_configs:
       - targets: ["agent-service:3002"]
 
   - job_name: ingest-worker
     metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials: pgpt_metrics_dev
     static_configs:
       - targets: ["ingest-worker:3001"]

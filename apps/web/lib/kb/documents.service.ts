@@ -489,6 +489,6 @@ export async function reindexDocument(
 }
 
 /** 按 ingest_job id 查 job（SSE 鉴权：必须属于 default workspace） */
-export { getIngestJobById } from "./ingest-jobs.service";
+export { getIngestJobForContext } from "./ingest-jobs.service";
 
 export { parseTagsParam };

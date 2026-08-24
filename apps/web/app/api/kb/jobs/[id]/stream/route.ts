@@ -1,18 +1,24 @@
-import { getIngestJobById } from "@/lib/kb/ingest-jobs.service";
+import { requireSession } from "@/lib/auth/session";
+import { getIngestJobForContext } from "@/lib/kb/ingest-jobs.service";
 import { getIngestQueueEvents } from "@/lib/kb/queue";
+import { documentsContextFromSession } from "@/lib/kb/request-context";
 import { runKbGuards } from "@/lib/kb/route-guards";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * GET /api/kb/jobs/:id/stream — SSE 推送 BullMQ 导入进度（D-11）。
- * 校验 ingest_job 属于 default workspace，防 job id 枚举（T-01-13）。
+ * 校验 job 属于当前 session workspace 且文档可读。
  */
 export async function GET(req: Request, context: RouteContext) {
   return runKbGuards(req, async () => {
+    const authResult = await requireSession();
+    if (authResult.error) return authResult.error;
+
+    const ctx = await documentsContextFromSession(authResult.session);
     const { id: jobId } = await context.params;
 
-    const ingestJob = await getIngestJobById(jobId);
+    const ingestJob = await getIngestJobForContext(jobId, ctx);
     if (!ingestJob?.bullJobId) {
       return new Response(JSON.stringify({ error: "任务不存在" }), {
         status: 404,

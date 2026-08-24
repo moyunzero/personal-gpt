@@ -96,7 +96,7 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
     workspaceId: input.workspaceId,
     minSimilarity,
     hybridDeps: input.hybridDeps,
-    documentIds: input.documentIds?.length ? input.documentIds : undefined,
+    documentIds: input.documentIds,
   };
 
   try {
@@ -167,7 +167,8 @@ function allowedDocumentIdsFromConfig(config?: RunnableConfig): string[] | undef
       .map((id) => id.trim());
   }
   const fromCtx = getKbSearchContextForThread(threadIdFromConfig(config)).allowedDocumentIds;
-  return fromCtx?.length ? fromCtx : undefined;
+  if (fromCtx !== undefined) return fromCtx;
+  return undefined;
 }
 
 export const kbSearchTool = tool(

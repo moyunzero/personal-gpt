@@ -84,7 +84,7 @@ export async function resolveIntentPlanForAgent(input: {
 }): Promise<{ plan: IntentPlan; layers: RouterLayer[] }> {
   const config = readIntentRouterConfig();
   const neo4jOk = await probeNeo4jAvailable();
-  const documentIds = input.allowedDocumentIds?.length ? input.allowedDocumentIds : undefined;
+  const documentIds = input.allowedDocumentIds;
 
   return resolveIntentPlan(input.query, {
     probeKb: async (q: string) => {

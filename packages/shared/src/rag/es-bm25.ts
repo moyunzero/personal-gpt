@@ -131,6 +131,9 @@ function mapHit(hit: {
 
 /** BM25 search via structured client query (no string-concat injection). */
 export async function esBm25Search(params: EsBm25SearchParams): Promise<RetrievedChunk[]> {
+  if (params.documentIds !== undefined && params.documentIds.length === 0) {
+    return [];
+  }
   const corpus = params.corpus ?? "user";
   const index = params.index ?? resolveCorpusTargets(corpus).esIndex;
   const limit = params.limit ?? 10;

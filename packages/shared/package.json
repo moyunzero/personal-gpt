@@ -84,6 +84,10 @@
     "./routing": {
       "types": "./src/routing/index.ts",
       "default": "./dist/routing/index.js"
+    },
+    "./metrics-auth": {
+      "types": "./src/metrics-auth.ts",
+      "default": "./dist/metrics-auth.js"
     }
   },
   "scripts": {

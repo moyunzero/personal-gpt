@@ -201,6 +201,9 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
     },
 
     async search(params: VectorSearchParams) {
+      if (params.documentIds !== undefined && params.documentIds.length === 0) {
+        return [];
+      }
       assertSearchWorkspaceId(params.workspaceId);
       await ensureCollection();
 

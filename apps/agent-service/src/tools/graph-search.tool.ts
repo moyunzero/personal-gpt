@@ -17,6 +17,7 @@ import {
   type ResolvedGraphEntity,
 } from "@personal-gpt/shared";
 
+import { getKbSearchContextForThread } from "./kb-search-context";
 import { graphHitTotal, graphMissTotal } from "../metrics";
 
 export type GraphSearchInput = {
@@ -25,7 +26,7 @@ export type GraphSearchInput = {
   resolvedEntity?: ResolvedGraphEntity;
   /** 测试注入；生产走 Neo4j read session */
   executor?: GraphQueryExecutor;
-  /** Optional document filter stub for Wave 1 PROD-03 (04-05) */
+  /** Server-injected ACL allowlist; empty = deny-all */
   documentIds?: string[];
 };
 
@@ -37,7 +38,7 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
 
   try {
     let resolvedEntity = input.resolvedEntity;
-    const documentIds = input.documentIds?.length ? input.documentIds : undefined;
+    const documentIds = input.documentIds;
     if (!resolvedEntity && input.workspaceId) {
       const resolved = await resolveGraphEntity(question, input.workspaceId, {
         allowedDocumentIds: documentIds,
@@ -84,39 +85,44 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
   }
 }
 
+function threadIdFromConfig(config?: RunnableConfig): string | undefined {
+  const runId = config?.configurable?.run_id;
+  if (typeof runId === "string" && runId.trim()) return runId.trim();
+  const raw = config?.configurable?.thread_id;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : undefined;
+}
+
+function workspaceFromConfig(config?: RunnableConfig): string | undefined {
+  const fromCfg = config?.configurable?.workspaceId;
+  if (typeof fromCfg === "string" && fromCfg.trim()) return fromCfg.trim();
+  return getKbSearchContextForThread(threadIdFromConfig(config)).workspaceId;
+}
+
 function allowedDocumentIdsFromConfig(config?: RunnableConfig): string[] | undefined {
   const fromCfg = config?.configurable?.allowedDocumentIds;
-  if (!Array.isArray(fromCfg)) return undefined;
-  const ids = fromCfg
-    .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
-    .map((id) => id.trim());
-  return ids.length ? ids : undefined;
+  if (Array.isArray(fromCfg)) {
+    return fromCfg
+      .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+      .map((id) => id.trim());
+  }
+  const fromCtx = getKbSearchContextForThread(threadIdFromConfig(config)).allowedDocumentIds;
+  if (fromCtx !== undefined) return fromCtx;
+  return undefined;
 }
 
 export const graphSearchTool = tool(
-  async (
-    input: { question: string; workspaceId?: string; documentIds?: string[] },
-    config?: RunnableConfig,
-  ) => {
-    const fromConfig = allowedDocumentIdsFromConfig(config);
-    const documentIds = input.documentIds?.length ? input.documentIds : fromConfig;
-    return invokeGraphSearch({
+  async (input: { question: string }, config?: RunnableConfig) =>
+    invokeGraphSearch({
       question: input.question,
-      workspaceId: input.workspaceId,
-      documentIds,
-    });
-  },
+      workspaceId: workspaceFromConfig(config),
+      documentIds: allowedDocumentIdsFromConfig(config),
+    }),
   {
     name: "graph_search",
     description:
       "查询窄域知识图谱中的实体关系路径（节点 id + 关系类型可追溯）。适用于「A 包含什么 / A 与 B 的关系 / 配料工艺」类问题；非图谱问题请用 kb_search。",
     schema: z.object({
       question: z.string().min(1).describe("实体关系问题，例如：珍珠奶茶的配料用了什么工艺？"),
-      workspaceId: z.string().optional().describe("Workspace scope for user graph entities"),
-      documentIds: z
-        .array(z.string())
-        .optional()
-        .describe("Optional document filter stub (Wave 1 ACL; empty = no filter)"),
     }),
   },
 );

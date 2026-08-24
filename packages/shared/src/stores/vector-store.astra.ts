@@ -134,6 +134,9 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
     },
 
     async search(params: VectorSearchParams) {
+      if (params.documentIds !== undefined && params.documentIds.length === 0) {
+        return [];
+      }
       assertSearchWorkspaceId(params.workspaceId);
 
       const limit = params.limit ?? 5;

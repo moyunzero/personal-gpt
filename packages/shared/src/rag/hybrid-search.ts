@@ -50,7 +50,8 @@ function filterByDocumentIds(
   hits: RetrievedChunk[],
   documentIds?: string[],
 ): RetrievedChunk[] {
-  if (!documentIds?.length) return hits;
+  if (documentIds === undefined) return hits;
+  if (documentIds.length === 0) return [];
   const allowed = new Set(documentIds);
   return hits.filter((hit) => hit.documentId && allowed.has(hit.documentId));
 }
@@ -59,6 +60,9 @@ async function hybridSearchOnce(
   params: HybridSearchParams,
   deps: HybridSearchDeps,
 ): Promise<RetrievedChunk[]> {
+  if (params.documentIds !== undefined && params.documentIds.length === 0) {
+    return [];
+  }
   const corpus = params.corpus ?? "user";
   const limit = params.limit ?? DEFAULT_LIMIT;
   const candidateLimit = resolveCandidateLimit(limit);
