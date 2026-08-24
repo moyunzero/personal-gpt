@@ -17,7 +17,7 @@ export async function POST(req: Request, context: RouteContext) {
     const authResult = await requireSession();
     if (authResult.error) return authResult.error;
 
-    const ctx = documentsContextFromSession(authResult.session);
+    const ctx = await documentsContextFromSession(authResult.session);
 
     try {
       const { id } = await context.params;

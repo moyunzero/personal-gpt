@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     const authResult = await requireSession();
     if (authResult.error) return authResult.error;
 
-    const ctx = documentsContextFromSession(authResult.session);
+    const ctx = await documentsContextFromSession(authResult.session);
 
     try {
       const { searchParams } = new URL(req.url);
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     const authResult = await requireSession();
     if (authResult.error) return authResult.error;
 
-    const ctx = documentsContextFromSession(authResult.session);
+    const ctx = await documentsContextFromSession(authResult.session);
 
     try {
       const formData = await req.formData();

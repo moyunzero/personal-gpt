@@ -279,7 +279,7 @@ export async function POST(req: Request) {
 
   const userContent = extractLastUserContentFromMessages(parsedBody.messages);
 
-  let upstreamBody = upstreamRes.body;
+  let upstreamBody: ReadableStream<Uint8Array> = upstreamRes.body;
   if (chatSession) {
     upstreamBody = tapAgentStreamForPersistence(upstreamBody, {
       session: chatSession,

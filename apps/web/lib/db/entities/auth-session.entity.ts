@@ -22,7 +22,7 @@ export class AuthSessionEntity {
   @Column({ type: "varchar", transformer: dateTransformer })
   expires!: string;
 
-  @ManyToOne(() => UserEntity, (user) => user.sessions, { onDelete: "CASCADE" })
+  @ManyToOne(() => UserEntity, { onDelete: "CASCADE" })
   @JoinColumn({ name: "userId" })
   user!: UserEntity;
 }

@@ -37,6 +37,10 @@ export async function bootstrapPersonalWorkspace(
   });
   await memberRepo.save(membership);
 
-  await userRepo.update({ id: user.id }, { activeWorkspaceId: workspaceId });
+  try {
+    await userRepo.update({ id: user.id }, { activeWorkspaceId: workspaceId });
+  } catch {
+    // Auth.js adapter may drop users.active_workspace_id; membership is enough.
+  }
   return workspaceId;
 }

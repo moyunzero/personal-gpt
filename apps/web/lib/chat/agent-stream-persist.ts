@@ -63,25 +63,30 @@ export function tapAgentStreamForPersistence(
   const assistantText = { value: "" };
   const log = logger.child({ scope: "agent-stream-persist" });
 
-  const flushPersist = async () => {
+  const flushPersist = () => {
     const ok = opts.upstreamStatus >= 200 && opts.upstreamStatus < 300;
     if (!ok || !assistantText.value.trim() || !opts.userContent.trim()) return;
-    try {
-      await Promise.race([
-        persistChatTurn({
-          session: opts.session,
-          userContent: opts.userContent,
-          assistantContent: assistantText.value,
-        }),
-        new Promise<void>((resolve) => {
-          const timer = setTimeout(resolve, PERSIST_TIMEOUT_MS);
-          timer.unref?.();
-        }),
-      ]);
-      opts.onPersisted?.();
-    } catch (err) {
-      log.warn("persistChatTurn failed (ignored)", { err });
-    }
+    void (async () => {
+      try {
+        await Promise.race([
+          persistChatTurn({
+            session: opts.session,
+            userContent: opts.userContent,
+            assistantContent: assistantText.value,
+          }),
+          new Promise<never>((_, reject) => {
+            const timer = setTimeout(
+              () => reject(new Error("persist timeout")),
+              PERSIST_TIMEOUT_MS,
+            );
+            timer.unref?.();
+          }),
+        ]);
+        opts.onPersisted?.();
+      } catch (err) {
+        log.warn("persistChatTurn failed or timed out (ignored)", { err });
+      }
+    })();
   };
 
   return new ReadableStream<Uint8Array>({
@@ -91,7 +96,7 @@ export function tapAgentStreamForPersistence(
         if (done) {
           if (lineBuffer) processSseLine(lineBuffer, assistantText);
           lineBuffer = "";
-          await flushPersist();
+          flushPersist();
           controller.close();
           return;
         }

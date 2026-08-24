@@ -45,7 +45,7 @@ export class AuthAccountEntity {
   @Column({ type: "varchar", nullable: true })
   session_state!: string | null;
 
-  @ManyToOne(() => UserEntity, (user) => user.accounts, { onDelete: "CASCADE" })
+  @ManyToOne(() => UserEntity, { onDelete: "CASCADE" })
   @JoinColumn({ name: "userId" })
   user!: UserEntity;
 }

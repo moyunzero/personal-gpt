@@ -13,7 +13,7 @@ export async function resolveRetrievalContext(
   session: AppAuthSession,
 ): Promise<RetrievalContext> {
   const userId = getSessionUserId(session);
-  const workspaceId = getActiveWorkspaceId(session);
+  const workspaceId = await getActiveWorkspaceId(session);
   const allowedDocumentIds = await resolveAllowedDocumentIds(userId, workspaceId);
   return { userId, workspaceId, allowedDocumentIds };
 }

@@ -110,6 +110,38 @@ export async function deleteChatSession(
 }
 
 /** D-23: persist turn after stream completes */
+export async function persistUserMessage(params: {
+  session: ChatSessionEntity;
+  userContent: string;
+}): Promise<void> {
+  const trimmed = params.userContent.trim();
+  if (!trimmed) return;
+
+  const ds = await getDataSource();
+  const messageRepo = ds.getRepository(ChatMessageEntity);
+  const sessionRepo = ds.getRepository(ChatSessionEntity);
+
+  const existing = await messageRepo.find({
+    where: { sessionId: params.session.id },
+    order: { createdAt: "DESC" },
+    take: 1,
+  });
+  const last = existing[0];
+  if (last?.role === "user" && last.content === trimmed) return;
+
+  await messageRepo.insert({
+    sessionId: params.session.id,
+    role: "user",
+    content: trimmed,
+  });
+
+  const title =
+    !params.session.title || params.session.title === "New chat"
+      ? titleFromContent(trimmed)
+      : params.session.title;
+  await sessionRepo.update(params.session.id, { title, updatedAt: new Date() });
+}
+
 export async function persistChatTurn(params: {
   session: ChatSessionEntity;
   userContent: string;
@@ -119,24 +151,41 @@ export async function persistChatTurn(params: {
   const messageRepo = ds.getRepository(ChatMessageEntity);
   const sessionRepo = ds.getRepository(ChatSessionEntity);
 
-  await messageRepo.save([
-    messageRepo.create({
+  const trimmedUser = params.userContent.trim();
+  const trimmedAssistant = params.assistantContent.trim();
+  if (!trimmedAssistant) return;
+
+  const recent = await messageRepo.find({
+    where: { sessionId: params.session.id },
+    order: { createdAt: "DESC" },
+    take: 2,
+  });
+  const hasUser =
+    recent.some((m) => m.role === "user" && m.content === trimmedUser) ||
+    (recent[0]?.role === "user" && recent[0].content === trimmedUser);
+
+  if (trimmedUser && !hasUser) {
+    await messageRepo.insert({
       sessionId: params.session.id,
       role: "user",
-      content: params.userContent,
-    }),
-    messageRepo.create({
+      content: trimmedUser,
+    });
+  }
+
+  const last = recent[0];
+  if (!(last?.role === "assistant" && last.content === trimmedAssistant)) {
+    await messageRepo.insert({
       sessionId: params.session.id,
       role: "assistant",
-      content: params.assistantContent,
-    }),
-  ]);
-
-  if (!params.session.title || params.session.title === "New chat") {
-    params.session.title = titleFromContent(params.userContent);
+      content: trimmedAssistant,
+    });
   }
-  params.session.updatedAt = new Date();
-  await sessionRepo.save(params.session);
+
+  const title =
+    !params.session.title || params.session.title === "New chat"
+      ? titleFromContent(trimmedUser || trimmedAssistant)
+      : params.session.title;
+  await sessionRepo.update(params.session.id, { title, updatedAt: new Date() });
 }
 
 export async function getSessionMessages(sessionId: string): Promise<ChatMessageEntity[]> {

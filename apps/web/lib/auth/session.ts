@@ -25,9 +25,21 @@ export async function requireSession(): Promise<SessionResult> {
   return { session: session as AppAuthSession };
 }
 
-/** Active workspace from session DB — never trust client input (D-20). */
-export function getActiveWorkspaceId(session: AppAuthSession): string {
-  const workspaceId = session.user.activeWorkspaceId?.trim();
+/** Active workspace from session — fall back to membership if missing (D-20). */
+export async function getActiveWorkspaceId(session: AppAuthSession): Promise<string> {
+  const fromSession = session.user.activeWorkspaceId?.trim();
+  if (fromSession) return fromSession;
+
+  const { getDataSource } = await import("@/lib/db/get-data-source");
+  const ds = await getDataSource();
+  const rows = await ds.query(
+    `SELECT workspace_id FROM workspace_members
+     WHERE user_id = $1
+     ORDER BY created_at ASC
+     LIMIT 1`,
+    [session.user.id],
+  );
+  const workspaceId = typeof rows?.[0]?.workspace_id === "string" ? rows[0].workspace_id : "";
   if (!workspaceId) {
     throw new Error("Session missing activeWorkspaceId");
   }

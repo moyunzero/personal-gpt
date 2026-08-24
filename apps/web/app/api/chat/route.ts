@@ -7,6 +7,7 @@ import { requireSession } from "@/lib/auth/session";
 import {
   ensureChatSession,
   persistChatTurn,
+  persistUserMessage,
   ThreadOwnershipError,
 } from "@/lib/chat/chat-session.service";
 import { createThreadId } from "@/lib/chat/thread-id";
@@ -291,6 +292,12 @@ export async function POST(req: Request) {
     const systemPrompt = memoryBlock
       ? `${systemPromptBase}${graphBlock}\n\n${memoryBlock}`
       : `${systemPromptBase}${graphBlock}`;
+
+    try {
+      await persistUserMessage({ session: chatSession, userContent: lastContent });
+    } catch (err) {
+      log.warn("persistUserMessage failed (ignored)", { err });
+    }
 
     const stream = createChatStream({
       systemPrompt,

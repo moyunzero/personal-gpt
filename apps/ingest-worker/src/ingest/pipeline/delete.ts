@@ -34,9 +34,11 @@ export async function deleteDocument(
   if (options.dataSource) {
     const store = createEntityCatalogStore(options.dataSource);
     tasks.push(
-      deleteCatalogForDocument(workspaceId, documentId, store).catch((err) => {
-        errors.push(err instanceof Error ? err : new Error(String(err)));
-      }),
+      deleteCatalogForDocument(workspaceId, documentId, store)
+        .then(() => undefined)
+        .catch((err) => {
+          errors.push(err instanceof Error ? err : new Error(String(err)));
+        }),
     );
   }
 

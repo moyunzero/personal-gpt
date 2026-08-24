@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid role" }, { status: 400 });
   }
 
-  const workspaceId = getActiveWorkspaceId(authResult.session);
+  const workspaceId = await getActiveWorkspaceId(authResult.session);
   const invite = await createWorkspaceInvite({
     workspaceId,
     inviterUserId: authResult.session.user.id,
