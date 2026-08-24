@@ -57,3 +57,15 @@ export function rotateThreadId(mode: ChatMode): string {
   }
   return next;
 }
+
+/** 写入指定 thread_id（恢复历史会话）。 */
+export function setThreadId(mode: ChatMode, threadId: string): void {
+  if (typeof window === "undefined") return;
+  const trimmed = threadId.trim();
+  if (!SAFE_THREAD_ID_PATTERN.test(trimmed)) return;
+  try {
+    window.localStorage.setItem(storageKey(mode), trimmed);
+  } catch {
+    /* ignore quota / private mode */
+  }
+}

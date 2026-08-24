@@ -24,7 +24,7 @@ export default function CorpusToggle({ value, onChange, disabled = false }: Corp
         aria-label="检索种子知识库"
         onChange={(e) => onChange(e.target.checked ? "seed" : "user")}
       />
-      <span className="corpus-toggle-label">种子库</span>
+      <span className="corpus-toggle-label">同时检索种子库</span>
     </label>
   );
 }

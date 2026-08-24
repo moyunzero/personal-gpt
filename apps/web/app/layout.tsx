@@ -1,23 +1,21 @@
 import type { Metadata } from "next";
-import { EB_Garamond, Inter, JetBrains_Mono } from "next/font/google";
+import { Instrument_Serif, JetBrains_Mono, Outfit } from "next/font/google";
 import "./globals.css";
 
 /**
- * 字体策略（参照 DESIGN.md › typography）：
- * - 品牌指定 Copernicus / StyreneB 为专有授权字体，无法公开自托管，
- *   按 DESIGN.md "Note on Font Substitutes" 用 EB Garamond / Inter 作开源替代。
- * - JetBrains Mono 用于代码块（与 DESIGN.md typography.code 一致）。
- * - 三个字体均以 CSS 变量注入 :root，globals.css 通过 var(--font-*) 读取。
+ * 字体：Instrument Serif（展示）+ Outfit（UI）对齐 design/chat-ui-mock-v1；
+ * JetBrains Mono 用于代码块。
  */
-const serif = EB_Garamond({
+const serif = Instrument_Serif({
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: "400",
   variable: "--font-serif",
   display: "swap",
 });
 
-const sans = Inter({
+const sans = Outfit({
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
   variable: "--font-sans",
   display: "swap",
 });

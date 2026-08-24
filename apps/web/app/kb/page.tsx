@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import AppHeader from "../components/AppHeader";
+import AppShell from "../components/AppShell";
 import KbCategoryCombobox from "../components/KbCategoryCombobox";
 import KbDocumentList, { type KbDocumentItem } from "../components/KbDocumentList";
 import KbUploadZone from "../components/KbUploadZone";
@@ -68,6 +69,7 @@ export default function KbPage() {
   };
 
   return (
+    <AppShell activePage="kb">
     <main className="kb-page">
       <AppHeader activePage="kb" />
 
@@ -126,5 +128,6 @@ export default function KbPage() {
         <KbDocumentList items={items} categories={categories} onItemsChange={setItems} />
       </div>
     </main>
+    </AppShell>
   );
 }
