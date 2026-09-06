@@ -210,9 +210,7 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
       const limit = params.limit ?? 5;
       let filter = `workspaceId == "${escapeMilvusString(params.workspaceId)}"`;
       if (params.documentIds?.length) {
-        const ids = params.documentIds
-          .map((id) => `"${escapeMilvusString(id)}"`)
-          .join(", ");
+        const ids = params.documentIds.map((id) => `"${escapeMilvusString(id)}"`).join(", ");
         filter += ` && documentId in [${ids}]`;
       }
 

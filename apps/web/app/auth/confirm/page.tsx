@@ -15,11 +15,7 @@ function first(value: string | string[] | undefined): string {
   return value ?? "";
 }
 
-export default async function AuthConfirmPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+export default async function AuthConfirmPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const token = first(params.token);
   const email = first(params.email);
@@ -28,8 +24,9 @@ export default async function AuthConfirmPage({
   const proto =
     h.get("x-forwarded-proto") ??
     (host?.includes("localhost") || host?.startsWith("127.0.0.1") ? "http" : "https");
-  const origin =
-    host?.trim() ? `${proto}://${host.trim()}` : process.env.AUTH_URL?.trim() || "http://localhost:3000";
+  const origin = host?.trim()
+    ? `${proto}://${host.trim()}`
+    : process.env.AUTH_URL?.trim() || "http://localhost:3000";
   const callbackUrl = safeCallbackUrl(first(params.callbackUrl) || "/", origin);
   const missing = !token || !email;
 

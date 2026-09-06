@@ -6,15 +6,17 @@ import {
   type EntityCatalogStore,
 } from "./entity-resolve";
 
-function createMockStore(rows: Array<{
-  id: string;
-  workspaceId: string;
-  normalizedName: string;
-  entityType: "product";
-  displayName: string;
-  neo4jNodeId: string;
-  sourceDocumentId: string;
-}>): EntityCatalogStore {
+function createMockStore(
+  rows: Array<{
+    id: string;
+    workspaceId: string;
+    normalizedName: string;
+    entityType: "product";
+    displayName: string;
+    neo4jNodeId: string;
+    sourceDocumentId: string;
+  }>,
+): EntityCatalogStore {
   return {
     findByWorkspace: vi.fn(async (workspaceId: string) =>
       rows.filter((row) => row.workspaceId === workspaceId),

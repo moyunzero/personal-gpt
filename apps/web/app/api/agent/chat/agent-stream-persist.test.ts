@@ -36,8 +36,7 @@ const SESSION = {
 } as ChatSessionEntity;
 
 function sseStream(events: unknown[]): ReadableStream<Uint8Array> {
-  const body =
-    events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") + "data: [DONE]\n\n";
+  const body = events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") + "data: [DONE]\n\n";
   return new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(body));

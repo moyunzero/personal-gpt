@@ -119,4 +119,7 @@ export async function upsertDocumentGraph(
   }
 }
 
-export { ensureNeo4jGraphConstraints, resetNeo4jGraphConstraintsForTests } from "./neo4j-constraints";
+export {
+  ensureNeo4jGraphConstraints,
+  resetNeo4jGraphConstraintsForTests,
+} from "./neo4j-constraints";

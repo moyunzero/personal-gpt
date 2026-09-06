@@ -13,8 +13,7 @@ export type AppAuthSession = {
 };
 
 export type SessionResult =
-  | { session: AppAuthSession; error?: never }
-  | { session?: never; error: NextResponse };
+  { session: AppAuthSession; error?: never } | { session?: never; error: NextResponse };
 
 /** Require authenticated session for BFF routes (D-20, D-22). */
 export async function requireSession(): Promise<SessionResult> {

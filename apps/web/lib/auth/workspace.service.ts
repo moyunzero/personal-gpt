@@ -70,13 +70,14 @@ export async function createTeamWorkspace(
   const userRepo = ds.getRepository(UserEntity);
 
   const workspaceId = randomUUID();
-  const slug = `team-${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${workspaceId.slice(0, 8)}`;
+  const slug = `team-${trimmed
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}-${workspaceId.slice(0, 8)}`;
 
   const workspace = workspaceRepo.create({ id: workspaceId, slug, name: trimmed });
   await workspaceRepo.save(workspace);
-  await memberRepo.save(
-    memberRepo.create({ workspaceId, userId, role: "owner" }),
-  );
+  await memberRepo.save(memberRepo.create({ workspaceId, userId, role: "owner" }));
   await userRepo.update({ id: userId }, { activeWorkspaceId: workspaceId });
   return workspace;
 }

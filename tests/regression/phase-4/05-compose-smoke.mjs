@@ -17,6 +17,9 @@ if (!enabled) {
   process.exit(0);
 }
 
-const scriptPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../scripts/phase-4-smoke.sh");
+const scriptPath = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../scripts/phase-4-smoke.sh",
+);
 const result = spawnSync("bash", [scriptPath], { stdio: "inherit" });
 process.exit(result.status ?? 1);

@@ -46,10 +46,7 @@ function isRerankerEnabled(): boolean {
   return process.env.ENABLE_RERANKER !== "false";
 }
 
-function filterByDocumentIds(
-  hits: RetrievedChunk[],
-  documentIds?: string[],
-): RetrievedChunk[] {
+function filterByDocumentIds(hits: RetrievedChunk[], documentIds?: string[]): RetrievedChunk[] {
   if (documentIds === undefined) return hits;
   if (documentIds.length === 0) return [];
   const allowed = new Set(documentIds);

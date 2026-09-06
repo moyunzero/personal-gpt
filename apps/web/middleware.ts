@@ -4,7 +4,11 @@ import type { NextRequest } from "next/server";
 const PROTECTED_API_PREFIXES = ["/api/chat", "/api/kb", "/api/agent", "/api/workspace"];
 
 function isProtectedPath(pathname: string): boolean {
-  if (PROTECTED_API_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+  if (
+    PROTECTED_API_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  ) {
     return true;
   }
   if (pathname === "/" || pathname.startsWith("/kb")) {
@@ -20,7 +24,7 @@ function isApiPath(pathname: string): boolean {
 function hasSessionCookie(req: NextRequest): boolean {
   return Boolean(
     req.cookies.get("authjs.session-token")?.value ||
-      req.cookies.get("__Secure-authjs.session-token")?.value,
+    req.cookies.get("__Secure-authjs.session-token")?.value,
   );
 }
 

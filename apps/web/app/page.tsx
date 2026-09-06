@@ -13,11 +13,7 @@ import CorpusToggle, { type CorpusChoice } from "./components/CorpusToggle";
 import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
-import {
-  getOrCreateThreadId,
-  rotateThreadId,
-  setThreadId,
-} from "@/lib/chat/thread-id";
+import { getOrCreateThreadId, rotateThreadId, setThreadId } from "@/lib/chat/thread-id";
 import {
   mapPersistedMessages,
   sessionCacheKey,
@@ -124,9 +120,7 @@ export default function Home() {
         const listRes = await fetch("/api/chat/sessions");
         if (!listRes.ok) throw new Error("sessions list failed");
         const listData = (await listRes.json()) as { sessions?: ChatSessionRow[] };
-        const session = listData.sessions?.find(
-          (s) => s.threadId === threadId && s.mode === mode,
-        );
+        const session = listData.sessions?.find((s) => s.threadId === threadId && s.mode === mode);
         if (!session) {
           if (!cancelled) setMessages([]);
           return;
@@ -217,10 +211,7 @@ export default function Home() {
   };
 
   const handleDeleteSession = (session: ChatSessionRow) => {
-    const key = sessionCacheKey(
-      session.mode === "agent" ? "agent" : "chat",
-      session.threadId,
-    );
+    const key = sessionCacheKey(session.mode === "agent" ? "agent" : "chat", session.threadId);
     delete messagesCacheRef.current[key];
     if (session.threadId !== threadId) return;
     clearError();
@@ -331,7 +322,9 @@ export default function Home() {
                 className="composer-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={mode === "agent" ? "描述复杂任务，例如调研并生成报告…" : "想问点啥呢～"}
+                placeholder={
+                  mode === "agent" ? "描述复杂任务，例如调研并生成报告…" : "想问点啥呢～"
+                }
                 disabled={isLoading}
                 aria-label="输入消息"
               />

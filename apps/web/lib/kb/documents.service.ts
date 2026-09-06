@@ -421,11 +421,7 @@ export async function deleteDocument(documentId: string, ctx: DocumentsContext):
   await Promise.all(tasks);
 
   try {
-    await deleteByDocumentId(
-      resolveCorpusTargets("user").esIndex,
-      ctx.workspaceId,
-      documentId,
-    );
+    await deleteByDocumentId(resolveCorpusTargets("user").esIndex, ctx.workspaceId, documentId);
   } catch (err) {
     errors.push(err instanceof Error ? err : new Error(String(err)));
   }

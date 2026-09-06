@@ -1233,19 +1233,13 @@ export class AgentService {
    * 将 UIMessage 流转写到 Express Response。
    * GraphRecursionError / 工具降级时尽量写出可读错误或部分文本（D-16）。
    */
-  async streamChat(
-    body: unknown,
-    res: Response,
-    retrievalCtx?: RetrievalContext,
-  ): Promise<void> {
+  async streamChat(body: unknown, res: Response, retrievalCtx?: RetrievalContext): Promise<void> {
     assertModelConfigured();
     ensureLangSmithProjectHint();
 
     const parsed = parseAgentChatBody(body);
     const headerWorkspace = retrievalCtx?.workspaceId?.trim();
-    const workspaceId = headerWorkspace
-      ? resolveWorkspaceId(headerWorkspace)
-      : parsed.workspaceId;
+    const workspaceId = headerWorkspace ? resolveWorkspaceId(headerWorkspace) : parsed.workspaceId;
     const allowedDocumentIds = retrievalCtx?.allowedDocumentIds ?? [];
     const documentIds = allowedDocumentIds;
     const lcMessages = await toBaseMessages(parsed.messages);
@@ -1287,10 +1281,7 @@ export class AgentService {
     // 请求级 runId：避免同 thread 并发互相覆盖 KB/web 配额状态
     const runId = randomUUID();
     const memoryBlock = await withBoundedTimeout(
-      loadMemoryContextBlock(
-        { workspaceId, userKey: parsed.userKey },
-        userText,
-      ),
+      loadMemoryContextBlock({ workspaceId, userKey: parsed.userKey }, userText),
       MEMORY_LOAD_TIMEOUT_MS,
       "",
     ).catch(() => "");

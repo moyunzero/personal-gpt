@@ -45,8 +45,7 @@ export class AgentController {
     const bodyRecord = (body ?? {}) as Record<string, unknown>;
     const fallbackWorkspace =
       typeof bodyRecord.workspaceId === "string" ? bodyRecord.workspaceId : undefined;
-    const fallbackUserKey =
-      typeof bodyRecord.userKey === "string" ? bodyRecord.userKey : undefined;
+    const fallbackUserKey = typeof bodyRecord.userKey === "string" ? bodyRecord.userKey : undefined;
     const retrievalCtx = parseRetrievalContextFromHeaders(
       {
         "x-user-id": xUserId,

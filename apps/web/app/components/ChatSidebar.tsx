@@ -101,7 +101,14 @@ export default function ChatSidebar({
           disabled={modeDisabled}
           onClick={onNewThread}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M12 5v14M5 12h14" />
           </svg>
           新会话
@@ -134,10 +141,7 @@ export default function ChatSidebar({
             对话
           </Link>
         )}
-        <Link
-          href="/kb"
-          className={`chat-sidebar-item${activePage === "kb" ? " active" : ""}`}
-        >
+        <Link href="/kb" className={`chat-sidebar-item${activePage === "kb" ? " active" : ""}`}>
           知识库
         </Link>
       </div>
@@ -152,10 +156,7 @@ export default function ChatSidebar({
               sessions.map((s) => {
                 const active = s.threadId === activeThreadId;
                 return (
-                  <div
-                    key={s.id}
-                    className={`chat-sidebar-thread-row${active ? " active" : ""}`}
-                  >
+                  <div key={s.id} className={`chat-sidebar-thread-row${active ? " active" : ""}`}>
                     <button
                       type="button"
                       className="chat-sidebar-thread"
@@ -173,7 +174,13 @@ export default function ChatSidebar({
                       title="删除"
                       onClick={(e) => askDelete(s, e)}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                      >
                         <path
                           d="M5 7h14M10 11v6M14 11v6M9 7V5h6v2M7 7l1 12h8l1-12"
                           stroke="currentColor"

@@ -97,10 +97,7 @@ export class IngestProcessor extends WorkerHost {
       await this.updateIngestJob(ingestJob?.id, { progress: 90 });
 
       await traceIngestStep("graph-extract", traceCtx, () =>
-        extractAndUpsertGraph(
-          { workspaceId, documentId, chunks },
-          { dataSource: this.dataSource },
-        ),
+        extractAndUpsertGraph({ workspaceId, documentId, chunks }, { dataSource: this.dataSource }),
       );
       await job.updateProgress(100);
 

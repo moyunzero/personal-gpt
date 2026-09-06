@@ -13,10 +13,7 @@ import {
   selectTemplateForEntity,
 } from "./graph-cypher-templates";
 import { resolveSeedProductName } from "../routing/graph-entities";
-import {
-  resolveGraphEntity,
-  type ResolvedGraphEntity,
-} from "../routing/entity-resolve";
+import { resolveGraphEntity, type ResolvedGraphEntity } from "../routing/entity-resolve";
 
 export { MILK_TEA_PATH_CYPHER } from "./graph-cypher-templates";
 

@@ -16,9 +16,7 @@ export type EntityCatalogRecord = {
 export type EntityCatalogStore = {
   findByWorkspace(workspaceId: string): Promise<EntityCatalogRecord[]>;
   findByDocument(workspaceId: string, documentId: string): Promise<EntityCatalogRecord[]>;
-  upsert(
-    row: Omit<EntityCatalogRecord, "id"> & { id?: string },
-  ): Promise<EntityCatalogRecord>;
+  upsert(row: Omit<EntityCatalogRecord, "id"> & { id?: string }): Promise<EntityCatalogRecord>;
   deleteByDocument(workspaceId: string, documentId: string): Promise<number>;
   ensureWorkspaceReadAcl(workspaceId: string, entityCatalogId: string): Promise<void>;
 };

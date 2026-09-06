@@ -1,13 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  type EntityCatalogRecord,
-  type EntityCatalogStore,
-} from "@personal-gpt/shared";
-import {
-  resolveGraphEntity,
-  setEntityCatalogStoreForTests,
-} from "@personal-gpt/shared/routing";
+import { type EntityCatalogRecord, type EntityCatalogStore } from "@personal-gpt/shared";
+import { resolveGraphEntity, setEntityCatalogStoreForTests } from "@personal-gpt/shared/routing";
 
 const deleteGraphMock = vi.fn();
 const deleteCatalogMock = vi.fn().mockResolvedValue(1);
@@ -43,9 +37,7 @@ function createCatalogStore(initial: EntityCatalogRecord[]): EntityCatalogStore 
       rows.filter((row) => row.workspaceId === workspaceId),
     ),
     findByDocument: vi.fn(async (workspaceId: string, documentId: string) =>
-      rows.filter(
-        (row) => row.workspaceId === workspaceId && row.sourceDocumentId === documentId,
-      ),
+      rows.filter((row) => row.workspaceId === workspaceId && row.sourceDocumentId === documentId),
     ),
     upsert: vi.fn(),
     deleteByDocument: vi.fn(async (workspaceId: string, documentId: string) => {

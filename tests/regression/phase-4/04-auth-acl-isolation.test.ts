@@ -54,9 +54,9 @@ describe("Phase 4 regression #4: auth ACL isolation (PROD-03)", () => {
 
     expect(canReadDocument(privateDoc, { userId: USER_A, memberRole: "editor" })).toBe(true);
     expect(canReadDocument(privateDoc, { userId: USER_B, memberRole: "editor" })).toBe(false);
-    expect(canReadDocument(doc({ id: DOC_WORKSPACE }), { userId: USER_B, memberRole: "viewer" })).toBe(
-      true,
-    );
+    expect(
+      canReadDocument(doc({ id: DOC_WORKSPACE }), { userId: USER_B, memberRole: "viewer" }),
+    ).toBe(true);
   });
 
   it("hybridSearch documentIds excludes forbidden vector+ES hits", async () => {

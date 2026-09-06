@@ -111,8 +111,12 @@ export class AuthWorkspaceAcl1741000000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "FK_users_active_workspace_id"`);
-    await queryRunner.query(`ALTER TABLE "documents" DROP CONSTRAINT IF EXISTS "FK_documents_owner_id"`);
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "FK_users_active_workspace_id"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "documents" DROP CONSTRAINT IF EXISTS "FK_documents_owner_id"`,
+    );
     await queryRunner.query(`
       ALTER TABLE "documents"
         DROP COLUMN IF EXISTS "restricted_user_ids",

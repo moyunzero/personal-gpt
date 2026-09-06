@@ -33,10 +33,13 @@ describe("parseRetrievalContextFromHeaders", () => {
   });
 
   it("uses fallback workspace and user when headers absent", () => {
-    const ctx = parseRetrievalContextFromHeaders({}, {
-      workspaceId: "ws-fallback",
-      userId: "user-fallback",
-    });
+    const ctx = parseRetrievalContextFromHeaders(
+      {},
+      {
+        workspaceId: "ws-fallback",
+        userId: "user-fallback",
+      },
+    );
     expect(ctx.workspaceId).toBe("ws-fallback");
     expect(ctx.userId).toBe("user-fallback");
     expect(ctx.allowedDocumentIds).toEqual([]);

@@ -31,15 +31,9 @@ export default function AppHeader({
     <header className="chat-header">
       <div className="chat-header-inner app-header-inner">
         {activePage === "chat" && mode && onModeChange ? (
-          <ModeSegmentedControl
-            mode={mode}
-            onChange={onModeChange}
-            disabled={modeDisabled}
-          />
+          <ModeSegmentedControl mode={mode} onChange={onModeChange} disabled={modeDisabled} />
         ) : (
-          <span className="chat-header-page-title">
-            {activePage === "kb" ? "知识库" : "对话"}
-          </span>
+          <span className="chat-header-page-title">{activePage === "kb" ? "知识库" : "对话"}</span>
         )}
 
         <div className="app-header-cluster">

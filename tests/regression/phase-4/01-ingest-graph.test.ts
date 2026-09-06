@@ -165,8 +165,6 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
       (call) => call[1]?.status === "failed",
     );
     expect(failedDocUpdate).toBeDefined();
-    expect(
-      documentUpdateMock.mock.calls.some((call) => call[1]?.status === "ready"),
-    ).toBe(false);
+    expect(documentUpdateMock.mock.calls.some((call) => call[1]?.status === "ready")).toBe(false);
   });
 });

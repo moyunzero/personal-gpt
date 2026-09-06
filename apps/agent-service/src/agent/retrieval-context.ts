@@ -33,8 +33,7 @@ export function parseRetrievalContextFromHeaders(
   const userId =
     (typeof headers["x-user-id"] === "string" && headers["x-user-id"].trim()
       ? headers["x-user-id"].trim()
-      : undefined) ??
-    (fallback?.userId?.trim() ? fallback.userId.trim() : "anonymous");
+      : undefined) ?? (fallback?.userId?.trim() ? fallback.userId.trim() : "anonymous");
 
   const headerWorkspace =
     typeof headers["x-workspace-id"] === "string" && headers["x-workspace-id"].trim()

@@ -1,8 +1,5 @@
 import type { EntityType } from "../graph/extract-schema";
-import {
-  findCatalogEntitiesInQuery,
-  type EntityCatalogStore,
-} from "../graph/entity-catalog";
+import { findCatalogEntitiesInQuery, type EntityCatalogStore } from "../graph/entity-catalog";
 import { normalizeEntityName } from "../graph/normalize-entity";
 import { resolveSeedProductName } from "./graph-entities";
 

@@ -13,12 +13,16 @@ let cachedClient: S3Client | undefined;
 let bucketReady: Promise<void> | undefined;
 
 export function isMinioConfigured(): boolean {
-  return Boolean(env.MINIO_ENDPOINT?.trim() && env.MINIO_ACCESS_KEY?.trim() && env.MINIO_SECRET_KEY?.trim());
+  return Boolean(
+    env.MINIO_ENDPOINT?.trim() && env.MINIO_ACCESS_KEY?.trim() && env.MINIO_SECRET_KEY?.trim(),
+  );
 }
 
 function getS3Client(): S3Client {
   if (!isMinioConfigured()) {
-    throw new Error("MinIO is not configured (MINIO_ENDPOINT / MINIO_ACCESS_KEY / MINIO_SECRET_KEY)");
+    throw new Error(
+      "MinIO is not configured (MINIO_ENDPOINT / MINIO_ACCESS_KEY / MINIO_SECRET_KEY)",
+    );
   }
   if (!cachedClient) {
     cachedClient = new S3Client({

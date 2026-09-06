@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireSession } from "@/lib/auth/session";
-import {
-  createTeamWorkspace,
-  listUserWorkspaces,
-} from "@/lib/auth/workspace.service";
+import { createTeamWorkspace, listUserWorkspaces } from "@/lib/auth/workspace.service";
 
 /** GET /api/workspace — list memberships */
 export async function GET() {

@@ -5,7 +5,10 @@ import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
 
 import { DEFAULT_ALLOWED_MIME_TYPES } from "../../../../../packages/shared/src/utils/ingest";
-import { isS3Uri, materializeS3UriToTempFile } from "../../../../../packages/shared/src/storage/s3-uri";
+import {
+  isS3Uri,
+  materializeS3UriToTempFile,
+} from "../../../../../packages/shared/src/storage/s3-uri";
 import { getUploadsDir } from "../../../../../packages/shared/src/utils/paths";
 
 const PARSE_TIMEOUT_MS = 60_000;

@@ -12,15 +12,7 @@ export type AuditLogInput = {
   requestId?: string | null;
 };
 
-const SENSITIVE_KEYS = new Set([
-  "content",
-  "body",
-  "messages",
-  "document",
-  "file",
-  "raw",
-  "text",
-]);
+const SENSITIVE_KEYS = new Set(["content", "body", "messages", "document", "file", "raw", "text"]);
 
 /** Strip document/message payloads — audit metadata only (D-37, T-04-06-03). */
 export function sanitizeAuditResource(path: string): string {

@@ -69,12 +69,8 @@ vi.mock("@/lib/auth/acl-resolver", () => ({
 }));
 
 vi.mock("@/lib/middleware/api-guards", () => ({
-  runApiGuards: vi.fn(
-    async (
-      _req: Request,
-      _ctx: unknown,
-      handler: () => Promise<Response>,
-    ) => handler(),
+  runApiGuards: vi.fn(async (_req: Request, _ctx: unknown, handler: () => Promise<Response>) =>
+    handler(),
   ),
 }));
 
@@ -88,10 +84,7 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
-import {
-  ensureChatSession,
-  ThreadOwnershipError,
-} from "@/lib/chat/chat-session.service";
+import { ensureChatSession, ThreadOwnershipError } from "@/lib/chat/chat-session.service";
 import { tapAgentStreamForPersistence } from "@/lib/chat/agent-stream-persist";
 import type { ChatSessionEntity } from "@/lib/db/entities/chat-session.entity";
 import { POST } from "@/app/api/agent/chat/route";
@@ -101,8 +94,7 @@ function sseBody(deltas: string[]): ReadableStream<Uint8Array> {
     ...(i === 0 ? [{ type: "text-start", id: "m1" }] : []),
     { type: "text-delta", id: "m1", delta },
   ]);
-  const text =
-    events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") + "data: [DONE]\n\n";
+  const text = events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") + "data: [DONE]\n\n";
   return new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(text));

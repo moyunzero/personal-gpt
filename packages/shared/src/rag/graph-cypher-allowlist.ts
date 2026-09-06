@@ -158,7 +158,10 @@ export function assertAllowlistedCypher(cypher: string): void {
       }
     }
 
-    const types = typePart.split("|").map((t) => t.trim()).filter(Boolean);
+    const types = typePart
+      .split("|")
+      .map((t) => t.trim())
+      .filter(Boolean);
     if (types.length === 0) {
       throw new CypherAllowlistError("Cypher rejected: untyped relationship pattern");
     }

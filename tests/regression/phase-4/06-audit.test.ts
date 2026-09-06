@@ -30,7 +30,11 @@ import {
   shouldRedactAuditField,
   writeAuditLog,
 } from "@/lib/middleware/audit";
-import { checkUserRateLimit, rateLimitJsonResponse, resetRateLimitRedisForTests } from "@/lib/ratelimit";
+import {
+  checkUserRateLimit,
+  rateLimitJsonResponse,
+  resetRateLimitRedisForTests,
+} from "@/lib/ratelimit";
 
 describe("Phase 4 regression #6: audit + rate limit", () => {
   beforeEach(() => {

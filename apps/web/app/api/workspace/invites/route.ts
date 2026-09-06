@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getActiveWorkspaceId, requireSession } from "@/lib/auth/session";
-import {
-  acceptWorkspaceInvite,
-  createWorkspaceInvite,
-} from "@/lib/auth/workspace.service";
+import { acceptWorkspaceInvite, createWorkspaceInvite } from "@/lib/auth/workspace.service";
 import type { WorkspaceRole } from "@/lib/db/entities/workspace-member.entity";
 
 const INVITE_ROLES = new Set<WorkspaceRole>(["owner", "editor", "viewer"]);

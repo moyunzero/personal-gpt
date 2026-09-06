@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  graphRagQuery,
-  resolveGraphEntity,
-  type ResolvedGraphEntity,
-} from "@personal-gpt/shared";
+import { graphRagQuery, resolveGraphEntity, type ResolvedGraphEntity } from "@personal-gpt/shared";
 import { retrieveKb } from "../../../apps/agent-service/src/rag/retrieve";
 import { invokeGraphSearch } from "../../../apps/agent-service/src/tools/graph-search.tool";
 

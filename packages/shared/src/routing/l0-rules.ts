@@ -149,7 +149,9 @@ export async function matchMultiStepL0(
   const specialists = await orderSpecialistsByKeywordAppearance(query, ctx);
   if (specialists.length < 2) return null;
 
-  const entity = await resolveGraphEntity(query, ctx.workspaceId, { catalogStore: ctx.catalogStore });
+  const entity = await resolveGraphEntity(query, ctx.workspaceId, {
+    catalogStore: ctx.catalogStore,
+  });
   const hasGraph = hasGraphRelationCue(query) && entity !== null;
   const hasKb = KB_RE.test(query);
   const hasWeb = WEB_RE.test(query) && !REFUSES_WEB_RE.test(query);

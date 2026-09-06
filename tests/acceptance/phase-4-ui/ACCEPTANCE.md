@@ -19,11 +19,11 @@ node tests/acceptance/phase-4-ui/run-chat-ui-uat.mjs
 
 ## Cases
 
-| ID | Check |
-|----|--------|
-| infra | `GET /api/health` |
-| ui-sidebar-margin | Owner pill 距浏览器底 ≥12px |
-| ui-session-restore | 会话 A → 新会话 B → 点回 A，历史仍在 |
+| ID                  | Check                                       |
+| ------------------- | ------------------------------------------- |
+| infra               | `GET /api/health`                           |
+| ui-sidebar-margin   | Owner pill 距浏览器底 ≥12px                 |
+| ui-session-restore  | 会话 A → 新会话 B → 点回 A，历史仍在        |
 | api-session-persist | `/api/chat/sessions` 至少一条含 ≥2 messages |
 
 ## Known infra

@@ -171,7 +171,7 @@ export default function WorkspaceSwitcher({ variant = "default" }: WorkspaceSwit
         >
           <span className="ws-avatar">{loading ? "…" : initial}</span>
           <span className="ws-meta">
-            <span className="ws-name">{loading ? "加载中…" : active?.name ?? "工作区"}</span>
+            <span className="ws-name">{loading ? "加载中…" : (active?.name ?? "工作区")}</span>
             <span className="ws-role">{active?.role ?? ""}</span>
           </span>
           <svg

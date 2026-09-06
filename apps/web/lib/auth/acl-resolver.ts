@@ -9,9 +9,7 @@ export type RetrievalContext = {
 };
 
 /** Build tenant-scoped retrieval context from session (D-20). */
-export async function resolveRetrievalContext(
-  session: AppAuthSession,
-): Promise<RetrievalContext> {
+export async function resolveRetrievalContext(session: AppAuthSession): Promise<RetrievalContext> {
   const userId = getSessionUserId(session);
   const workspaceId = await getActiveWorkspaceId(session);
   const allowedDocumentIds = await resolveAllowedDocumentIds(userId, workspaceId);

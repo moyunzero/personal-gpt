@@ -1,14 +1,7 @@
 import { z } from "zod";
 
 /** D-14: fixed entityType enum for LLM structured output */
-export const EntityTypeEnum = z.enum([
-  "person",
-  "org",
-  "product",
-  "concept",
-  "location",
-  "other",
-]);
+export const EntityTypeEnum = z.enum(["person", "org", "product", "concept", "location", "other"]);
 
 /** D-13: fixed relation type set for ingest graph */
 export const RelationTypeEnum = z.enum(["MENTIONS", "RELATED_TO", "CONTAINS", "USES"]);

@@ -66,9 +66,9 @@ function KbDocumentRow({
   const [editTitle, setEditTitle] = useState(item.title);
   const [editCategory, setEditCategory] = useState(item.category ?? "");
   const [editTags, setEditTags] = useState(item.tags.join(", "));
-  const [editVisibility, setEditVisibility] = useState<
-    "workspace" | "private" | "restricted"
-  >(item.visibility ?? "workspace");
+  const [editVisibility, setEditVisibility] = useState<"workspace" | "private" | "restricted">(
+    item.visibility ?? "workspace",
+  );
 
   const parseTags = (raw: string) =>
     raw
@@ -275,9 +275,7 @@ function KbDocumentRow({
                   <select
                     className="kb-field-input"
                     value={editVisibility}
-                    onChange={(e) =>
-                      setEditVisibility(e.target.value as typeof editVisibility)
-                    }
+                    onChange={(e) => setEditVisibility(e.target.value as typeof editVisibility)}
                   >
                     <option value="workspace">工作区全员</option>
                     <option value="private">仅自己</option>

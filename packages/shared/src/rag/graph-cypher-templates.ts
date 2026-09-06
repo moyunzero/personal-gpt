@@ -5,10 +5,7 @@
 
 import type { ResolvedGraphEntity } from "../routing/entity-resolve";
 
-export type GraphCypherTemplateId =
-  | "seed_product_path"
-  | "entity_rel_path"
-  | "doc_entity_mentions";
+export type GraphCypherTemplateId = "seed_product_path" | "entity_rel_path" | "doc_entity_mentions";
 
 export type GraphCypherTemplate = {
   id: GraphCypherTemplateId;

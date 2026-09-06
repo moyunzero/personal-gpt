@@ -1,10 +1,7 @@
 import { createThreadId, SAFE_THREAD_ID_PATTERN } from "@/lib/chat/thread-id";
 import { getDataSource } from "@/lib/db/get-data-source";
 import { ChatMessageEntity } from "@/lib/db/entities/chat-message.entity";
-import {
-  ChatSessionEntity,
-  type ChatSessionMode,
-} from "@/lib/db/entities/chat-session.entity";
+import { ChatSessionEntity, type ChatSessionMode } from "@/lib/db/entities/chat-session.entity";
 
 export { SAFE_THREAD_ID_PATTERN };
 

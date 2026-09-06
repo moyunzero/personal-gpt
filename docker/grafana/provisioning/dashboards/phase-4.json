@@ -21,9 +21,7 @@
       "id": 2,
       "title": "Rate Limit 429",
       "type": "timeseries",
-      "targets": [
-        { "expr": "sum(rate(rate_limit_exceeded_total[5m]))", "legendFormat": "429" }
-      ]
+      "targets": [{ "expr": "sum(rate(rate_limit_exceeded_total[5m]))", "legendFormat": "429" }]
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -55,9 +53,7 @@
       "id": 5,
       "title": "Ingest Failures",
       "type": "timeseries",
-      "targets": [
-        { "expr": "sum(rate(ingest_failures_total[5m]))", "legendFormat": "failures" }
-      ]
+      "targets": [{ "expr": "sum(rate(ingest_failures_total[5m]))", "legendFormat": "failures" }]
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },

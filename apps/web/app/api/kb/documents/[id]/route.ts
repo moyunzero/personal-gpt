@@ -57,15 +57,10 @@ export async function PATCH(req: Request, context: RouteContext) {
       };
 
       if (body.visibility) {
-        const updatedVisibility = await updateDocumentVisibility(
-          id,
-          ctx.workspaceId,
-          ctx.userId,
-          {
-            visibility: body.visibility,
-            restrictedUserIds: body.restrictedUserIds,
-          },
-        );
+        const updatedVisibility = await updateDocumentVisibility(id, ctx.workspaceId, ctx.userId, {
+          visibility: body.visibility,
+          restrictedUserIds: body.restrictedUserIds,
+        });
         if (!updatedVisibility) {
           return NextResponse.json({ error: "Forbidden or not found" }, { status: 403 });
         }

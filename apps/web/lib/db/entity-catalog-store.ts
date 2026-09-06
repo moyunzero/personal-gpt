@@ -1,9 +1,6 @@
 import type { DataSource, Repository } from "typeorm";
 
-import {
-  type EntityCatalogRecord,
-  type EntityCatalogStore,
-} from "@personal-gpt/shared";
+import { type EntityCatalogRecord, type EntityCatalogStore } from "@personal-gpt/shared";
 
 import { EntityAclEntity } from "./entities/entity-acl.entity";
 import { EntityCatalogEntity } from "./entities/entity-catalog.entity";
@@ -21,7 +18,8 @@ function toRecord(row: EntityCatalogEntity): EntityCatalogRecord {
 }
 
 export function createEntityCatalogStore(dataSource: DataSource): EntityCatalogStore {
-  const catalogRepo: Repository<EntityCatalogEntity> = dataSource.getRepository(EntityCatalogEntity);
+  const catalogRepo: Repository<EntityCatalogEntity> =
+    dataSource.getRepository(EntityCatalogEntity);
   const aclRepo: Repository<EntityAclEntity> = dataSource.getRepository(EntityAclEntity);
 
   return {

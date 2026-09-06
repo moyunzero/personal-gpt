@@ -1,4 +1,12 @@
-import { Controller, Get, Headers, Module, Query, Res, UnauthorizedException } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Headers,
+  Module,
+  Query,
+  Res,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import type { Response } from "express";
 

@@ -78,23 +78,24 @@ function createMockStore(initial: EntityCatalogRecord[] = []): EntityCatalogStor
         (row) => row.workspaceId === workspaceId && row.sourceDocumentId === documentId,
       );
       for (let i = catalog.length - 1; i >= 0; i -= 1) {
-        if (catalog[i]!.workspaceId === workspaceId && catalog[i]!.sourceDocumentId === documentId) {
+        if (
+          catalog[i]!.workspaceId === workspaceId &&
+          catalog[i]!.sourceDocumentId === documentId
+        ) {
           catalog.splice(i, 1);
         }
       }
       return removed.length;
     }),
-    ensureWorkspaceReadAcl: vi.fn(
-      async (workspaceId: string, entityCatalogId: string) => {
-        aclRows.push({
-          workspaceId,
-          entityCatalogId,
-          principalType: "workspace",
-          principalId: workspaceId,
-          permission: "read",
-        });
-      },
-    ),
+    ensureWorkspaceReadAcl: vi.fn(async (workspaceId: string, entityCatalogId: string) => {
+      aclRows.push({
+        workspaceId,
+        entityCatalogId,
+        principalType: "workspace",
+        principalId: workspaceId,
+        permission: "read",
+      });
+    }),
     getAclRows: () => aclRows,
   };
 }
@@ -102,12 +103,12 @@ function createMockStore(initial: EntityCatalogRecord[] = []): EntityCatalogStor
 describe("upsertCatalogEntries", () => {
   it("inserts catalog rows with normalized keys and neo4j ids", async () => {
     const store = createMockStore();
-    const entities = [makeEntity(), makeEntity({ name: "Bob", normalizedName: "bob", entityType: "person" })];
+    const entities = [
+      makeEntity(),
+      makeEntity({ name: "Bob", normalizedName: "bob", entityType: "person" }),
+    ];
 
-    await upsertCatalogEntries(
-      { workspaceId: "ws-1", documentId: "doc-1", entities },
-      store,
-    );
+    await upsertCatalogEntries({ workspaceId: "ws-1", documentId: "doc-1", entities }, store);
 
     expect(store.upsert).toHaveBeenCalledTimes(2);
     expect(store.ensureWorkspaceReadAcl).toHaveBeenCalledTimes(2);
@@ -149,7 +150,11 @@ describe("findCatalogEntitiesInQuery", () => {
   });
 
   it("returns hits on exact normalized substring match in query", async () => {
-    const hits = await findCatalogEntitiesInQuery("ws-1", "Tell me about Acme Corp suppliers", store);
+    const hits = await findCatalogEntitiesInQuery(
+      "ws-1",
+      "Tell me about Acme Corp suppliers",
+      store,
+    );
     expect(hits).toHaveLength(1);
     expect(hits[0]?.displayName).toBe("Acme Corp");
   });

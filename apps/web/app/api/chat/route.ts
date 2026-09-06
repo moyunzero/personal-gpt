@@ -155,178 +155,195 @@ export async function POST(req: Request) {
         requestId,
       },
       async () => {
-    const body = (await req.json()) as {
-      messages?: unknown;
-      corpus?: unknown;
-      userKey?: unknown;
-      thread_id?: unknown;
-    };
-    const { messages } = body;
-    // D-27/D-28 / T-03-seed: default user; seed only when explicit
-    const corpus = parseCorpus(body.corpus);
-    const userKey = parseUserKey(body.userKey);
+        const body = (await req.json()) as {
+          messages?: unknown;
+          corpus?: unknown;
+          userKey?: unknown;
+          thread_id?: unknown;
+        };
+        const { messages } = body;
+        // D-27/D-28 / T-03-seed: default user; seed only when explicit
+        const corpus = parseCorpus(body.corpus);
+        const userKey = parseUserKey(body.userKey);
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return new Response("No messages provided", {
-        status: 400,
-        headers: corsHeaders,
-      });
-    }
-
-    const trimmedMessages =
-      messages.length > MAX_CHAT_MESSAGES ? messages.slice(-MAX_CHAT_MESSAGES) : messages;
-
-    const formattedMessages = formatMessages(trimmedMessages as InputMessage[]);
-
-    const rawThreadId =
-      typeof body.thread_id === "string" && body.thread_id.trim()
-        ? body.thread_id.trim()
-        : createThreadId();
-    let chatSession;
-    try {
-      chatSession = await ensureChatSession({
-        threadId: rawThreadId,
-        userId: retrievalCtx.userId,
-        workspaceId: retrievalCtx.workspaceId,
-        mode: "chat",
-      });
-    } catch (err) {
-      if (err instanceof ThreadOwnershipError) {
-        return new Response(JSON.stringify({ error: "Forbidden thread_id", requestId }), {
-          status: 403,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
-      }
-      throw err;
-    }
-
-    // 取最后一条做向量搜索 + 长度校验
-    const lastContent = formattedMessages[formattedMessages.length - 1]?.content || "";
-
-    if (lastContent.length > 8000) {
-      return new Response("Message too long", {
-        status: 400,
-        headers: corsHeaders,
-      });
-    }
-
-    const routeDecision = await decideQueryRoute(lastContent, {
-      workspaceId: retrievalCtx.workspaceId,
-      requestId,
-      corpus,
-    });
-    log.debug("query route", {
-      corpus,
-      route: routeDecision.route,
-      reason: routeDecision.reason,
-      fastPath: routeDecision.fastPath ?? false,
-      precheckSimilarity: routeDecision.precheckSimilarity,
-    });
-
-    let contextResult: VectorSearchResult = { kind: "no-docs" };
-    const graphOnlyRetrieve =
-      routeDecision.intentPrimary === "graph_relation" && routeDecision.needsGraphContext;
-    if (routeDecision.route === "retrieve" && !graphOnlyRetrieve) {
-      contextResult = await getRelevantContext(lastContent, requestId, retrievalCtx.workspaceId, {
-        corpus,
-        documentIds: retrievalCtx.allowedDocumentIds,
-      });
-    }
-
-    let graphSummary = "";
-    let graphPathsForUi = graphPathsToDisplay([]);
-    if (routeDecision.needsGraphContext && corpus === "seed") {
-      try {
-        const graphResult = await withGraphRagTimeout(
-          graphRagQuery({
-            question: lastContent,
-            workspaceId: retrievalCtx.workspaceId,
-            documentIds: retrievalCtx.allowedDocumentIds,
-          }),
-          GRAPH_RAG_TIMEOUT_MS,
-        );
-        if (graphResult.paths.length > 0) {
-          graphSummary = graphResult.summary;
-          graphPathsForUi = graphPathsToDisplay(graphResult.paths);
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+          return new Response("No messages provided", {
+            status: 400,
+            headers: corsHeaders,
+          });
         }
-      } catch (err) {
-        log.warn("graphRagQuery failed, continuing without graph context", { err });
-      }
-    }
 
-    if (graphOnlyRetrieve && graphPathsForUi.length === 0 && routeDecision.route === "retrieve") {
-      contextResult = await getRelevantContext(lastContent, requestId, retrievalCtx.workspaceId, {
-        corpus,
-        documentIds: retrievalCtx.allowedDocumentIds,
-      });
-    }
+        const trimmedMessages =
+          messages.length > MAX_CHAT_MESSAGES ? messages.slice(-MAX_CHAT_MESSAGES) : messages;
 
-    const citations = contextResult.kind === "ok" ? contextResult.citations : [];
+        const formattedMessages = formatMessages(trimmedMessages as InputMessage[]);
 
-    // 把检索结果记一条 telemetry，让 ok / no-docs / timeout / api-error 在
-    // 同一个 [METRIC] 命名空间下，便于 grep 与未来接入 metrics 客户端。
-    if (contextResult.kind === "ok") {
-      log.metric("vector.search.ok", {
-        docCount: contextResult.docCount,
-        sources: contextResult.sources,
-      });
-    } else if (contextResult.kind === "no-docs" && routeDecision.route === "retrieve") {
-      log.metric("vector.search.no_docs", { queryLength: lastContent.length });
-    }
-    // timeout / api-error 的日志在 getRelevantContext 里已经发过，避免重复。
+        const rawThreadId =
+          typeof body.thread_id === "string" && body.thread_id.trim()
+            ? body.thread_id.trim()
+            : createThreadId();
+        let chatSession;
+        try {
+          chatSession = await ensureChatSession({
+            threadId: rawThreadId,
+            userId: retrievalCtx.userId,
+            workspaceId: retrievalCtx.workspaceId,
+            mode: "chat",
+          });
+        } catch (err) {
+          if (err instanceof ThreadOwnershipError) {
+            return new Response(JSON.stringify({ error: "Forbidden thread_id", requestId }), {
+              status: 403,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
+          }
+          throw err;
+        }
 
-    const systemPromptBase = buildSystemPrompt(contextResult);
-    const graphBlock = graphSummary ? `\n\n## 图谱知识\n${graphSummary}` : "";
-    let memoryBlock = "";
-    if (userKey) {
-      try {
-        memoryBlock = await withTimeout(
-          loadMemoryContextBlock({ workspaceId: retrievalCtx.workspaceId, userKey }, lastContent),
-          MEMORY_LOAD_TIMEOUT_MS,
-          "memory_load",
-        );
-      } catch {
-        memoryBlock = "";
-      }
-    }
-    const systemPrompt = memoryBlock
-      ? `${systemPromptBase}${graphBlock}\n\n${memoryBlock}`
-      : `${systemPromptBase}${graphBlock}`;
+        // 取最后一条做向量搜索 + 长度校验
+        const lastContent = formattedMessages[formattedMessages.length - 1]?.content || "";
 
-    try {
-      await persistUserMessage({ session: chatSession, userContent: lastContent });
-    } catch (err) {
-      log.warn("persistUserMessage failed (ignored)", { err });
-    }
+        if (lastContent.length > 8000) {
+          return new Response("Message too long", {
+            status: 400,
+            headers: corsHeaders,
+          });
+        }
 
-    const stream = createChatStream({
-      systemPrompt,
-      messages: formattedMessages,
-      requestId,
-      citations,
-      graphPaths: graphPathsForUi,
-      onComplete: async (assistantText) => {
-        await persistChatTurn({
-          session: chatSession,
-          userContent: lastContent,
-          assistantContent: assistantText,
+        const routeDecision = await decideQueryRoute(lastContent, {
+          workspaceId: retrievalCtx.workspaceId,
+          requestId,
+          corpus,
         });
-        if (userKey) {
-          await persistTurnMemory(
-            { workspaceId: retrievalCtx.workspaceId, userKey },
+        log.debug("query route", {
+          corpus,
+          route: routeDecision.route,
+          reason: routeDecision.reason,
+          fastPath: routeDecision.fastPath ?? false,
+          precheckSimilarity: routeDecision.precheckSimilarity,
+        });
+
+        let contextResult: VectorSearchResult = { kind: "no-docs" };
+        const graphOnlyRetrieve =
+          routeDecision.intentPrimary === "graph_relation" && routeDecision.needsGraphContext;
+        if (routeDecision.route === "retrieve" && !graphOnlyRetrieve) {
+          contextResult = await getRelevantContext(
             lastContent,
-            assistantText,
+            requestId,
+            retrievalCtx.workspaceId,
+            {
+              corpus,
+              documentIds: retrievalCtx.allowedDocumentIds,
+            },
           );
         }
-      },
-    });
 
-    // SSE 响应默认只有 text/event-stream，需要手动注入 CORS 头（空值的不写）
-    const streamResponse = createUIMessageStreamResponse({ stream });
-    Object.entries(corsHeaders).forEach(([key, value]) => {
-      if (value) streamResponse.headers.set(key, value);
-    });
-    return streamResponse;
+        let graphSummary = "";
+        let graphPathsForUi = graphPathsToDisplay([]);
+        if (routeDecision.needsGraphContext && corpus === "seed") {
+          try {
+            const graphResult = await withGraphRagTimeout(
+              graphRagQuery({
+                question: lastContent,
+                workspaceId: retrievalCtx.workspaceId,
+                documentIds: retrievalCtx.allowedDocumentIds,
+              }),
+              GRAPH_RAG_TIMEOUT_MS,
+            );
+            if (graphResult.paths.length > 0) {
+              graphSummary = graphResult.summary;
+              graphPathsForUi = graphPathsToDisplay(graphResult.paths);
+            }
+          } catch (err) {
+            log.warn("graphRagQuery failed, continuing without graph context", { err });
+          }
+        }
+
+        if (
+          graphOnlyRetrieve &&
+          graphPathsForUi.length === 0 &&
+          routeDecision.route === "retrieve"
+        ) {
+          contextResult = await getRelevantContext(
+            lastContent,
+            requestId,
+            retrievalCtx.workspaceId,
+            {
+              corpus,
+              documentIds: retrievalCtx.allowedDocumentIds,
+            },
+          );
+        }
+
+        const citations = contextResult.kind === "ok" ? contextResult.citations : [];
+
+        // 把检索结果记一条 telemetry，让 ok / no-docs / timeout / api-error 在
+        // 同一个 [METRIC] 命名空间下，便于 grep 与未来接入 metrics 客户端。
+        if (contextResult.kind === "ok") {
+          log.metric("vector.search.ok", {
+            docCount: contextResult.docCount,
+            sources: contextResult.sources,
+          });
+        } else if (contextResult.kind === "no-docs" && routeDecision.route === "retrieve") {
+          log.metric("vector.search.no_docs", { queryLength: lastContent.length });
+        }
+        // timeout / api-error 的日志在 getRelevantContext 里已经发过，避免重复。
+
+        const systemPromptBase = buildSystemPrompt(contextResult);
+        const graphBlock = graphSummary ? `\n\n## 图谱知识\n${graphSummary}` : "";
+        let memoryBlock = "";
+        if (userKey) {
+          try {
+            memoryBlock = await withTimeout(
+              loadMemoryContextBlock(
+                { workspaceId: retrievalCtx.workspaceId, userKey },
+                lastContent,
+              ),
+              MEMORY_LOAD_TIMEOUT_MS,
+              "memory_load",
+            );
+          } catch {
+            memoryBlock = "";
+          }
+        }
+        const systemPrompt = memoryBlock
+          ? `${systemPromptBase}${graphBlock}\n\n${memoryBlock}`
+          : `${systemPromptBase}${graphBlock}`;
+
+        try {
+          await persistUserMessage({ session: chatSession, userContent: lastContent });
+        } catch (err) {
+          log.warn("persistUserMessage failed (ignored)", { err });
+        }
+
+        const stream = createChatStream({
+          systemPrompt,
+          messages: formattedMessages,
+          requestId,
+          citations,
+          graphPaths: graphPathsForUi,
+          onComplete: async (assistantText) => {
+            await persistChatTurn({
+              session: chatSession,
+              userContent: lastContent,
+              assistantContent: assistantText,
+            });
+            if (userKey) {
+              await persistTurnMemory(
+                { workspaceId: retrievalCtx.workspaceId, userKey },
+                lastContent,
+                assistantText,
+              );
+            }
+          },
+        });
+
+        // SSE 响应默认只有 text/event-stream，需要手动注入 CORS 头（空值的不写）
+        const streamResponse = createUIMessageStreamResponse({ stream });
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          if (value) streamResponse.headers.set(key, value);
+        });
+        return streamResponse;
       },
       "chat",
     );
