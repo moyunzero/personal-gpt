@@ -1,7 +1,7 @@
 "use client";
 
 import { upload } from "@vercel/blob/client";
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import type { KbDocumentItem } from "./KbDocumentList";
 
@@ -137,34 +137,31 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
     return registerDocument(formData);
   };
 
-  const uploadFile = useCallback(
-    async (file: File, uploadMeta: UploadMeta) => {
-      setError(null);
-      setUploading(true);
+  const uploadFile = async (file: File, uploadMeta: UploadMeta) => {
+    setError(null);
+    setUploading(true);
+    try {
+      let document: KbDocumentItem;
       try {
-        let document: KbDocumentItem;
-        try {
-          document = await uploadViaBlobThenRegister(file, uploadMeta);
-        } catch (blobErr) {
-          // 大文件不能回退 multipart（会撞 Serverless 4.5MB）；小文件可回退到本地/MinIO 路径
-          if (file.size > 4.5 * 1024 * 1024) {
-            throw blobErr;
-          }
-          document = await uploadViaMultipart(file, uploadMeta);
+        document = await uploadViaBlobThenRegister(file, uploadMeta);
+      } catch (blobErr) {
+        // 大文件不能回退 multipart（会撞 Serverless 4.5MB）；小文件可回退到本地/MinIO 路径
+        if (file.size > 4.5 * 1024 * 1024) {
+          throw blobErr;
         }
-
-        onUploaded(document);
-        setMeta(EMPTY_META);
-        setPendingFile(null);
-        setShowMeta(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "上传失败");
-      } finally {
-        setUploading(false);
+        document = await uploadViaMultipart(file, uploadMeta);
       }
-    },
-    [onUploaded],
-  );
+
+      onUploaded(document);
+      setMeta(EMPTY_META);
+      setPendingFile(null);
+      setShowMeta(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "上传失败");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = () => {
     if (!pendingFile || uploading) return;

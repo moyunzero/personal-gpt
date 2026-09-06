@@ -208,7 +208,6 @@ export async function checkGuestChatRateLimit(
   identifier: string,
   requestId: string,
 ): Promise<RateLimitResult> {
-  const log = logger.child({ scope: "ratelimit.guest-chat", requestId });
   if (!guestChatLimiter) {
     // Upstash 未配时退回通用 chat 桶，仍 fail-open/限流逻辑一致
     return checkUserRateLimit(`guest:${identifier}`, requestId, "chat");

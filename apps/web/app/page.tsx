@@ -2,6 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "./components/AppHeader";
 import AppShell from "./components/AppShell";
@@ -63,29 +64,36 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      const applyGuestDefaults = () => {
+        setCorpus("seed");
+        setMode((m) => (m === "agent" ? "chat" : m));
+      };
       try {
         const res = await fetch("/api/auth/session");
         if (!res.ok) {
-          if (!cancelled) setIsAuthenticated(false);
+          if (!cancelled) {
+            setIsAuthenticated(false);
+            applyGuestDefaults();
+          }
           return;
         }
         const data = (await res.json()) as { user?: { id?: string } | null };
-        if (!cancelled) setIsAuthenticated(Boolean(data?.user?.id));
+        if (!cancelled) {
+          const authed = Boolean(data?.user?.id);
+          setIsAuthenticated(authed);
+          if (!authed) applyGuestDefaults();
+        }
       } catch {
-        if (!cancelled) setIsAuthenticated(false);
+        if (!cancelled) {
+          setIsAuthenticated(false);
+          applyGuestDefaults();
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (isAuthenticated === false) {
-      setCorpus("seed");
-      if (mode === "agent") setMode("chat");
-    }
-  }, [isAuthenticated, mode]);
 
   const handleModeChange = (next: ChatMode) => {
     if (next === "agent" && isAuthenticated === false) {
@@ -295,9 +303,9 @@ export default function Home() {
             }}
           >
             游客试用：可直接对话（种子库、约每小时 5 次）。登录后解锁个人知识库、会话历史与 Agent。
-            <a href="/api/auth/signin" style={{ marginLeft: 8, fontWeight: 600 }}>
+            <Link href="/api/auth/signin" style={{ marginLeft: 8, fontWeight: 600 }}>
               去登录
-            </a>
+            </Link>
           </div>
         ) : null}
         <section ref={streamRef} className="chat-stream">

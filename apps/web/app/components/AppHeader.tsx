@@ -61,14 +61,14 @@ export default function AppHeader({
               </button>
             ) : null}
             {isAuthenticated === false ? (
-              <a href="/api/auth/signin" className="app-header-link accent">
+              <Link href="/api/auth/signin" className="app-header-link accent">
                 登录
-              </a>
+              </Link>
             ) : null}
             {isAuthenticated === true ? (
-              <a href="/api/auth/signout" className="app-header-link ghost">
+              <Link href="/api/auth/signout" className="app-header-link ghost">
                 退出
-              </a>
+              </Link>
             ) : null}
           </nav>
         </div>
