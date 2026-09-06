@@ -11,7 +11,8 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "@personal-gpt/shared/routing": ["../../packages/shared/src/routing/index.ts"]
+      "@personal-gpt/shared/routing": ["../../packages/shared/src/routing/index.ts"],
+      "@personal-gpt/shared/metrics-auth": ["../../packages/shared/src/metrics-auth.ts"]
     },
     "incremental": true,
     "skipLibCheck": true,
