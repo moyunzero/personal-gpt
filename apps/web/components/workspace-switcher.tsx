@@ -35,6 +35,8 @@ export default function WorkspaceSwitcher({ variant = "default" }: WorkspaceSwit
   }, []);
 
   useEffect(() => {
+    // Mount: load workspace list from API (external store).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional fetch→setState
     void refresh();
   }, [refresh]);
 

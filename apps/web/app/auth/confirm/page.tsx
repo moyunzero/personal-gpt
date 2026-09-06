@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
@@ -64,9 +65,9 @@ export default async function AuthConfirmPage({ searchParams }: { searchParams: 
             : "点击下方按钮完成登录（避免邮箱安全扫描提前消耗一次性链接）。"}
         </p>
         {missing ? (
-          <a href="/api/auth/signin" style={{ color: "#7eb6ff" }}>
+          <Link href="/api/auth/signin" style={{ color: "#7eb6ff" }}>
             返回登录
-          </a>
+          </Link>
         ) : (
           <a
             href={href}

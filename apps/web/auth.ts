@@ -4,7 +4,6 @@ import Nodemailer from "next-auth/providers/nodemailer";
 import { TypeORMAdapter } from "@auth/typeorm-adapter";
 
 import { authConfig } from "@/auth.config";
-import { UserEntity } from "@/lib/db/entities/user.entity";
 import { getDataSource } from "@/lib/db/get-data-source";
 
 /** Rewrite Auth.js callback URL → /auth/confirm so email scanners don't burn the token. */

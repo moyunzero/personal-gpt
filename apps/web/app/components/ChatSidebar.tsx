@@ -55,6 +55,8 @@ export default function ChatSidebar({
   }, []);
 
   useEffect(() => {
+    // Mount / revision: refetch session list from API (external store).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional fetch→setState
     void refresh();
   }, [refresh, sessionsRevision]);
 
