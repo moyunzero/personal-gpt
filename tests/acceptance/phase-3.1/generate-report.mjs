@@ -2,7 +2,7 @@
 /**
  * Generate FULL-UAT-REPORT-2026-08-23.html from UAT results + MCP screenshots.
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
