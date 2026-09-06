@@ -33,6 +33,8 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  serverExternalPackages: ["typeorm", "pg", "@auth/typeorm-adapter", "reflect-metadata"],
   async headers() {
     return [
       {

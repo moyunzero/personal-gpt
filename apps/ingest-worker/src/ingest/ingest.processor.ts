@@ -1,22 +1,25 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Injectable, Logger } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
+import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
 import type { Job } from "bullmq";
 import * as fs from "node:fs/promises";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 
 import { INGEST_QUEUE_NAME } from "@personal-gpt/shared";
 import type { IngestJobPayload } from "@personal-gpt/shared";
 import { getEnv } from "@personal-gpt/shared/schemas/env";
+import { isS3Uri } from "@personal-gpt/shared/storage/s3-uri";
 import { DocumentEntity } from "../../../web/lib/db/entities/document.entity";
 import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity";
 
 import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
+import { extractAndUpsertGraph } from "./pipeline/graph-extract";
 import { parseDocument } from "./pipeline/parse";
 import { splitText, toChunkRecords } from "./pipeline/split";
 import { traceIngestStep } from "./pipeline/tracing";
 import { upsertChunks } from "./pipeline/upsert";
+import { ingestFailuresTotal } from "../metrics";
 
 @Injectable()
 @Processor(INGEST_QUEUE_NAME, { concurrency: 2 })
@@ -28,6 +31,8 @@ export class IngestProcessor extends WorkerHost {
     private readonly documentRepo: Repository<DocumentEntity>,
     @InjectRepository(IngestJobEntity)
     private readonly ingestJobRepo: Repository<IngestJobEntity>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {
     super();
   }
@@ -36,9 +41,11 @@ export class IngestProcessor extends WorkerHost {
     const { workspaceId, documentId, filePath, mimeType, title, category, tags } = job.data;
 
     const maxBytes = getEnv().UPLOAD_MAX_BYTES;
-    const stat = await fs.stat(filePath);
-    if (stat.size > maxBytes) {
-      throw new Error(`File exceeds upload limit: ${stat.size} bytes`);
+    if (!isS3Uri(filePath)) {
+      const stat = await fs.stat(filePath);
+      if (stat.size > maxBytes) {
+        throw new Error(`File exceeds upload limit: ${stat.size} bytes`);
+      }
     }
 
     const bullJobId = String(job.id ?? job.name);
@@ -86,6 +93,12 @@ export class IngestProcessor extends WorkerHost {
       });
 
       await traceIngestStep("upsert", traceCtx, () => upsertChunks(records));
+      await job.updateProgress(90);
+      await this.updateIngestJob(ingestJob?.id, { progress: 90 });
+
+      await traceIngestStep("graph-extract", traceCtx, () =>
+        extractAndUpsertGraph({ workspaceId, documentId, chunks }, { dataSource: this.dataSource }),
+      );
       await job.updateProgress(100);
 
       await this.documentRepo.update(
@@ -99,10 +112,11 @@ export class IngestProcessor extends WorkerHost {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      ingestFailuresTotal.inc({ step: "ingest" });
       this.logger.error(`Ingest failed for document ${documentId}: ${message}`);
 
       try {
-        await deleteDocument(workspaceId, documentId, "user");
+        await deleteDocument(workspaceId, documentId, "user", { dataSource: this.dataSource });
       } catch (cleanupErr) {
         this.logger.warn(
           `Vector cleanup after ingest failure failed: ${

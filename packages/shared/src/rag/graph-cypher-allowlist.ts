@@ -6,11 +6,32 @@
 const WRITE_OR_ADMIN =
   /\b(CREATE|MERGE|DELETE|DETACH|SET|REMOVE|DROP|LOAD\s+CSV|CALL|FOREACH|CREATE\s+CONSTRAINT|CREATE\s+INDEX|ALTER|GRANT|DENY|REVOKE|USING\s+PERIODIC\s+COMMIT)\b/i;
 
-/** Allowed relationship types in the milk-tea seed subgraph (A5). */
-export const ALLOWED_REL_TYPES = ["CONTAINS", "USES", "SUITABLE_FOR", "BELONGS_TO"] as const;
+/** Allowed relationship types — seed subgraph + user graph (D-13). */
+export const ALLOWED_REL_TYPES = [
+  "CONTAINS",
+  "USES",
+  "SUITABLE_FOR",
+  "BELONGS_TO",
+  "MENTIONS",
+  "RELATED_TO",
+] as const;
 
-/** Allowed node labels in the milk-tea seed subgraph. */
-export const ALLOWED_LABELS = ["Product", "Ingredient", "Method", "People", "Type"] as const;
+/** Allowed node labels — seed subgraph + user graph (D-03). */
+export const ALLOWED_LABELS = [
+  "Product",
+  "Ingredient",
+  "Method",
+  "People",
+  "Type",
+  "Entity",
+  "Document",
+  "Concept",
+] as const;
+
+/** Max hops for bounded variable-length relationship patterns (T-04-02-02). */
+const MAX_ALLOWED_VAR_LENGTH_HOPS = 2;
+
+const BOUNDED_VAR_LENGTH = /^\*(\d+)\.\.(\d+)$/;
 
 export class CypherAllowlistError extends Error {
   constructor(message: string) {
@@ -107,27 +128,49 @@ export function assertAllowlistedCypher(cypher: string): void {
     const bracketMatch = relPattern.match(/\[([^\]]*)\]/);
     if (!bracketMatch) continue;
     const inner = bracketMatch[1]!.trim();
-    if (inner.includes("*")) {
-      throw new CypherAllowlistError(
-        "Cypher rejected: variable-length relationship not allowlisted",
-      );
-    }
     if (!inner.includes(":")) {
       throw new CypherAllowlistError("Cypher rejected: untyped relationship pattern");
     }
-    if (inner.includes("|")) {
-      throw new CypherAllowlistError("Cypher rejected: multi-type relationship not allowlisted");
+
+    const colonIdx = inner.indexOf(":");
+    const typeSegment = inner.slice(colonIdx + 1);
+    let varLengthSuffix = "";
+    let typePart = typeSegment;
+    const starIdx = typeSegment.indexOf("*");
+    if (starIdx >= 0) {
+      varLengthSuffix = typeSegment.slice(starIdx);
+      typePart = typeSegment.slice(0, starIdx);
     }
-    const types = [...inner.matchAll(/:([A-Za-z]\w*)/g)].map((m) => m[1]!);
-    if (types.length !== 1) {
-      throw new CypherAllowlistError(
-        "Cypher rejected: relationship pattern must contain exactly one type",
-      );
+
+    if (varLengthSuffix) {
+      const bounded = BOUNDED_VAR_LENGTH.exec(varLengthSuffix);
+      if (!bounded) {
+        throw new CypherAllowlistError(
+          "Cypher rejected: variable-length relationship not allowlisted",
+        );
+      }
+      const minHop = Number(bounded[1]);
+      const maxHop = Number(bounded[2]);
+      if (maxHop > MAX_ALLOWED_VAR_LENGTH_HOPS || minHop > maxHop) {
+        throw new CypherAllowlistError(
+          "Cypher rejected: variable-length relationship exceeds max hops",
+        );
+      }
     }
-    if (!allowedRels.has(types[0]!)) {
-      throw new CypherAllowlistError(
-        `Cypher rejected: relationship type not allowlisted: ${types[0]}`,
-      );
+
+    const types = typePart
+      .split("|")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (types.length === 0) {
+      throw new CypherAllowlistError("Cypher rejected: untyped relationship pattern");
+    }
+    for (const type of types) {
+      if (!allowedRels.has(type)) {
+        throw new CypherAllowlistError(
+          `Cypher rejected: relationship type not allowlisted: ${type}`,
+        );
+      }
     }
   }
 }

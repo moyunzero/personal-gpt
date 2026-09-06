@@ -43,6 +43,8 @@ export type RetrieveKbParams = {
   corpus?: Corpus;
   /** 测试注入 hybridSearch deps */
   hybridDeps?: HybridSearchDeps;
+  /** Security trim: only these documentIds (D-07). */
+  documentIds?: string[];
 };
 
 /**
@@ -82,12 +84,15 @@ export async function retrieveKb(params: RetrieveKbParams): Promise<KbRetrieveRe
   const corpus = params.corpus ?? "user";
   const minSimilarity = resolveKbMinSimilarity(params.minSimilarity);
 
+  const documentIds = params.documentIds;
+
   const raw = await hybridSearch(
     {
       query,
       workspaceId,
       corpus,
       limit: topK,
+      documentIds,
     },
     params.hybridDeps ?? {},
   );

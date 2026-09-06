@@ -1,5 +1,10 @@
-import { hasSeedGraphEntity, resolveSeedProductName } from "./graph-entities";
+import { resolveGraphEntity } from "./entity-resolve";
+import type { ResolveGraphEntityDeps } from "./entity-resolve";
 import type { L0Hit, SpecialistName } from "./types";
+
+export type L0RoutingContext = ResolveGraphEntityDeps & {
+  workspaceId?: string;
+};
 
 const GREETING_PHRASES = new Set([
   "你好",
@@ -55,16 +60,25 @@ export function hasGraphRelationCue(query: string): boolean {
   return GRAPH_RELATION_RE.test(query);
 }
 
-export function matchGraphRelationL0(query: string): L0Hit | null {
+export async function matchGraphRelationL0(
+  query: string,
+  ctx: L0RoutingContext = {},
+): Promise<L0Hit | null> {
   if (!hasGraphRelationCue(query)) return null;
-  if (!hasSeedGraphEntity(query)) return null;
+  const entity = await resolveGraphEntity(query, ctx.workspaceId, {
+    catalogStore: ctx.catalogStore,
+  });
+  if (!entity) return null;
   const mixed = KB_RE.test(query) || REPORT_RE.test(query) || WEB_RE.test(query);
   return {
     primary: "graph_relation",
     channels: "graph",
     specialists: ["retriever"],
     retrieverTools: ["graph_search"],
-    reason: "l0:graph_relation:seed_entity",
+    reason:
+      entity.source === "catalog"
+        ? "l0:graph_relation:catalog_entity"
+        : "l0:graph_relation:seed_entity",
     terminal: !mixed,
     graphSignal: true,
   };
@@ -89,7 +103,10 @@ type SpecialistNeed = { name: SpecialistName; idx: number; graphOnly?: boolean }
  * D-12: order specialists by first keyword appearance; tie-break DEFAULT_ORDER.
  * Graph multi-step may emit retriever-only graph_search step.
  */
-export function orderSpecialistsByKeywordAppearance(query: string): SpecialistName[] {
+export async function orderSpecialistsByKeywordAppearance(
+  query: string,
+  ctx: L0RoutingContext = {},
+): Promise<SpecialistName[]> {
   const t = (query ?? "").trim();
   if (!t) return [];
 
@@ -98,8 +115,8 @@ export function orderSpecialistsByKeywordAppearance(query: string): SpecialistNa
   const wantsWeb = WEB_RE.test(t) && !refusesWeb;
   const wantsReport = REPORT_RE.test(t);
   const wantsAnalyst = ANALYST_RE.test(t);
-  const seedProduct = resolveSeedProductName(t);
-  const wantsGraph = GRAPH_KB_RE.test(t) || (hasGraphRelationCue(t) && seedProduct !== null);
+  const entity = await resolveGraphEntity(t, ctx.workspaceId, { catalogStore: ctx.catalogStore });
+  const wantsGraph = GRAPH_KB_RE.test(t) || (hasGraphRelationCue(t) && entity !== null);
 
   const need: SpecialistNeed[] = [];
   if (wantsGraph) {
@@ -125,11 +142,17 @@ export function orderSpecialistsByKeywordAppearance(query: string): SpecialistNa
   return need.map((n) => n.name);
 }
 
-export function matchMultiStepL0(query: string): L0Hit | null {
-  const specialists = orderSpecialistsByKeywordAppearance(query);
+export async function matchMultiStepL0(
+  query: string,
+  ctx: L0RoutingContext = {},
+): Promise<L0Hit | null> {
+  const specialists = await orderSpecialistsByKeywordAppearance(query, ctx);
   if (specialists.length < 2) return null;
 
-  const hasGraph = hasGraphRelationCue(query) && hasSeedGraphEntity(query);
+  const entity = await resolveGraphEntity(query, ctx.workspaceId, {
+    catalogStore: ctx.catalogStore,
+  });
+  const hasGraph = hasGraphRelationCue(query) && entity !== null;
   const hasKb = KB_RE.test(query);
   const hasWeb = WEB_RE.test(query) && !REFUSES_WEB_RE.test(query);
 
@@ -190,9 +213,17 @@ function matchChitchatL0(query: string): L0Hit | null {
 }
 
 /** Run all L0 matchers — multi_step before graph so mixed queries win (CR-02) */
-export function matchL0Rules(query: string): L0Hit | null {
+export async function matchL0Rules(
+  query: string,
+  ctx: L0RoutingContext = {},
+): Promise<L0Hit | null> {
   const q = query.trim();
-  return matchChitchatL0(q) ?? matchMultiStepL0(q) ?? matchGraphRelationL0(q) ?? null;
+  return (
+    matchChitchatL0(q) ??
+    (await matchMultiStepL0(q, ctx)) ??
+    (await matchGraphRelationL0(q, ctx)) ??
+    null
+  );
 }
 
 /** Whether L0 hit used graph-only retriever tools for a step */

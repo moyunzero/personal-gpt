@@ -1,15 +1,21 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 type KbDeleteConfirmProps = {
   open: boolean;
   title: string;
   onCancel: () => void;
   onConfirm: () => void;
   loading?: boolean;
+  /** 对话框标题；默认「确认删除文档？」 */
+  heading?: string;
+  /** 自定义正文；默认知识库删除说明 */
+  body?: ReactNode;
 };
 
 /**
- * 删除二次确认（D-20）：明确说明将同时删除 Astra 向量 chunks。
+ * 删除二次确认弹层（与 KB 共用同一套 modal UI）。
  */
 export default function KbDeleteConfirm({
   open,
@@ -17,6 +23,8 @@ export default function KbDeleteConfirm({
   onCancel,
   onConfirm,
   loading = false,
+  heading = "确认删除文档？",
+  body,
 }: KbDeleteConfirmProps) {
   if (!open) return null;
 
@@ -30,12 +38,16 @@ export default function KbDeleteConfirm({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="kb-delete-title" className="kb-modal-title">
-          确认删除文档？
+          {heading}
         </h2>
-        <p className="kb-modal-body">
-          将永久删除「<strong>{title}</strong>
-          」及其在知识库中的所有向量切片（Astra chunks）。此操作不可撤销。
-        </p>
+        <div className="kb-modal-body">
+          {body ?? (
+            <p>
+              将永久删除「<strong>{title}</strong>
+              」及其在知识库中的所有向量切片（Astra chunks）。此操作不可撤销。
+            </p>
+          )}
+        </div>
         <div className="kb-modal-actions">
           <button
             type="button"

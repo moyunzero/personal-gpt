@@ -3,20 +3,31 @@
  * 调用 shared graphRagQuery；禁止新建 Graph/Corrective 子 Agent（D-32/D-35）。
  */
 
+import type { RunnableConfig } from "@langchain/core/runnables";
 import { tool } from "langchain";
 import { z } from "zod";
 
 import {
+  createCatalogEntityFixtureExecutor,
   createSeededMilkTeaFixtureExecutor,
   graphRagQuery,
+  resolveGraphEntity,
   type GraphQueryExecutor,
   type GraphRagResult,
+  type ResolvedGraphEntity,
 } from "@personal-gpt/shared";
+
+import { getKbSearchContextForThread } from "./kb-search-context";
+import { graphHitTotal, graphMissTotal } from "../metrics";
 
 export type GraphSearchInput = {
   question: string;
+  workspaceId?: string;
+  resolvedEntity?: ResolvedGraphEntity;
   /** 测试注入；生产走 Neo4j read session */
   executor?: GraphQueryExecutor;
+  /** Server-injected ACL allowlist; empty = deny-all */
+  documentIds?: string[];
 };
 
 export async function invokeGraphSearch(input: GraphSearchInput): Promise<string> {
@@ -26,11 +37,24 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
   }
 
   try {
+    let resolvedEntity = input.resolvedEntity;
+    const documentIds = input.documentIds;
+    if (!resolvedEntity && input.workspaceId) {
+      const resolved = await resolveGraphEntity(question, input.workspaceId, {
+        allowedDocumentIds: documentIds,
+      });
+      if (resolved) resolvedEntity = resolved;
+    }
+
     const result: GraphRagResult = await graphRagQuery({
       question,
+      workspaceId: input.workspaceId,
+      resolvedEntity,
       executor: input.executor,
+      documentIds,
     });
     if (!result.paths.length) {
+      graphMissTotal.inc();
       return ["GRAPH_SEARCH_STATUS: NO_PATH", "图谱未找到可追溯路径。"].join("\n");
     }
 
@@ -47,6 +71,7 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
       return [`[path ${i + 1}]`, "nodes:", nodes, "relationships:", rels].join("\n");
     });
 
+    graphHitTotal.inc();
     return [
       "GRAPH_SEARCH_STATUS: HIT",
       result.summary,
@@ -60,8 +85,38 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
   }
 }
 
+function threadIdFromConfig(config?: RunnableConfig): string | undefined {
+  const runId = config?.configurable?.run_id;
+  if (typeof runId === "string" && runId.trim()) return runId.trim();
+  const raw = config?.configurable?.thread_id;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : undefined;
+}
+
+function workspaceFromConfig(config?: RunnableConfig): string | undefined {
+  const fromCfg = config?.configurable?.workspaceId;
+  if (typeof fromCfg === "string" && fromCfg.trim()) return fromCfg.trim();
+  return getKbSearchContextForThread(threadIdFromConfig(config)).workspaceId;
+}
+
+function allowedDocumentIdsFromConfig(config?: RunnableConfig): string[] | undefined {
+  const fromCfg = config?.configurable?.allowedDocumentIds;
+  if (Array.isArray(fromCfg)) {
+    return fromCfg
+      .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+      .map((id) => id.trim());
+  }
+  const fromCtx = getKbSearchContextForThread(threadIdFromConfig(config)).allowedDocumentIds;
+  if (fromCtx !== undefined) return fromCtx;
+  return undefined;
+}
+
 export const graphSearchTool = tool(
-  async (input: { question: string }) => invokeGraphSearch({ question: input.question }),
+  async (input: { question: string }, config?: RunnableConfig) =>
+    invokeGraphSearch({
+      question: input.question,
+      workspaceId: workspaceFromConfig(config),
+      documentIds: allowedDocumentIdsFromConfig(config),
+    }),
   {
     name: "graph_search",
     description:
@@ -77,5 +132,25 @@ export function invokeGraphSearchWithFixture(question: string): Promise<string> 
   return invokeGraphSearch({
     question,
     executor: createSeededMilkTeaFixtureExecutor(),
+  });
+}
+
+/** 测试辅助：catalog entity path via entity_rel_path template */
+export function invokeGraphSearchWithCatalogFixture(
+  question: string,
+  workspaceId = "ws-1",
+): Promise<string> {
+  const catalogEntity: ResolvedGraphEntity = {
+    source: "catalog",
+    displayName: "Project Atlas",
+    normalizedName: "project atlas",
+    entityType: "concept",
+    neo4jNodeId: "entity:ws-1:project atlas:concept",
+  };
+  return invokeGraphSearch({
+    question,
+    workspaceId,
+    resolvedEntity: catalogEntity,
+    executor: createCatalogEntityFixtureExecutor(),
   });
 }

@@ -63,6 +63,7 @@ import {
   type WebSearchSource,
 } from "../tools/web-search.tool";
 import { sanitizeUserFacingAgentText, isToolCallLeakText } from "./sanitize-user-text";
+import type { RetrievalContext } from "./retrieval-context";
 import { formatGraphAnswerFromToolOutput } from "./graph-answer-format";
 import {
   formatKbAnswerFromCitations,
@@ -497,17 +498,24 @@ async function prefetchForSingleSpecialist(input: {
   plan: IntentPlan;
   userText: string;
   workspaceId: string;
+  allowedDocumentIds?: string[];
   trace: AgentTraceCollector;
   tracker?: ProgressTracker;
   abortSignal?: AbortSignal;
   kbSearchPrefetched?: boolean;
 }): Promise<SystemMessage[]> {
   const seeds: SystemMessage[] = [];
+  const documentIds = input.allowedDocumentIds;
   let kbSearchExecuted = input.kbSearchPrefetched ?? false;
   if (input.plan.retrieverTools.includes("graph_search")) {
-    const graphOut = await raceExternalCall(invokeGraphSearch({ question: input.userText }), {
-      signal: input.abortSignal,
-    });
+    const graphOut = await raceExternalCall(
+      invokeGraphSearch({
+        question: input.userText,
+        workspaceId: input.workspaceId,
+        documentIds,
+      }),
+      { signal: input.abortSignal },
+    );
     if (input.abortSignal?.aborted) return seeds;
     const graphHit = Boolean(graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut));
     if (graphOut) {
@@ -540,6 +548,7 @@ async function prefetchForSingleSpecialist(input: {
           query: extractKbSearchQuery(input.userText),
           userText: input.userText,
           workspaceId: input.workspaceId,
+          documentIds,
         }),
         { signal: input.abortSignal },
       );
@@ -578,6 +587,7 @@ async function prefetchForSingleSpecialist(input: {
         query: extractKbSearchQuery(input.userText),
         userText: input.userText,
         workspaceId: input.workspaceId,
+        documentIds,
       }),
       { signal: input.abortSignal },
     );
@@ -1223,11 +1233,15 @@ export class AgentService {
    * 将 UIMessage 流转写到 Express Response。
    * GraphRecursionError / 工具降级时尽量写出可读错误或部分文本（D-16）。
    */
-  async streamChat(body: unknown, res: Response): Promise<void> {
+  async streamChat(body: unknown, res: Response, retrievalCtx?: RetrievalContext): Promise<void> {
     assertModelConfigured();
     ensureLangSmithProjectHint();
 
     const parsed = parseAgentChatBody(body);
+    const headerWorkspace = retrievalCtx?.workspaceId?.trim();
+    const workspaceId = headerWorkspace ? resolveWorkspaceId(headerWorkspace) : parsed.workspaceId;
+    const allowedDocumentIds = retrievalCtx?.allowedDocumentIds ?? [];
+    const documentIds = allowedDocumentIds;
     const lcMessages = await toBaseMessages(parsed.messages);
     const userText = lastUserText(lcMessages);
     const routerConfig = readIntentRouterConfig();
@@ -1240,7 +1254,8 @@ export class AgentService {
         const resolved = await withBoundedTimeout(
           resolveIntentPlanForAgent({
             query: userText,
-            workspaceId: parsed.workspaceId,
+            workspaceId,
+            allowedDocumentIds: documentIds,
           }),
           INTENT_RESOLVE_TIMEOUT_MS,
           null as { plan: IntentPlan; layers: RouterLayer[] } | null,
@@ -1266,10 +1281,7 @@ export class AgentService {
     // 请求级 runId：避免同 thread 并发互相覆盖 KB/web 配额状态
     const runId = randomUUID();
     const memoryBlock = await withBoundedTimeout(
-      loadMemoryContextBlock(
-        { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
-        userText,
-      ),
+      loadMemoryContextBlock({ workspaceId, userKey: parsed.userKey }, userText),
       MEMORY_LOAD_TIMEOUT_MS,
       "",
     ).catch(() => "");
@@ -1278,7 +1290,8 @@ export class AgentService {
       execute: async ({ writer }) => {
         setKbSearchContextForThread(runId, {
           userText,
-          workspaceId: parsed.workspaceId,
+          workspaceId,
+          allowedDocumentIds: documentIds,
         });
         resetWebSearchCallCount(runId);
         let assistantForMemory = "";
@@ -1375,8 +1388,9 @@ export class AgentService {
                 configurable: {
                   ...runConfig.configurable,
                   run_id: runId,
-                  workspaceId: parsed.workspaceId,
+                  workspaceId,
                   userText,
+                  allowedDocumentIds: documentIds ?? [],
                 },
               };
               const citationBag = new Map<string, Citation>();
@@ -1451,7 +1465,8 @@ export class AgentService {
                     // 长任务句先压缩检索词；invoke 内仍会用 userText / condensed 回退
                     query: extractKbSearchQuery(userText),
                     userText,
-                    workspaceId: parsed.workspaceId,
+                    workspaceId,
+                    documentIds,
                   }),
                   new Promise<undefined>((resolve) => {
                     timer = setTimeout(() => resolve(undefined), KB_PREFETCH_TIMEOUT_MS);
@@ -1493,7 +1508,7 @@ export class AgentService {
                     ) {
                       try {
                         const graphOut = await raceExternalCall(
-                          invokeGraphSearch({ question: userText }),
+                          invokeGraphSearch({ question: userText, documentIds }),
                           { signal: abortSignal },
                         );
                         if (graphOut) {
@@ -1542,7 +1557,8 @@ export class AgentService {
                 const prefetchSeeds = await prefetchForSingleSpecialist({
                   plan: intentPlan,
                   userText,
-                  workspaceId: parsed.workspaceId,
+                  workspaceId,
+                  allowedDocumentIds: documentIds,
                   trace,
                   tracker,
                   abortSignal,
@@ -1839,13 +1855,13 @@ export class AgentService {
                       configurable: {
                         ...runConfig.configurable,
                         run_id: runId,
-                        workspaceId: parsed.workspaceId,
+                        workspaceId,
                       },
                     },
                     {
                       todos: tracker.todos.map((t) => ({ ...t })),
                       citations: citations.map((c) => ({ ...c })),
-                      workspaceId: parsed.workspaceId,
+                      workspaceId,
                     },
                   );
                 } catch (persistErr) {
@@ -1926,7 +1942,7 @@ export class AgentService {
             try {
               if (assistantForMemory.trim()) {
                 await persistTurnMemory(
-                  { workspaceId: parsed.workspaceId, userKey: parsed.userKey },
+                  { workspaceId, userKey: parsed.userKey },
                   userText,
                   assistantForMemory,
                 );

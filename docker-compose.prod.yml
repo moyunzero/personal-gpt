@@ -1,0 +1,30 @@
+# Production-oriented overrides for docker compose (D-31).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+services:
+  web:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  agent-service:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  ingest-worker:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  elasticsearch:
+    environment:
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+
+  milvus:
+    deploy:
+      resources:
+        limits:
+          memory: 2G

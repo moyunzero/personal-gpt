@@ -38,6 +38,24 @@ vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/es-upsert", () => ({
   upsertChunksToEs: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@personal-gpt/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@personal-gpt/shared")>();
+  return {
+    ...actual,
+    deleteGraphForDocument: vi.fn().mockResolvedValue(undefined),
+    deleteCatalogForDocument: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+vi.mock("@personal-gpt/shared/stores/vector-store", () => ({
+  shouldWriteAstra: () => true,
+  shouldWriteMilvus: () => false,
+}));
+
+vi.mock("../../../apps/ingest-worker/src/ingest/entity-catalog-store", () => ({
+  createEntityCatalogStore: () => ({}),
+}));
+
 import { IngestProcessor } from "../../../apps/ingest-worker/src/ingest/ingest.processor";
 import { parseDocumentUnsafe } from "../../../apps/ingest-worker/src/ingest/pipeline/parse";
 

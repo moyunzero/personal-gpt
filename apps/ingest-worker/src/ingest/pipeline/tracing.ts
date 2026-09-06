@@ -10,7 +10,7 @@ export interface IngestTraceContext {
   requestId?: string;
 }
 
-export type IngestTraceStep = "parse" | "split" | "embed" | "upsert";
+export type IngestTraceStep = "parse" | "split" | "embed" | "upsert" | "graph-extract";
 
 function ensureLangSmithEnv(): boolean {
   if (configured) return true;

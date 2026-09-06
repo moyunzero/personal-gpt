@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { combineAbortSignals, createUpstreamTimeoutSignal } from "./abort-signals";
-import { pipeUpstreamBody } from "./route";
+import { pipeUpstreamBody } from "./pipe-upstream";
 
 describe("agent BFF abort signals", () => {
   it("combineAbortSignals aborts when any input aborts", () => {

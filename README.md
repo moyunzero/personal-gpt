@@ -203,6 +203,8 @@ yarn test:regression:phase-3    # hybrid / corpus / memory / graph / intent
 yarn eval:phase-3               # 黄金集 smoke
 ```
 
+评价指标与生产门禁见 [`tests/eval/EVALUATION-STANDARD.md`](./tests/eval/EVALUATION-STANDARD.md)。
+
 验收说明（仓库内）：[`tests/acceptance/phase-3/ACCEPTANCE.md`](./tests/acceptance/phase-3/ACCEPTANCE.md) · [`tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md`](./tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md)
 
 ## 项目结构
@@ -372,6 +374,7 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 | [tests/acceptance/phase-2-agent/README.md](./tests/acceptance/phase-2-agent/README.md)         | Phase 2 验收与 smoke 说明              |
 | [tests/acceptance/phase-3/ACCEPTANCE.md](./tests/acceptance/phase-3/ACCEPTANCE.md)             | Phase 3 验收                           |
 | [tests/acceptance/phase-3/MCP-ACCEPTANCE.md](./tests/acceptance/phase-3/MCP-ACCEPTANCE.md)     | Phase 3 Playwright MCP 记录            |
+| [tests/eval/EVALUATION-STANDARD.md](./tests/eval/EVALUATION-STANDARD.md)                       | 知识库评价标准（对外展示 / 生产门禁）  |
 | [tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md](./tests/acceptance/phase-3.1/MCP-ACCEPTANCE.md) | Phase 3.1 意图路由 UAT                 |
 
 ## 产品路线图 (Product Roadmap)

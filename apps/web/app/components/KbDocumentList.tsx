@@ -10,6 +10,7 @@ export type KbDocumentItem = {
   title: string;
   category: string | null;
   tags: string[];
+  visibility?: "workspace" | "private" | "restricted";
   status: "pending" | "processing" | "ready" | "failed";
   chunkCount: number;
   mimeType: string | null;
@@ -65,6 +66,9 @@ function KbDocumentRow({
   const [editTitle, setEditTitle] = useState(item.title);
   const [editCategory, setEditCategory] = useState(item.category ?? "");
   const [editTags, setEditTags] = useState(item.tags.join(", "));
+  const [editVisibility, setEditVisibility] = useState<"workspace" | "private" | "restricted">(
+    item.visibility ?? "workspace",
+  );
 
   const parseTags = (raw: string) =>
     raw
@@ -76,6 +80,7 @@ function KbDocumentRow({
     setEditTitle(item.title);
     setEditCategory(item.category ?? "");
     setEditTags(item.tags.join(", "));
+    setEditVisibility(item.visibility ?? "workspace");
   };
 
   const startEditing = () => {
@@ -181,7 +186,8 @@ function KbDocumentRow({
     const unchanged =
       trimmedTitle === item.title &&
       nextCategory === item.category &&
-      JSON.stringify(nextTags) === JSON.stringify(item.tags);
+      JSON.stringify(nextTags) === JSON.stringify(item.tags) &&
+      editVisibility === (item.visibility ?? "workspace");
 
     if (unchanged) {
       setEditing(false);
@@ -195,6 +201,7 @@ function KbDocumentRow({
         title: trimmedTitle,
         category: nextCategory,
         tags: nextTags,
+        visibility: editVisibility,
       }),
     });
     const data = (await res.json()) as { document?: KbDocumentItem };
@@ -263,6 +270,18 @@ function KbDocumentRow({
                     placeholder="逗号分隔"
                   />
                 </label>
+                <label className="kb-field">
+                  <span className="kb-field-label">可见性</span>
+                  <select
+                    className="kb-field-input"
+                    value={editVisibility}
+                    onChange={(e) => setEditVisibility(e.target.value as typeof editVisibility)}
+                  >
+                    <option value="workspace">工作区全员</option>
+                    <option value="private">仅自己</option>
+                    <option value="restricted">指定成员</option>
+                  </select>
+                </label>
               </div>
               <div className="kb-doc-edit-actions">
                 <button
@@ -288,6 +307,7 @@ function KbDocumentRow({
               {STATUS_LABEL[item.status]}
             </span>
             {item.category ? <span className="kb-doc-tag">{item.category}</span> : null}
+            <span className="kb-doc-tag">{item.visibility ?? "workspace"}</span>
             {item.tags?.map((tag) => (
               <span key={tag} className="kb-doc-tag">
                 {tag}

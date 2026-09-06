@@ -39,7 +39,7 @@ describe("assertAllowlistedCypher", () => {
     ).toThrow(/relationship type not allowlisted/);
   });
 
-  it("rejects untyped and multi-type relationship patterns", () => {
+  it("rejects untyped and non-allowlisted multi-type relationship patterns", () => {
     expect(() => assertAllowlistedCypher("MATCH (a:Product)-[]->(b:Ingredient) RETURN a")).toThrow(
       /untyped relationship/i,
     );
@@ -48,6 +48,33 @@ describe("assertAllowlistedCypher", () => {
     );
     expect(() =>
       assertAllowlistedCypher("MATCH (a:Product)-[:CONTAINS|HACK]->(b:Ingredient) RETURN a"),
-    ).toThrow(/multi-type relationship/i);
+    ).toThrow(/relationship type not allowlisted/);
+  });
+
+  it("allows Entity/Document labels and D-13 rel types (GRAPH-03)", () => {
+    expect(() =>
+      assertAllowlistedCypher(
+        "MATCH path = (d:Document {workspaceId: $workspaceId})-[:MENTIONS]->(e:Entity) WHERE e.workspaceId = $workspaceId RETURN path",
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertAllowlistedCypher(
+        "MATCH path = (e:Entity {workspaceId: $workspaceId})-[:RELATED_TO]->(n:Concept) RETURN path",
+      ),
+    ).not.toThrow();
+  });
+
+  it("allows bounded 1-2 hop variable-length rels and rejects unbounded", () => {
+    expect(() =>
+      assertAllowlistedCypher(
+        "MATCH path = (e:Entity)-[:RELATED_TO|CONTAINS|USES*1..2]-(n:Entity) RETURN path",
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertAllowlistedCypher("MATCH path = (e:Entity)-[:RELATED_TO*]-(n:Entity) RETURN path"),
+    ).toThrow(/variable-length relationship not allowlisted/);
+    expect(() =>
+      assertAllowlistedCypher("MATCH path = (e:Entity)-[:RELATED_TO*1..5]-(n:Entity) RETURN path"),
+    ).toThrow(/exceeds max hops/);
   });
 });

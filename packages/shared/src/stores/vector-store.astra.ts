@@ -134,6 +134,9 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
     },
 
     async search(params: VectorSearchParams) {
+      if (params.documentIds !== undefined && params.documentIds.length === 0) {
+        return [];
+      }
       assertSearchWorkspaceId(params.workspaceId);
 
       const limit = params.limit ?? 5;
@@ -154,7 +157,15 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
       };
 
       const workspaceFilter = { workspaceId: { $eq: params.workspaceId } };
-      const filter = params.filter ? { $and: [workspaceFilter, params.filter] } : workspaceFilter;
+      const docFilters: Record<string, unknown>[] = [workspaceFilter];
+      if (params.documentIds?.length) {
+        docFilters.push({ documentId: { $in: params.documentIds } });
+      }
+      let filter: Record<string, unknown> =
+        docFilters.length === 1 ? docFilters[0]! : { $and: docFilters };
+      if (params.filter) {
+        filter = { $and: [filter, params.filter] };
+      }
 
       // Phase 1 多租户隔离：先按 workspaceId（+ 可选 filter）过滤
       let docs = (await collection!.find(filter, searchOptions).toArray()) as Record<

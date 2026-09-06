@@ -5,6 +5,8 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { INGEST_DEFAULT_JOB_OPTIONS, INGEST_QUEUE_NAME } from "@personal-gpt/shared";
 
 import { DocumentEntity } from "../../../web/lib/db/entities/document.entity";
+import { EntityAclEntity } from "../../../web/lib/db/entities/entity-acl.entity";
+import { EntityCatalogEntity } from "../../../web/lib/db/entities/entity-catalog.entity";
 import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity";
 import { WorkspaceEntity } from "../../../web/lib/db/entities/workspace.entity";
 
@@ -16,7 +18,13 @@ import { IngestProcessor } from "./ingest.processor";
       name: INGEST_QUEUE_NAME,
       defaultJobOptions: INGEST_DEFAULT_JOB_OPTIONS,
     }),
-    TypeOrmModule.forFeature([DocumentEntity, IngestJobEntity, WorkspaceEntity]),
+    TypeOrmModule.forFeature([
+      DocumentEntity,
+      IngestJobEntity,
+      WorkspaceEntity,
+      EntityCatalogEntity,
+      EntityAclEntity,
+    ]),
   ],
   providers: [IngestProcessor],
 })

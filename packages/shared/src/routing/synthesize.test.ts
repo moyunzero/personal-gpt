@@ -109,8 +109,8 @@ describe("readIntentRouterConfig (D-10/D-14)", () => {
 });
 
 describe("synthesizeIntentPlan (D-03/D-13/D-10)", () => {
-  it("L0 terminal graph hit skips L1 kb_doc override (D-03 / Pitfall 3)", () => {
-    const l0 = matchL0Rules("珍珠奶茶有哪些原料，用了什么工艺？")!;
+  it("L0 terminal graph hit skips L1 kb_doc override (D-03 / Pitfall 3)", async () => {
+    const l0 = (await matchL0Rules("珍珠奶茶有哪些原料，用了什么工艺？"))!;
     const plan = synthesizeIntentPlan({
       query: "珍珠奶茶有哪些原料，用了什么工艺？",
       l0,
@@ -125,8 +125,8 @@ describe("synthesizeIntentPlan (D-03/D-13/D-10)", () => {
     expect(plan.retrieverTools).toEqual(["graph_search"]);
   });
 
-  it("neo4jOk=false degrades graph_relation to kb_doc (D-10)", () => {
-    const l0 = matchL0Rules("珍珠奶茶有哪些原料，用了什么工艺？")!;
+  it("neo4jOk=false degrades graph_relation to kb_doc (D-10)", async () => {
+    const l0 = (await matchL0Rules("珍珠奶茶有哪些原料，用了什么工艺？"))!;
     const plan = synthesizeIntentPlan({
       query: "珍珠奶茶有哪些原料，用了什么工艺？",
       l0,
@@ -169,8 +169,8 @@ describe("synthesizeIntentPlan (D-03/D-13/D-10)", () => {
     expect(plan.graphSignal).toBe(true);
   });
 
-  it("mixed graph+KB L0 non-terminal → kb_graph_hybrid with both retriever tools (CR-X-01)", () => {
-    const l0 = matchL0Rules("珍珠奶茶原料知识库里怎么写的")!;
+  it("mixed graph+KB L0 non-terminal → kb_graph_hybrid with both retriever tools (CR-X-01)", async () => {
+    const l0 = await matchL0Rules("珍珠奶茶原料知识库里怎么写的");
     expect(l0?.terminal).toBe(false);
     const plan = synthesizeIntentPlan({
       query: "珍珠奶茶原料知识库里怎么写的",

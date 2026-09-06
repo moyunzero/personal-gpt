@@ -70,13 +70,54 @@ export {
   ALLOWED_LABELS,
 } from "./rag/graph-cypher-allowlist";
 export {
+  EntityTypeEnum,
+  RelationTypeEnum,
+  ChunkGraphSchema,
+  type EntityType,
+  type RelationType,
+  type ChunkGraph,
+} from "./graph/extract-schema";
+export { normalizeEntityName } from "./graph/normalize-entity";
+export {
+  extractGraphFromChunk,
+  extractGraphFromChunks,
+  type ExtractedEntity,
+  type ExtractedRelation,
+} from "./graph/extract-entities";
+export {
+  upsertDocumentGraph,
+  ensureNeo4jGraphConstraintsFromEnv,
+  ensureNeo4jGraphConstraints,
+  resetNeo4jGraphConstraintsForTests,
+  stableEntityId,
+  type UpsertDocumentGraphParams,
+} from "./graph/neo4j-upsert";
+export { deleteGraphForDocument } from "./graph/neo4j-delete";
+export {
+  upsertCatalogEntries,
+  deleteCatalogForDocument,
+  findCatalogEntitiesInQuery,
+  type EntityCatalogRecord,
+  type EntityCatalogStore,
+  type UpsertCatalogEntriesParams,
+} from "./graph/entity-catalog";
+export {
+  MILK_TEA_PATH_CYPHER,
+  ENTITY_REL_PATH_CYPHER,
+  DOC_ENTITY_MENTIONS_CYPHER,
+  GRAPH_CYPHER_TEMPLATES,
+  selectTemplateForEntity,
+  type GraphCypherTemplate,
+  type GraphCypherTemplateId,
+} from "./rag/graph-cypher-templates";
+export {
   graphRagQuery,
   seedMilkTeaSubgraph,
   createSeededMilkTeaFixtureExecutor,
+  createCatalogEntityFixtureExecutor,
   getNeo4jDriverFromEnv,
   resetNeo4jDriverForTests,
   resolveProductName,
-  MILK_TEA_PATH_CYPHER,
   MILK_TEA_SEED_CYPHER,
   type GraphRagResult,
   type GraphPathTrace,
@@ -85,3 +126,9 @@ export {
   type GraphQueryExecutor,
   type GraphRagQueryOptions,
 } from "./rag/graph-rag";
+export {
+  resolveGraphEntity,
+  setEntityCatalogStoreForTests,
+  type ResolvedGraphEntity,
+  type ResolveGraphEntityDeps,
+} from "./routing/entity-resolve";

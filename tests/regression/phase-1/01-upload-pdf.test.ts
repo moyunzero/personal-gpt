@@ -38,6 +38,10 @@ vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/upsert", () => ({
   upsertChunks: (...args: unknown[]) => upsertMock(...args),
 }));
 
+vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/graph-extract", () => ({
+  extractAndUpsertGraph: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/tracing", () => ({
   traceIngestStep: (_step: string, _ctx: unknown, fn: () => Promise<unknown>) => fn(),
 }));

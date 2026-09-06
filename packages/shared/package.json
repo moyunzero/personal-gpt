@@ -29,6 +29,10 @@
       "types": "./src/utils/paths.ts",
       "default": "./dist/utils/paths.js"
     },
+    "./storage/s3-uri": {
+      "types": "./src/storage/s3-uri.ts",
+      "default": "./dist/storage/s3-uri.js"
+    },
     "./constants/workspace": {
       "types": "./src/constants/workspace.ts",
       "default": "./dist/constants/workspace.js"
@@ -80,6 +84,10 @@
     "./routing": {
       "types": "./src/routing/index.ts",
       "default": "./dist/routing/index.js"
+    },
+    "./metrics-auth": {
+      "types": "./src/metrics-auth.ts",
+      "default": "./dist/metrics-auth.js"
     }
   },
   "scripts": {
@@ -90,6 +98,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "2.0.56",
+    "@aws-sdk/client-s3": "3.787.0",
     "@datastax/astra-db-ts": "2.2.1",
     "@elastic/elasticsearch": "8.17.1",
     "@zilliz/milvus2-sdk-node": "3.0.4",

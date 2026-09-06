@@ -25,6 +25,8 @@ export type KbSearchInput = {
   userText?: string;
   /** 测试注入 hybridSearch deps（禁止 live embed / ES） */
   hybridDeps?: HybridSearchDeps;
+  /** Security trim: only these documentIds (D-07). */
+  documentIds?: string[];
 };
 
 const SNIPPET_MAX = 400;
@@ -94,6 +96,7 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
     workspaceId: input.workspaceId,
     minSimilarity,
     hybridDeps: input.hybridDeps,
+    documentIds: input.documentIds,
   };
 
   try {
@@ -156,12 +159,25 @@ function userTextFromConfig(config?: RunnableConfig): string | undefined {
   return getKbSearchContextForThread(threadIdFromConfig(config)).userText;
 }
 
+function allowedDocumentIdsFromConfig(config?: RunnableConfig): string[] | undefined {
+  const fromCfg = config?.configurable?.allowedDocumentIds;
+  if (Array.isArray(fromCfg)) {
+    return fromCfg
+      .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+      .map((id) => id.trim());
+  }
+  const fromCtx = getKbSearchContextForThread(threadIdFromConfig(config)).allowedDocumentIds;
+  if (fromCtx !== undefined) return fromCtx;
+  return undefined;
+}
+
 export const kbSearchTool = tool(
   async (input: { query: string }, config?: RunnableConfig) =>
     invokeKbSearch({
       query: input.query,
       workspaceId: workspaceFromConfig(config),
       userText: userTextFromConfig(config),
+      documentIds: allowedDocumentIdsFromConfig(config),
     }),
   {
     name: "kb_search",

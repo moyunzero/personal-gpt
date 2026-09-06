@@ -10,6 +10,9 @@ export const THREAD_STORAGE_KEYS = {
   agent: "pgpt.thread.agent",
 } as const;
 
+/** Server-side validation pattern (aligned with agent-service SAFE_THREAD_ID). */
+export const SAFE_THREAD_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/;
+
 /** 生成 opaque thread_id（与 agent-service SAFE_THREAD_ID 对齐） */
 export function createThreadId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -53,4 +56,16 @@ export function rotateThreadId(mode: ChatMode): string {
     /* ignore quota / private mode */
   }
   return next;
+}
+
+/** 写入指定 thread_id（恢复历史会话）。 */
+export function setThreadId(mode: ChatMode, threadId: string): void {
+  if (typeof window === "undefined") return;
+  const trimmed = threadId.trim();
+  if (!SAFE_THREAD_ID_PATTERN.test(trimmed)) return;
+  try {
+    window.localStorage.setItem(storageKey(mode), trimmed);
+  } catch {
+    /* ignore quota / private mode */
+  }
 }

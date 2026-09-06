@@ -155,4 +155,40 @@ describe("hybridSearch", () => {
     expect(embed).toHaveBeenCalledWith("假设性 HyDE 段落");
     expect(esSearch).toHaveBeenCalledWith(expect.objectContaining({ query: "用户原始问题" }));
   });
+
+  it("returns no hits when documentIds is an empty allowlist (fail-closed ACL)", async () => {
+    process.env.ENABLE_RERANKER = "false";
+    process.env.CORRECTIVE_MIN_SCORE = "0";
+
+    const result = await hybridSearch(
+      {
+        query: "secret",
+        workspaceId: "ws-1",
+        corpus: "user",
+        documentIds: [],
+      },
+      {
+        embed: async () => [0.1, 0.2, 0.3],
+        getStore: () =>
+          mockStore([
+            {
+              text: "should not leak",
+              similarity: 0.99,
+              documentId: "doc-forbidden",
+              chunkIndex: 0,
+            },
+          ]),
+        esSearch: async () => [
+          {
+            text: "es forbidden",
+            similarity: 0.99,
+            documentId: "doc-forbidden",
+            chunkIndex: 0,
+          },
+        ],
+      },
+    );
+
+    expect(result).toEqual([]);
+  });
 });

@@ -5,6 +5,10 @@ import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
 
 import { DEFAULT_ALLOWED_MIME_TYPES } from "../../../../../packages/shared/src/utils/ingest";
+import {
+  isS3Uri,
+  materializeS3UriToTempFile,
+} from "../../../../../packages/shared/src/storage/s3-uri";
 import { getUploadsDir } from "../../../../../packages/shared/src/utils/paths";
 
 const PARSE_TIMEOUT_MS = 60_000;
@@ -68,32 +72,46 @@ async function parseText(filePath: string): Promise<string> {
  */
 export async function parseDocument(filePath: string, mimeType: string): Promise<string> {
   assertAllowedMime(mimeType);
-  const safePath = resolveSafeFilePath(filePath);
 
-  const stat = await fs.stat(safePath);
-  if (!stat.isFile()) {
-    throw new Error(`Not a file: ${safePath}`);
+  let localPath = filePath;
+  let tempPath: string | undefined;
+  if (isS3Uri(filePath)) {
+    tempPath = await materializeS3UriToTempFile(filePath);
+    localPath = tempPath;
+  } else {
+    localPath = resolveSafeFilePath(filePath);
   }
 
-  const parse = async (): Promise<string> => {
-    switch (mimeType) {
-      case "application/pdf":
-        return parsePdf(safePath);
-      case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        return parseDocx(safePath);
-      case "text/markdown":
-      case "text/plain":
-        return parseText(safePath);
-      default:
-        throw new Error(`No parser for MIME type: ${mimeType}`);
+  try {
+    const stat = await fs.stat(localPath);
+    if (!stat.isFile()) {
+      throw new Error(`Not a file: ${localPath}`);
     }
-  };
 
-  const text = await withTimeout(parse(), `parseDocument(${mimeType})`);
-  if (!text) {
-    throw new Error(`Parsed empty text from ${safePath}`);
+    const parse = async (): Promise<string> => {
+      switch (mimeType) {
+        case "application/pdf":
+          return parsePdf(localPath);
+        case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+          return parseDocx(localPath);
+        case "text/markdown":
+        case "text/plain":
+          return parseText(localPath);
+        default:
+          throw new Error(`No parser for MIME type: ${mimeType}`);
+      }
+    };
+
+    const text = await withTimeout(parse(), `parseDocument(${mimeType})`);
+    if (!text) {
+      throw new Error(`Parsed empty text from ${localPath}`);
+    }
+    return text;
+  } finally {
+    if (tempPath) {
+      await fs.unlink(tempPath).catch(() => undefined);
+    }
   }
-  return text;
 }
 
 /** 测试/ fixture 用：跳过 uploads 路径校验 */

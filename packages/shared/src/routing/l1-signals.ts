@@ -1,15 +1,22 @@
 import { hasGraphRelationCue } from "./l0-rules";
-import { hasSeedGraphEntity } from "./graph-entities";
+import { resolveGraphEntity } from "./entity-resolve";
+import type { EntityCatalogStore } from "../graph/entity-catalog";
 import type { KbProbeResult, L1Signals } from "./types";
 
 export interface CollectL1SignalsDeps {
+  workspaceId?: string;
+  catalogStore?: EntityCatalogStore;
   probeKb?: (query: string) => Promise<KbProbeResult>;
   routeRetrieveSimilarity?: number;
   routeDirectSimilarity?: number;
 }
 
-function detectGraphSignal(query: string): boolean {
-  return hasGraphRelationCue(query) && hasSeedGraphEntity(query);
+async function detectGraphSignal(query: string, deps: CollectL1SignalsDeps): Promise<boolean> {
+  if (!hasGraphRelationCue(query)) return false;
+  const entity = await resolveGraphEntity(query, deps.workspaceId, {
+    catalogStore: deps.catalogStore,
+  });
+  return entity !== null;
 }
 
 export async function collectL1Signals(
@@ -19,7 +26,7 @@ export async function collectL1Signals(
   const retrieveAt = deps.routeRetrieveSimilarity ?? 0.68;
   const directBelow = deps.routeDirectSimilarity ?? 0.42;
 
-  const graphSignal = detectGraphSignal(query);
+  const graphSignal = await detectGraphSignal(query, deps);
   const signals: L1Signals = { graphSignal };
 
   if (!deps.probeKb) {

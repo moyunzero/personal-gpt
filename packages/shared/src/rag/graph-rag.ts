@@ -7,7 +7,15 @@
 import neo4j, { type Driver, type Path as Neo4jPath } from "neo4j-driver";
 
 import { assertAllowlistedCypher } from "./graph-cypher-allowlist";
+import {
+  type GraphCypherTemplateId,
+  MILK_TEA_PATH_CYPHER,
+  selectTemplateForEntity,
+} from "./graph-cypher-templates";
 import { resolveSeedProductName } from "../routing/graph-entities";
+import { resolveGraphEntity, type ResolvedGraphEntity } from "../routing/entity-resolve";
+
+export { MILK_TEA_PATH_CYPHER } from "./graph-cypher-templates";
 
 export type GraphPathNode = {
   id: string;
@@ -39,12 +47,6 @@ export type GraphQueryExecutor = (
   cypher: string,
   params: Record<string, unknown>,
 ) => Promise<GraphPathTrace[]>;
-
-/** Canonical path query for milk-tea seed: Product → Ingredient → Method */
-export const MILK_TEA_PATH_CYPHER = `
-MATCH path = (p:Product {name: $productName})-[:CONTAINS]->(i:Ingredient)-[:USES]->(m:Method)
-RETURN path
-`.trim();
 
 /** Seed Cypher (write) — only for bootstrap scripts / test fixtures, never via graphRagQuery. */
 export const MILK_TEA_SEED_CYPHER = `
@@ -182,9 +184,57 @@ export function createSeededMilkTeaFixtureExecutor(): GraphQueryExecutor {
   };
 }
 
+/** Catalog entity fixture for user-graph template tests (entity_rel_path). */
+export function createCatalogEntityFixtureExecutor(): GraphQueryExecutor {
+  const fixturePath: GraphPathTrace = {
+    nodes: [
+      {
+        id: "entity:ws-1:project atlas:concept",
+        labels: ["Entity"],
+        properties: {
+          name: "Project Atlas",
+          normalizedName: "project atlas",
+          entityType: "concept",
+          workspaceId: "ws-1",
+          id: "entity:ws-1:project atlas:concept",
+        },
+      },
+      {
+        id: "entity:ws-1:acme corp:org",
+        labels: ["Entity"],
+        properties: {
+          name: "Acme Corp",
+          normalizedName: "acme corp",
+          entityType: "org",
+          workspaceId: "ws-1",
+          id: "entity:ws-1:acme corp:org",
+        },
+      },
+    ],
+    relationships: [
+      {
+        id: "rel:related",
+        type: "RELATED_TO",
+        startNodeId: "entity:ws-1:project atlas:concept",
+        endNodeId: "entity:ws-1:acme corp:org",
+      },
+    ],
+  };
+
+  return async (cypher) => {
+    assertAllowlistedCypher(cypher);
+    return [fixturePath];
+  };
+}
+
 export type GraphRagQueryOptions = {
   question: string;
   productName?: string;
+  workspaceId?: string;
+  /** Security trim paths to allowed documents (D-07, D-17). */
+  documentIds?: string[];
+  resolvedEntity?: ResolvedGraphEntity;
+  templateId?: GraphCypherTemplateId;
   /** Inject for tests; default uses neo4j-driver read session from env */
   executor?: GraphQueryExecutor;
 };
@@ -242,16 +292,72 @@ async function defaultExecutor(
   }
 }
 
+function pathAllowed(path: GraphPathTrace, documentIds?: string[]): boolean {
+  if (documentIds === undefined) return true;
+  if (documentIds.length === 0) return false;
+  const allowed = new Set(documentIds);
+  for (const node of path.nodes) {
+    const docId = node.properties.documentId;
+    if (typeof docId === "string" && docId.trim() && !allowed.has(docId.trim())) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function filterPaths(paths: GraphPathTrace[], documentIds?: string[]): GraphPathTrace[] {
+  if (documentIds === undefined) return paths;
+  if (documentIds.length === 0) return [];
+  return paths.filter((path) => pathAllowed(path, documentIds));
+}
+
 /**
- * Narrow Graph RAG entry: entity-relation questions over seeded subgraph.
+ * Narrow Graph RAG entry: template-selected entity-relation queries.
  * Always allowlists Cypher before execution.
  *
- * Tenancy: demo seed subgraph is global (no workspaceId filter) until Phase 4 GRAPH-01.
+ * User graph templates require workspaceId (D-05, D-07). Seed demo subgraph is global.
  */
 export async function graphRagQuery(options: GraphRagQueryOptions): Promise<GraphRagResult> {
-  const productName = options.productName ?? resolveProductName(options.question);
-  const cypher = MILK_TEA_PATH_CYPHER;
-  if (!productName) {
+  let resolvedEntity = options.resolvedEntity;
+  if (!resolvedEntity) {
+    if (options.workspaceId) {
+      const resolved = await resolveGraphEntity(options.question, options.workspaceId, {
+        allowedDocumentIds: options.documentIds,
+      });
+      if (resolved) resolvedEntity = resolved;
+    } else {
+      const seedName = options.productName ?? resolveProductName(options.question);
+      if (seedName) {
+        resolvedEntity = {
+          source: "seed",
+          displayName: seedName,
+          normalizedName: seedName,
+          entityType: "product",
+        };
+      }
+    }
+  }
+
+  if (!resolvedEntity) {
+    return {
+      cypher: MILK_TEA_PATH_CYPHER,
+      params: {},
+      paths: [],
+      summary: "GRAPH_RAG_STATUS: NO_PATH",
+    };
+  }
+
+  const template = selectTemplateForEntity(resolvedEntity, options.templateId);
+  const cypher = template.cypher;
+  const workspaceId = options.workspaceId ?? "";
+  const params =
+    resolvedEntity.source === "seed"
+      ? template.buildParams(resolvedEntity, workspaceId)
+      : workspaceId
+        ? template.buildParams(resolvedEntity, workspaceId)
+        : null;
+
+  if (!params) {
     return {
       cypher,
       params: {},
@@ -259,11 +365,12 @@ export async function graphRagQuery(options: GraphRagQueryOptions): Promise<Grap
       summary: "GRAPH_RAG_STATUS: NO_PATH",
     };
   }
-  const params = { productName };
+
   assertAllowlistedCypher(cypher);
 
   const executor = options.executor ?? defaultExecutor;
-  const paths = await executor(cypher, params);
+  const rawPaths = await executor(cypher, params);
+  const paths = filterPaths(rawPaths, options.documentIds);
   return {
     cypher,
     params,
