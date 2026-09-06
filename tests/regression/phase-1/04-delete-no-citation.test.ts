@@ -5,6 +5,10 @@ import type { HybridSearchDeps, VectorStore } from "@personal-gpt/shared";
 const searchMock = vi.fn();
 const deleteByDocumentMock = vi.fn();
 const deleteByDocumentIdMock = vi.fn();
+const TEST_CTX = {
+  userId: "user-test",
+  workspaceId: "11111111-1111-4111-8111-111111111111",
+};
 
 // documents.service imports createVectorStore from the barrel, not .astra
 vi.mock("@personal-gpt/shared/stores/vector-store", () => ({
@@ -22,8 +26,21 @@ vi.mock("@personal-gpt/shared", async (importOriginal) => {
   return {
     ...actual,
     deleteByDocumentId: (...args: unknown[]) => deleteByDocumentIdMock(...args),
+    deleteGraphForDocument: vi.fn().mockResolvedValue(undefined),
+    deleteCatalogForDocument: vi.fn().mockResolvedValue(undefined),
   };
 });
+
+vi.mock("@/lib/auth/workspace.service", () => ({
+  resolveDocumentAccessContext: vi.fn(async () => ({
+    userId: "user-test",
+    memberRole: "owner" as const,
+  })),
+}));
+
+vi.mock("@/lib/db/entity-catalog-store", () => ({
+  createEntityCatalogStore: () => ({}),
+}));
 
 vi.mock("@/lib/env", () => ({
   env: {
@@ -77,8 +94,11 @@ describe("Phase 1 regression #4: delete document → no citation on same questio
     const docRepo = {
       findOne: vi.fn().mockResolvedValue({
         id: documentId,
-        workspaceId: "11111111-1111-4111-8111-111111111111",
+        workspaceId: TEST_CTX.workspaceId,
         filePath: "/tmp/uploads/deleted.pdf",
+        visibility: "workspace",
+        ownerId: TEST_CTX.userId,
+        restrictedUserIds: [],
       }),
       delete: vi.fn().mockResolvedValue(undefined),
     };
@@ -89,7 +109,7 @@ describe("Phase 1 regression #4: delete document → no citation on same questio
   });
 
   it("returns no-docs after document deletion", async () => {
-    const deleted = await deleteDocument(documentId);
+    const deleted = await deleteDocument(documentId, TEST_CTX);
     expect(deleted).toBe(true);
     expect(deleteByDocumentMock).toHaveBeenCalledWith(expect.any(String), documentId);
     expect(deleteByDocumentIdMock).toHaveBeenCalled();

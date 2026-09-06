@@ -26,6 +26,8 @@ vi.mock("@personal-gpt/shared", () => ({
   deleteByDocumentId: (...args: unknown[]) => deleteByDocumentId(...args),
   indexChunks: (...args: unknown[]) => indexChunks(...args),
   ensureEsIndexes: (...args: unknown[]) => ensureEsIndexes(...args),
+  deleteGraphForDocument: vi.fn().mockResolvedValue(undefined),
+  deleteCatalogForDocument: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@personal-gpt/shared/stores/vector-store.astra", async (importOriginal) => {

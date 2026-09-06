@@ -53,6 +53,31 @@ vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
   createVectorStore: vi.fn(),
 }));
 
+vi.mock("@personal-gpt/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@personal-gpt/shared")>();
+  return {
+    ...actual,
+    deleteGraphForDocument: vi.fn().mockResolvedValue(undefined),
+    deleteCatalogForDocument: vi.fn().mockResolvedValue(undefined),
+    deleteByDocumentId: vi.fn().mockResolvedValue(undefined),
+    resolveCorpusTargets: () => ({ astraCollection: "kb_user", esIndex: "es_user" }),
+  };
+});
+
+vi.mock("@personal-gpt/shared/stores/vector-store", () => ({
+  createVectorStore: () => ({
+    search: vi.fn(),
+    upsert: vi.fn(),
+    deleteByDocument: vi.fn().mockResolvedValue(undefined),
+  }),
+  shouldWriteAstra: () => false,
+  shouldWriteMilvus: () => false,
+}));
+
+vi.mock("@/lib/db/entity-catalog-store", () => ({
+  createEntityCatalogStore: () => ({}),
+}));
+
 import { DocumentEntity } from "@/lib/db/entities/document.entity";
 import { IngestJobEntity } from "@/lib/db/entities/ingest-job.entity";
 import { getDataSource } from "@/lib/db/get-data-source";
@@ -228,6 +253,9 @@ describe("reindexDocument (INGEST-05)", () => {
       tags: ["tag-a"],
       category: "docs",
       chunkCount: 12,
+      visibility: "workspace",
+      ownerId: "user-test",
+      restrictedUserIds: [],
     };
 
     const ingestJobEntity = {
@@ -324,6 +352,9 @@ describe("updateDocumentMetadata (KB-02)", () => {
       category: "old-cat",
       tags: ["a"],
       chunkCount: 1,
+      visibility: "workspace",
+      ownerId: "user-test",
+      restrictedUserIds: [],
     };
 
     docFindOneMock.mockResolvedValue(documentEntity);
