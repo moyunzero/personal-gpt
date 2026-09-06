@@ -62,6 +62,9 @@ jobs:
       NIM_API_KEY: ci-dummy-nim-key
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       REDIS_URL: redis://localhost:6379
+      AUTH_SECRET: ci-dummy-auth-secret
+      EMAIL_SERVER: smtp://localhost:1025
+      EMAIL_FROM: ci@example.com
 
     steps:
       - name: Checkout

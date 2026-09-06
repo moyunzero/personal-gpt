@@ -1,6 +1,7 @@
 /**
  * Phase 3 regression #4 — Checkpointer resume same thread_id (CP-01 / D-20–D-23)。
- * MemorySaver 模拟「重启」；禁止 live LLM / 真 Postgres。
+ * MemorySaver 模拟「重启」；禁止 live LLM。
+ * PostgresSaver 用例需显式 RUN_POSTGRES_CHECKPOINTER=1（CI 仅有假 DATABASE_URL，不跑）。
  */
 import { HumanMessage } from "@langchain/core/messages";
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
@@ -98,7 +99,7 @@ describe("Phase 3 regression #4: checkpointer resume same thread_id (CP-01)", ()
     expect(values.citations?.some((c) => c.documentId === "doc-policy")).toBe(true);
   });
 
-  it.skipIf(!process.env.DATABASE_URL?.trim())(
+  it.skipIf(process.env.RUN_POSTGRES_CHECKPOINTER !== "1")(
     "two logical replicas share thread_id via PostgresSaver (CP-01 / D-27)",
     async () => {
       const prevMode = process.env.AGENT_CHECKPOINTER;

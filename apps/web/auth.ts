@@ -31,17 +31,18 @@ function authEnv(name: string): string {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  secret: authEnv("AUTH_SECRET") || authEnv("NEXTAUTH_SECRET"),
+  // Build/CI may lack secrets; runtime still needs real EMAIL_SERVER to deliver mail.
+  secret: authEnv("AUTH_SECRET") || authEnv("NEXTAUTH_SECRET") || "ci-build-placeholder",
   // Default adapter entities live in node_modules (serverExternalPackages) so
   // Next prod minification cannot mangle class/relation names TypeORM needs.
   adapter: TypeORMAdapter({
     type: "postgres",
-    url: authEnv("DATABASE_URL"),
+    url: authEnv("DATABASE_URL") || "postgresql://ci:ci@localhost:5432/ci",
   }),
   providers: [
     Nodemailer({
-      server: authEnv("EMAIL_SERVER"),
-      from: authEnv("EMAIL_FROM"),
+      server: authEnv("EMAIL_SERVER") || "smtp://localhost:1025",
+      from: authEnv("EMAIL_FROM") || "noreply@localhost",
       async sendVerificationRequest({ identifier, url, provider }) {
         const confirmUrl = toConfirmUrl(url);
         const { host } = new URL(confirmUrl);
