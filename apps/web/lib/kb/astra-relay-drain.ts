@@ -1,7 +1,4 @@
-import {
-  drainAstraRelayJobs,
-  type AstraRelayJob,
-} from "@personal-gpt/shared";
+import { drainAstraRelayJobs, type AstraRelayJob } from "@personal-gpt/shared";
 import { createAstraVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 
 /**

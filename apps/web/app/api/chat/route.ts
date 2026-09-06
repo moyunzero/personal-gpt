@@ -24,10 +24,7 @@ import { createChatStream } from "@/lib/chat/stream";
 import "@/lib/env";
 import { logger } from "@/lib/logger";
 import { runApiGuards } from "@/lib/middleware/api-guards";
-import {
-  checkGuestChatRateLimit,
-  getClientIp,
-} from "@/lib/ratelimit";
+import { checkGuestChatRateLimit, getClientIp } from "@/lib/ratelimit";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createHash } from "node:crypto";
 

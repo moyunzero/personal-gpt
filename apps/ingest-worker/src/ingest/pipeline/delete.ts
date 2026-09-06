@@ -52,7 +52,8 @@ export async function deleteDocument(
       (isAstraRelayConfigured()
         ? createAstraRelayVectorStore({ corpus })
         : createAstraVectorStore({ corpus })
-      ).deleteByDocument(workspaceId, documentId)
+      )
+        .deleteByDocument(workspaceId, documentId)
         .catch((err) => {
           errors.push(err instanceof Error ? err : new Error(String(err)));
         }),

@@ -2,11 +2,11 @@
 
 **结论：3/3 PASS（2026-09-06）**
 
-| # | 检查 | 结果 |
-|---|------|------|
-| 1 | `GET /api/health` | PASS |
-| 2 | `POST /api/kb/documents` multipart（含 ISO `createdAt`） | PASS |
-| 3 | `DELETE` pending 文档 | PASS |
+| #   | 检查                                                     | 结果 |
+| --- | -------------------------------------------------------- | ---- |
+| 1   | `GET /api/health`                                        | PASS |
+| 2   | `POST /api/kb/documents` multipart（含 ISO `createdAt`） | PASS |
+| 3   | `DELETE` pending 文档                                    | PASS |
 
 ## 根因修复
 

@@ -37,7 +37,9 @@ const MIME_EXT: Record<string, string> = {
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
 };
 
-async function readJsonResponse(res: Response): Promise<{ error?: string; document?: KbDocumentItem }> {
+async function readJsonResponse(
+  res: Response,
+): Promise<{ error?: string; document?: KbDocumentItem }> {
   const text = await res.text();
   try {
     return JSON.parse(text) as { error?: string; document?: KbDocumentItem };

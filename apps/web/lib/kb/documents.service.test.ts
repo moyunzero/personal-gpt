@@ -421,10 +421,7 @@ describe("updateDocumentMetadata (KB-02)", () => {
     const result = await updateDocumentMetadata("doc-meta", TEST_CTX, { category: null });
 
     expect(result?.category).toBeNull();
-    expect(docUpdateMock).toHaveBeenCalledWith(
-      { id: "doc-meta", workspaceId },
-      { category: null },
-    );
+    expect(docUpdateMock).toHaveBeenCalledWith({ id: "doc-meta", workspaceId }, { category: null });
   });
 });
 

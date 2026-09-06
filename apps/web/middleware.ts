@@ -5,12 +5,7 @@ import type { NextRequest } from "next/server";
 const PROTECTED_PAGE_PREFIXES = ["/kb"];
 
 /** API：知识库 / Agent / 工作区 / 会话历史需登录；POST /api/chat 允许游客 */
-const PROTECTED_API_PREFIXES = [
-  "/api/kb",
-  "/api/agent",
-  "/api/workspace",
-  "/api/chat/sessions",
-];
+const PROTECTED_API_PREFIXES = ["/api/kb", "/api/agent", "/api/workspace", "/api/chat/sessions"];
 
 function isProtectedPath(pathname: string): boolean {
   if (pathname === "/api/chat") {
@@ -36,7 +31,7 @@ function isApiPath(pathname: string): boolean {
 function hasSessionCookie(req: NextRequest): boolean {
   return Boolean(
     req.cookies.get("authjs.session-token")?.value ||
-      req.cookies.get("__Secure-authjs.session-token")?.value,
+    req.cookies.get("__Secure-authjs.session-token")?.value,
   );
 }
 

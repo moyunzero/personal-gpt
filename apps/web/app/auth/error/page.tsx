@@ -46,7 +46,14 @@ export default async function AuthErrorPage({
               多半是<strong>邮件服务仍处在 Resend 测试模式</strong>：只能向账号本人邮箱发魔法链接，
               其他邮箱会收到「Server error / server configuration」这类笼统失败。
             </p>
-            <ol style={{ margin: "0 0 16px", paddingLeft: 20, lineHeight: 1.7, color: "rgba(255,255,255,0.78)" }}>
+            <ol
+              style={{
+                margin: "0 0 16px",
+                paddingLeft: 20,
+                lineHeight: 1.7,
+                color: "rgba(255,255,255,0.78)",
+              }}
+            >
               <li>
                 打开{" "}
                 <a href="https://resend.com/domains" style={{ color: "#8ec8ff" }}>
@@ -63,7 +70,8 @@ export default async function AuthErrorPage({
           </>
         ) : (
           <p style={{ margin: "0 0 16px", lineHeight: 1.6, color: "rgba(255,255,255,0.78)" }}>
-            登录失败{code ? `（错误码：${code}）` : ""}。请稍后重试；若持续失败，检查 AUTH_SECRET / 数据库是否可用。
+            登录失败{code ? `（错误码：${code}）` : ""}。请稍后重试；若持续失败，检查 AUTH_SECRET /
+            数据库是否可用。
           </p>
         )}
         <Link

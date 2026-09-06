@@ -22,9 +22,7 @@ import { upsertChunks } from "./pipeline/upsert";
 import { ingestFailuresTotal } from "../metrics";
 
 /** 生产无 Neo4j 时可关；Compose 本地默认 ENABLE_GRAPH_RAG=true */
-export function isGraphIngestEnabled(
-  source: NodeJS.ProcessEnv = process.env,
-): boolean {
+export function isGraphIngestEnabled(source: NodeJS.ProcessEnv = process.env): boolean {
   return source.ENABLE_GRAPH_RAG === "true";
 }
 
@@ -106,7 +104,10 @@ export class IngestProcessor extends WorkerHost {
 
       if (isGraphIngestEnabled()) {
         await traceIngestStep("graph-extract", traceCtx, () =>
-          extractAndUpsertGraph({ workspaceId, documentId, chunks }, { dataSource: this.dataSource }),
+          extractAndUpsertGraph(
+            { workspaceId, documentId, chunks },
+            { dataSource: this.dataSource },
+          ),
         );
       } else {
         this.logger.log(

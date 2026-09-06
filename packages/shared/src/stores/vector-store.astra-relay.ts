@@ -3,12 +3,7 @@
  * 经 VECTOR_ASTRA_RELAY_URL（通常为 Vercel 美区）转发 upsert/delete/search。
  */
 import type { Corpus } from "../rag/corpus";
-import type {
-  ChunkRecord,
-  RetrievedChunk,
-  VectorSearchParams,
-  VectorStore,
-} from "./vector-store";
+import type { ChunkRecord, RetrievedChunk, VectorSearchParams, VectorStore } from "./vector-store";
 import { assertChunkWorkspaceId, assertSearchWorkspaceId } from "./vector-store.astra";
 
 export type AstraRelayEnv = {
@@ -78,11 +73,7 @@ export function createAstraRelayVectorStore(
       for (const chunk of chunks) {
         assertChunkWorkspaceId(chunk);
       }
-      await relayFetch(
-        "/api/internal/vector/upsert",
-        { corpus, collectionName, chunks },
-        env,
-      );
+      await relayFetch("/api/internal/vector/upsert", { corpus, collectionName, chunks }, env);
     },
 
     async deleteByDocument(workspaceId, documentId) {

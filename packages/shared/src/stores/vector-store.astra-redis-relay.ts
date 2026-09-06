@@ -6,12 +6,7 @@ import { randomUUID } from "node:crypto";
 import Redis from "ioredis";
 
 import type { Corpus } from "../rag/corpus";
-import type {
-  ChunkRecord,
-  RetrievedChunk,
-  VectorSearchParams,
-  VectorStore,
-} from "./vector-store";
+import type { ChunkRecord, RetrievedChunk, VectorSearchParams, VectorStore } from "./vector-store";
 import { assertChunkWorkspaceId, assertSearchWorkspaceId } from "./vector-store.astra";
 
 const QUEUE_KEY = "pgpt:astra:relay:q";
@@ -41,9 +36,7 @@ export type AstraRelayJob =
       params: VectorSearchParams;
     };
 
-export type AstraRelayAck =
-  | { ok: true; chunks?: RetrievedChunk[] }
-  | { ok: false; error: string };
+export type AstraRelayAck = { ok: true; chunks?: RetrievedChunk[] } | { ok: false; error: string };
 
 let sharedRedis: Redis | null = null;
 

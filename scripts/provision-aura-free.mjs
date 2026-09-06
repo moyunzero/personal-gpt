@@ -15,10 +15,9 @@
  */
 const CLIENT_ID = process.env.AURA_CLIENT_ID?.trim();
 const CLIENT_SECRET = process.env.AURA_CLIENT_SECRET?.trim();
-const NAME =
-  process.argv.includes("--name")
-    ? process.argv[process.argv.indexOf("--name") + 1]
-    : "personal-gpt-graph";
+const NAME = process.argv.includes("--name")
+  ? process.argv[process.argv.indexOf("--name") + 1]
+  : "personal-gpt-graph";
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
   console.error(`缺少 AURA_CLIENT_ID / AURA_CLIENT_SECRET。

@@ -3,10 +3,7 @@ import { DataAPIClient } from "@datastax/astra-db-ts";
 import type { Corpus } from "../rag/corpus";
 import { resolveCorpusTargets } from "../rag/corpus";
 import type { ChunkRecord, RetrievedChunk, VectorSearchParams, VectorStore } from "./vector-store";
-import {
-  createAstraRelayVectorStore,
-  isAstraRelayConfigured,
-} from "./vector-store.astra-relay";
+import { createAstraRelayVectorStore, isAstraRelayConfigured } from "./vector-store.astra-relay";
 
 export interface AstraCollectionHandle {
   find: (

@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  createAstraRelayVectorStore,
-  isAstraRelayConfigured,
-} from "./vector-store.astra-relay";
+import { createAstraRelayVectorStore, isAstraRelayConfigured } from "./vector-store.astra-relay";
 
 describe("Astra relay VectorStore", () => {
   afterEach(() => {
@@ -26,7 +23,9 @@ describe("Astra relay VectorStore", () => {
   it("upsert posts chunks to relay with internal key", async () => {
     process.env.VECTOR_ASTRA_RELAY_URL = "https://relay.example/";
     process.env.INTERNAL_PROXY_KEY = "k";
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const store = createAstraRelayVectorStore({ corpus: "user" });
@@ -60,8 +59,8 @@ describe("Astra relay VectorStore", () => {
     );
 
     const store = createAstraRelayVectorStore();
-    await expect(
-      store.deleteByDocument("ws-1", "doc-1"),
-    ).rejects.toThrow(/Astra relay .*failed \(403\)/);
+    await expect(store.deleteByDocument("ws-1", "doc-1")).rejects.toThrow(
+      /Astra relay .*failed \(403\)/,
+    );
   });
 });

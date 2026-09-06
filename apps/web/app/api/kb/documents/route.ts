@@ -91,10 +91,7 @@ export async function POST(req: Request) {
         };
 
         if (!body.fileUrl || !body.fileName || typeof body.size !== "number") {
-          return NextResponse.json(
-            { error: "缺少 fileUrl / fileName / size" },
-            { status: 400 },
-          );
+          return NextResponse.json({ error: "缺少 fileUrl / fileName / size" }, { status: 400 });
         }
 
         const { document, job } = await uploadDocumentFromRemote(
