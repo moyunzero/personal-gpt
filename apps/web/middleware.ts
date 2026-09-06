@@ -1,9 +1,22 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED_API_PREFIXES = ["/api/chat", "/api/kb", "/api/agent", "/api/workspace"];
+/** 页面：仅知识库需登录；首页对话允许游客 */
+const PROTECTED_PAGE_PREFIXES = ["/kb"];
+
+/** API：知识库 / Agent / 工作区 / 会话历史需登录；POST /api/chat 允许游客 */
+const PROTECTED_API_PREFIXES = [
+  "/api/kb",
+  "/api/agent",
+  "/api/workspace",
+  "/api/chat/sessions",
+];
 
 function isProtectedPath(pathname: string): boolean {
+  if (pathname === "/api/chat") {
+    // 试用对话开放；会话历史仍走 /api/chat/sessions
+    return false;
+  }
   if (
     PROTECTED_API_PREFIXES.some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -11,10 +24,9 @@ function isProtectedPath(pathname: string): boolean {
   ) {
     return true;
   }
-  if (pathname === "/" || pathname.startsWith("/kb")) {
-    return true;
-  }
-  return false;
+  return PROTECTED_PAGE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 }
 
 function isApiPath(pathname: string): boolean {
@@ -24,7 +36,7 @@ function isApiPath(pathname: string): boolean {
 function hasSessionCookie(req: NextRequest): boolean {
   return Boolean(
     req.cookies.get("authjs.session-token")?.value ||
-    req.cookies.get("__Secure-authjs.session-token")?.value,
+      req.cookies.get("__Secure-authjs.session-token")?.value,
   );
 }
 

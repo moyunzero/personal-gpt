@@ -46,6 +46,7 @@ export default function Home() {
   const [mode, setMode] = useState<ChatMode>("chat");
   const [corpus, setCorpus] = useState<CorpusChoice>("user");
   const [input, setInput] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [userKey] = useState(() => (typeof window !== "undefined" ? getOrCreateUserKey() : ""));
   const [threadRevision, setThreadRevision] = useState(0);
   const [sessionsRevision, setSessionsRevision] = useState(0);
@@ -59,17 +60,52 @@ export default function Home() {
   const messagesCacheRef = useRef<Record<string, UiChatMessage[]>>({});
   const skipHistoryLoadRef = useRef(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        if (!res.ok) {
+          if (!cancelled) setIsAuthenticated(false);
+          return;
+        }
+        const data = (await res.json()) as { user?: { id?: string } | null };
+        if (!cancelled) setIsAuthenticated(Boolean(data?.user?.id));
+      } catch {
+        if (!cancelled) setIsAuthenticated(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated === false) {
+      setCorpus("seed");
+      if (mode === "agent") setMode("chat");
+    }
+  }, [isAuthenticated, mode]);
+
+  const handleModeChange = (next: ChatMode) => {
+    if (next === "agent" && isAuthenticated === false) {
+      window.location.href = "/api/auth/signin?callbackUrl=" + encodeURIComponent("/");
+      return;
+    }
+    setMode(next);
+  };
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: mode === "agent" ? "/api/agent/chat" : "/api/chat",
         body: {
-          corpus,
-          ...(userKey ? { userKey } : {}),
+          corpus: isAuthenticated === false ? "seed" : corpus,
+          ...(userKey && isAuthenticated !== false ? { userKey } : {}),
           ...(threadId ? { thread_id: threadId } : {}),
         },
       }),
-    [mode, corpus, userKey, threadId],
+    [mode, corpus, userKey, threadId, isAuthenticated],
   );
 
   const { messages, sendMessage, regenerate, status, error, clearError, setMessages } = useChat({
@@ -226,7 +262,7 @@ export default function Home() {
     <AppShell
       activePage="chat"
       mode={mode}
-      onModeChange={setMode}
+      onModeChange={handleModeChange}
       modeDisabled={isLoading}
       onNewThread={handleNewThread}
       activeThreadId={threadId}
@@ -238,11 +274,32 @@ export default function Home() {
         <AppHeader
           activePage="chat"
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={handleModeChange}
           modeDisabled={isLoading}
           onNewThread={handleNewThread}
+          isAuthenticated={isAuthenticated}
         />
 
+        {isAuthenticated === false ? (
+          <div
+            className="guest-banner"
+            style={{
+              margin: "0 16px 8px",
+              padding: "10px 14px",
+              borderRadius: 8,
+              background: "rgba(196, 92, 62, 0.12)",
+              border: "1px solid rgba(196, 92, 62, 0.35)",
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: "var(--color-ink, inherit)",
+            }}
+          >
+            游客试用：可直接对话（种子库、约每小时 5 次）。登录后解锁个人知识库、会话历史与 Agent。
+            <a href="/api/auth/signin" style={{ marginLeft: 8, fontWeight: 600 }}>
+              去登录
+            </a>
+          </div>
+        ) : null}
         <section ref={streamRef} className="chat-stream">
           <div className="chat-stream-inner">
             {noMessages ? (
@@ -313,9 +370,18 @@ export default function Home() {
           <div className="composer-inner">
             <div className="composer-toolbar">
               <span className="composer-corpus-hint">
-                当前：{corpus === "seed" ? "种子库检索" : "用户库检索"}
+                当前：
+                {isAuthenticated === false
+                  ? "种子库检索（游客）"
+                  : corpus === "seed"
+                    ? "种子库检索"
+                    : "用户库检索"}
               </span>
-              <CorpusToggle value={corpus} onChange={setCorpus} disabled={isLoading} />
+              <CorpusToggle
+                value={isAuthenticated === false ? "seed" : corpus}
+                onChange={setCorpus}
+                disabled={isLoading || isAuthenticated === false}
+              />
             </div>
             <div className="composer-shell">
               <input
@@ -365,9 +431,11 @@ export default function Home() {
                 ? mode === "agent"
                   ? "Agent 模式 · 出错时可在上方卡片重试"
                   : "出错时可在上方卡片重试，或换个问法"
-                : mode === "agent"
-                  ? "Agent 模式 · 复杂任务走多 Agent · 闲聊会短路回复"
-                  : "按 Enter 发送 · 内容可能不准确，仅供参考"}
+                : isAuthenticated === false
+                  ? "游客试用 · 种子库 · 登录后可用知识库与 Agent"
+                  : mode === "agent"
+                    ? "Agent 模式 · 复杂任务走多 Agent · 闲聊会短路回复"
+                    : "按 Enter 发送 · 内容可能不准确，仅供参考"}
             </p>
           </div>
         </form>

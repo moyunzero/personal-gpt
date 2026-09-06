@@ -2,8 +2,13 @@
  * Delete document vectors from Astra/Milvus + ES + Neo4j + PG catalog (D-09, GRAPH-04).
  */
 import type { Corpus } from "@personal-gpt/shared";
-import { deleteCatalogForDocument, deleteGraphForDocument } from "@personal-gpt/shared";
+import {
+  deleteCatalogForDocument,
+  deleteGraphForDocument,
+  isEsConfigured,
+} from "@personal-gpt/shared";
 import { shouldWriteAstra, shouldWriteMilvus } from "@personal-gpt/shared/stores/vector-store";
+import { createAstraRelayVectorStore, isAstraRelayConfigured } from "@personal-gpt/shared";
 import { createAstraVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 import { createMilvusVectorStore } from "@personal-gpt/shared/stores/vector-store.milvus";
 import type { DataSource } from "typeorm";
@@ -44,8 +49,10 @@ export async function deleteDocument(
 
   if (shouldWriteAstra()) {
     tasks.push(
-      createAstraVectorStore({ corpus })
-        .deleteByDocument(workspaceId, documentId)
+      (isAstraRelayConfigured()
+        ? createAstraRelayVectorStore({ corpus })
+        : createAstraVectorStore({ corpus })
+      ).deleteByDocument(workspaceId, documentId)
         .catch((err) => {
           errors.push(err instanceof Error ? err : new Error(String(err)));
         }),
@@ -63,10 +70,12 @@ export async function deleteDocument(
 
   await Promise.all(tasks);
 
-  try {
-    await deleteDocumentFromEs(workspaceId, documentId, corpus);
-  } catch (err) {
-    errors.push(err instanceof Error ? err : new Error(String(err)));
+  if (isEsConfigured()) {
+    try {
+      await deleteDocumentFromEs(workspaceId, documentId, corpus);
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
   }
 
   if (errors.length > 0) {

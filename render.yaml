@@ -1,0 +1,44 @@
+# Blueprint: free web service for agent-service (Vercel hosts apps/web only).
+# Deploy: https://dashboard.render.com/blueprints
+# Or: RENDER_API_KEY=... yarn / node script below via assistant.
+services:
+  - type: web
+    name: personal-gpt-agent
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./apps/agent-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render injects PORT (usually 10000); Nest listens on AGENT_SERVICE_PORT
+      - key: AGENT_SERVICE_PORT
+        value: "10000"
+      - key: AGENT_CHECKPOINTER
+        value: postgres
+      - key: CORS_ORIGIN
+        value: https://personal-emotion-gpt.vercel.app
+      - key: DATABASE_URL
+        sync: false
+      - key: AGENT_INTERNAL_TOKEN
+        sync: false
+      - key: AGENT_PROVIDER
+        sync: false
+      - key: AGENT_MODEL
+        sync: false
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        sync: false
+      - key: BOCHA_API_KEY
+        sync: false
+      - key: LANGSMITH_API_KEY
+        sync: false
+      - key: LANGSMITH_TRACING
+        sync: false

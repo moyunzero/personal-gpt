@@ -24,6 +24,13 @@ export async function requireSession(): Promise<SessionResult> {
   return { session: session as AppAuthSession };
 }
 
+/** 可选会话：游客模式用；无登录时返回 null（不抛 401）。 */
+export async function getOptionalSession(): Promise<AppAuthSession | null> {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  return session as AppAuthSession;
+}
+
 /** Active workspace from session — fall back to membership if missing (D-20). */
 export async function getActiveWorkspaceId(session: AppAuthSession): Promise<string> {
   const fromSession = session.user.activeWorkspaceId?.trim();

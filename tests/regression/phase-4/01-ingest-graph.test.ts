@@ -73,6 +73,7 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     traceSteps.length = 0;
+    process.env.ENABLE_GRAPH_RAG = "true";
 
     statMock.mockResolvedValue({ size: 1024 });
     parseMock.mockResolvedValue("fixture text");
@@ -107,6 +108,30 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
       } as never,
       {} as never,
     );
+  });
+
+  it("skips graph-extract when ENABLE_GRAPH_RAG is not true", async () => {
+    process.env.ENABLE_GRAPH_RAG = "false";
+
+    const job = {
+      id: "bull-graph-skip",
+      name: "ingest",
+      data: {
+        workspaceId,
+        documentId,
+        filePath,
+        mimeType: "application/pdf",
+        title: "Graph Fixture",
+      },
+      updateProgress: jobProgressMock,
+    };
+
+    await processor.process(job as never);
+
+    expect(graphExtractMock).not.toHaveBeenCalled();
+    expect(traceSteps).not.toContain("graph-extract");
+    const readyUpdate = documentUpdateMock.mock.calls.find((call) => call[1]?.status === "ready");
+    expect(readyUpdate).toBeDefined();
   });
 
   it("invokes graph-extract after upsert and before ready (75→90→100)", async () => {

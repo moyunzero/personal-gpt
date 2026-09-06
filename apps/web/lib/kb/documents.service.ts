@@ -9,6 +9,7 @@ import {
   deleteByDocumentId,
   deleteCatalogForDocument,
   deleteGraphForDocument,
+  isEsConfigured,
   resolveCorpusTargets,
 } from "@personal-gpt/shared";
 import {
@@ -26,8 +27,17 @@ import { createEntityCatalogStore } from "@/lib/db/entity-catalog-store";
 import { getDataSource } from "@/lib/db/get-data-source";
 import { env } from "@/lib/env";
 import { isMinioConfigured, uploadToMinio } from "@/lib/storage/minio";
+import {
+  isTrustedVercelBlobUrl,
+  isVercelBlobConfigured,
+  uploadToVercelBlob,
+} from "@/lib/storage/vercel-blob";
 
 import { getIngestQueue } from "./queue";
+
+function isServerlessRuntime(): boolean {
+  return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+}
 
 /** MIME → 存储扩展名（服务端生成，禁止用户指定路径） */
 const MIME_EXT_MAP: Record<string, string> = {
@@ -39,7 +49,12 @@ const MIME_EXT_MAP: Record<string, string> = {
 
 export class UploadValidationError extends Error {
   constructor(
-    public readonly code: "mime_not_allowed" | "file_too_large" | "empty_file",
+    public readonly code:
+      | "mime_not_allowed"
+      | "file_too_large"
+      | "empty_file"
+      | "storage_unavailable"
+      | "untrusted_url",
     message: string,
   ) {
     super(message);
@@ -164,6 +179,18 @@ async function saveUpload(file: UploadFileInput, mimeType: string): Promise<stri
     return uploadToMinio(buffer, mimeType, ext);
   }
 
+  // Vercel / Lambda 只读文件系统：必须用对象存储（Blob / MinIO）
+  if (isVercelBlobConfigured()) {
+    return uploadToVercelBlob(buffer, mimeType, ext);
+  }
+
+  if (isServerlessRuntime()) {
+    throw new UploadValidationError(
+      "storage_unavailable",
+      "生产环境未配置对象存储：请设置 BLOB_READ_WRITE_TOKEN（Vercel Blob）或 MinIO（MINIO_*）后再上传",
+    );
+  }
+
   const fileName = `${randomUUID()}.${ext}`;
   const uploadsDir = getUploadsDir();
   await fs.mkdir(uploadsDir, { recursive: true });
@@ -180,7 +207,10 @@ async function enqueueIngestJob(
   const ds = await getDataSource();
   const jobRepo = ds.getRepository(IngestJobEntity);
 
-  const ingestJob = jobRepo.create({
+  // insert（非 save）：避开 TypeORM SubjectTopologicalSorter 的 Cyclic dependency（prod 常显示为 "d"）
+  const id = randomUUID();
+  await jobRepo.insert({
+    id,
     workspaceId,
     documentId: document.id,
     status: "queued",
@@ -188,57 +218,68 @@ async function enqueueIngestJob(
     error: null,
     bullJobId: null,
   });
-  await jobRepo.save(ingestJob);
 
   const queue = getIngestQueue();
   const bullJob = await queue.add(`ingest-${document.id}`, payload);
-  await jobRepo.update({ id: ingestJob.id }, { bullJobId: String(bullJob.id) });
+  await jobRepo.update({ id }, { bullJobId: String(bullJob.id) });
 
-  ingestJob.bullJobId = String(bullJob.id);
-  return ingestJob;
+  return {
+    id,
+    workspaceId,
+    documentId: document.id,
+    status: "queued",
+    progress: 0,
+    error: null,
+    bullJobId: String(bullJob.id),
+  } as IngestJobEntity;
 }
 
-/** 上传文件：落盘 → 建 document(pending) → 入队 BullMQ */
-export async function uploadDocument(
-  file: UploadFileInput,
-  ctx: DocumentsContext,
-  meta: {
-    title?: string;
-    category?: string;
-    tags?: string[];
-    visibility?: DocumentVisibility;
-  } = {},
-): Promise<DocumentWithJob> {
-  const mimeType = normalizeUploadMime(file.name, file.type);
-  validateUploadFile({ type: mimeType, size: file.size });
+type UploadMetaInput = {
+  title?: string;
+  category?: string;
+  tags?: string[];
+  visibility?: DocumentVisibility;
+};
 
-  const filePath = await saveUpload(file, mimeType);
+async function createPendingDocumentAndEnqueue(
+  ctx: DocumentsContext,
+  file: { name: string; mimeType: string; filePath: string },
+  meta: UploadMetaInput = {},
+): Promise<DocumentWithJob> {
   const title = meta.title?.trim() || file.name.replace(/\.[^.]+$/, "") || file.name;
 
   const ds = await getDataSource();
   const docRepo = ds.getRepository(DocumentEntity);
 
-  const document = docRepo.create({
+  // insert（非 save）：同 chat 消息修复，避免 DocumentEntity relation 拓扑环
+  const id = randomUUID();
+  const visibility = meta.visibility ?? defaultDocumentVisibility();
+  const tags = meta.tags ?? [];
+  const category = meta.category ?? null;
+  await docRepo.insert({
+    id,
     workspaceId: ctx.workspaceId,
     ownerId: ctx.userId,
-    visibility: meta.visibility ?? defaultDocumentVisibility(),
+    visibility,
     restrictedUserIds: [],
     title,
     source: file.name,
-    category: meta.category ?? null,
-    tags: meta.tags ?? [],
+    category,
+    tags,
     status: "pending",
     chunkCount: 0,
-    filePath,
-    mimeType,
+    filePath: file.filePath,
+    mimeType: file.mimeType,
   });
-  await docRepo.save(document);
+
+  // 必须回读：insert 不回填 CreateDateColumn，否则 serialize 会炸 toISOString
+  const document = await docRepo.findOneByOrFail({ id });
 
   const payload: IngestJobPayload = {
     workspaceId: ctx.workspaceId,
     documentId: document.id,
-    filePath,
-    mimeType,
+    filePath: file.filePath,
+    mimeType: file.mimeType,
     title: document.title,
     category: document.category ?? undefined,
     tags: document.tags,
@@ -246,6 +287,41 @@ export async function uploadDocument(
 
   const job = await enqueueIngestJob(document, payload, ctx.workspaceId);
   return { document, job };
+}
+
+/** 上传文件：落盘 → 建 document(pending) → 入队 BullMQ */
+export async function uploadDocument(
+  file: UploadFileInput,
+  ctx: DocumentsContext,
+  meta: UploadMetaInput = {},
+): Promise<DocumentWithJob> {
+  const mimeType = normalizeUploadMime(file.name, file.type);
+  validateUploadFile({ type: mimeType, size: file.size });
+
+  const filePath = await saveUpload(file, mimeType);
+  return createPendingDocumentAndEnqueue(ctx, { name: file.name, mimeType, filePath }, meta);
+}
+
+/**
+ * 浏览器已直传 Vercel Blob 后，仅登记 URL（不经 Serverless 请求体传文件）。
+ */
+export async function uploadDocumentFromRemote(
+  input: { fileUrl: string; fileName: string; mimeType: string; size: number },
+  ctx: DocumentsContext,
+  meta: UploadMetaInput = {},
+): Promise<DocumentWithJob> {
+  const mimeType = normalizeUploadMime(input.fileName, input.mimeType);
+  validateUploadFile({ type: mimeType, size: input.size });
+
+  if (!isTrustedVercelBlobUrl(input.fileUrl)) {
+    throw new UploadValidationError("untrusted_url", "仅允许 Vercel Blob 文件 URL");
+  }
+
+  return createPendingDocumentAndEnqueue(
+    ctx,
+    { name: input.fileName, mimeType, filePath: input.fileUrl },
+    meta,
+  );
 }
 
 /** 分页列表 + ACL security-trim（D-44） */
@@ -353,18 +429,31 @@ export async function updateDocumentMetadata(
   const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
   if (!accessCtx || !canReadDocument(document, accessCtx)) return null;
 
+  const next: {
+    title?: string;
+    category?: string | null;
+    tags?: string[];
+  } = {};
   if (patch.title !== undefined) {
     const trimmed = patch.title.trim();
-    if (trimmed) document.title = trimmed;
+    if (trimmed) {
+      next.title = trimmed;
+      document.title = trimmed;
+    }
   }
   if (patch.category !== undefined) {
+    next.category = patch.category;
     document.category = patch.category;
   }
   if (patch.tags !== undefined) {
+    next.tags = patch.tags;
     document.tags = patch.tags;
   }
 
-  return docRepo.save(document);
+  if (Object.keys(next).length > 0) {
+    await docRepo.update({ id: documentId, workspaceId: ctx.workspaceId }, next);
+  }
+  return document;
 }
 
 async function purgeGraphAndCatalog(workspaceId: string, documentId: string): Promise<void> {
@@ -420,14 +509,24 @@ export async function deleteDocument(documentId: string, ctx: DocumentsContext):
 
   await Promise.all(tasks);
 
-  try {
-    await deleteByDocumentId(resolveCorpusTargets("user").esIndex, ctx.workspaceId, documentId);
-  } catch (err) {
-    errors.push(err instanceof Error ? err : new Error(String(err)));
+  if (isEsConfigured()) {
+    try {
+      await deleteByDocumentId(resolveCorpusTargets("user").esIndex, ctx.workspaceId, documentId);
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
   }
 
   if (errors.length > 0) {
-    throw new AggregateError(errors, `deleteDocument failed for ${documentId}`);
+    // 未入库 / 入库失败且无向量：次级存储可能为空或不可达，不阻断删除
+    const allowDropWithoutChunks =
+      document.chunkCount === 0 &&
+      (document.status === "pending" ||
+        document.status === "failed" ||
+        document.status === "processing");
+    if (!allowDropWithoutChunks) {
+      throw new AggregateError(errors, `deleteDocument failed for ${documentId}`);
+    }
   }
 
   if (document.filePath) {

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth/session";
 import { updateDocumentVisibility } from "@/lib/auth/workspace.service";
 import type { DocumentVisibility } from "@/lib/db/entities/document.entity";
+import { drainAstraRelayBestEffort } from "@/lib/kb/astra-relay-drain";
 import {
   deleteDocument,
   getDocumentById,
@@ -23,6 +24,8 @@ export async function GET(req: Request, context: RouteContext) {
     const ctx = await documentsContextFromSession(authResult.session);
 
     try {
+      // CloudBase Redis relay：轮询详情时顺带 drain，避免依赖 Vercel 分钟级 Cron
+      await drainAstraRelayBestEffort(5);
       const { id } = await context.params;
       const row = await getDocumentById(id, ctx);
       if (!row) {

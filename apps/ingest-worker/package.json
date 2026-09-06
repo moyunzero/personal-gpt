@@ -20,6 +20,7 @@
     "@nestjs/platform-express": "11.1.27",
     "@nestjs/typeorm": "11.0.3",
     "@personal-gpt/shared": "*",
+    "@vercel/blob": "^2",
     "bullmq": "5.56.0",
     "dotenv": "17.4.2",
     "ioredis": "5.11.1",

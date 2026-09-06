@@ -49,6 +49,14 @@
       "types": "./src/stores/vector-store.astra.ts",
       "default": "./dist/stores/vector-store.astra.js"
     },
+    "./stores/vector-store.astra-relay": {
+      "types": "./src/stores/vector-store.astra-relay.ts",
+      "default": "./dist/stores/vector-store.astra-relay.js"
+    },
+    "./stores/vector-store.astra-redis-relay": {
+      "types": "./src/stores/vector-store.astra-redis-relay.ts",
+      "default": "./dist/stores/vector-store.astra-redis-relay.js"
+    },
     "./stores/vector-store.milvus": {
       "types": "./src/stores/vector-store.milvus.ts",
       "default": "./dist/stores/vector-store.milvus.js"

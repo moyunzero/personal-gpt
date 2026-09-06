@@ -11,6 +11,19 @@ export * from "./schemas/env";
 export * from "./utils/ingest";
 export * from "./stores/vector-store";
 export { createAstraVectorStore, createVectorStore } from "./stores/vector-store.astra";
+export {
+  createAstraRelayVectorStore,
+  isAstraRelayConfigured,
+} from "./stores/vector-store.astra-relay";
+export {
+  ackAstraRelayJob,
+  createAstraRedisRelayVectorStore,
+  drainAstraRelayJobs,
+  popAstraRelayJob,
+  shouldUseAstraRedisRelay,
+  type AstraRelayJob,
+  type AstraRelayAck,
+} from "./stores/vector-store.astra-redis-relay";
 export { createMilvusVectorStore, resolveMilvusCollectionName } from "./stores/vector-store.milvus";
 export {
   createVectorStoreFromEnv,
@@ -33,6 +46,7 @@ export {
   type MaybeCorrectiveDeps,
 } from "./rag/corrective";
 export { esBm25Search, ensureEsIndexes, indexChunks, deleteByDocumentId } from "./rag/es-bm25";
+export { isEsConfigured, getEsClient, resetEsClientForTests } from "./rag/es-client";
 export { rerankDedicated } from "./rag/rerank";
 export {
   ShortTermRedisMemory,

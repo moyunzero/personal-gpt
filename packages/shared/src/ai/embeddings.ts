@@ -62,9 +62,20 @@ export async function embedText(text: string): Promise<number[]> {
 export async function embedTexts(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
 
-  const { embeddings } = await embedMany({
-    model: getPassageEmbeddingModel(),
-    values: texts,
-  });
-  return embeddings;
+  try {
+    const { embeddings } = await embedMany({
+      model: getPassageEmbeddingModel(),
+      values: texts,
+    });
+    return embeddings;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // NIM EOL 时常只抛 "Gone"；附带模型名便于运维定位
+    if (/^Gone$/i.test(message) || /\b410\b/.test(message)) {
+      throw new Error(
+        `NIM embedding Gone (410): model ${NVIDIA_EMBEDDING_MODEL} unavailable — ${message}`,
+      );
+    }
+    throw err;
+  }
 }

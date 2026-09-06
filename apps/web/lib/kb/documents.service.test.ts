@@ -23,11 +23,10 @@ vi.mock("@/lib/env", () => ({
   },
 }));
 
-const saveMock = vi.fn();
-const createMock = vi.fn();
+const insertMock = vi.fn();
+const jobInsertMock = vi.fn();
 const queueAddMock = vi.fn();
 const jobUpdateMock = vi.fn();
-const jobSaveMock = vi.fn();
 const docUpdateMock = vi.fn();
 const docFindOneMock = vi.fn();
 const mkdirMock = vi.fn();
@@ -84,8 +83,10 @@ import { getDataSource } from "@/lib/db/get-data-source";
 import {
   listDocuments,
   reindexDocument,
+  serializeDocumentRow,
   updateDocumentMetadata,
   uploadDocument,
+  uploadDocumentFromRemote,
   UploadValidationError,
   validateUploadFile,
 } from "./documents.service";
@@ -155,52 +156,44 @@ describe("uploadDocument enqueue contract", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    const documentEntity = {
-      id: "doc-uuid",
-      workspaceId: "00000000-0000-4000-8000-000000000001",
-      title: "sample",
-      status: "pending",
-      filePath: "/tmp/uploads/x.pdf",
-      mimeType: "application/pdf",
-      tags: [],
-      category: null,
-      chunkCount: 0,
-    };
-
-    const ingestJobEntity = {
-      id: "job-uuid",
-      workspaceId: documentEntity.workspaceId,
-      documentId: documentEntity.id,
-      status: "queued",
-      progress: 0,
-      bullJobId: null,
-    };
-
-    createMock.mockImplementation((data: Record<string, unknown>) => ({
-      ...data,
-      id: data.documentId ? ingestJobEntity.id : documentEntity.id,
-    }));
-    saveMock.mockImplementation(async (entity: Record<string, unknown>) => {
-      if (entity.status === "pending") {
-        return { ...documentEntity, ...entity, id: documentEntity.id };
-      }
-      return { ...ingestJobEntity, ...entity };
-    });
-
+    insertMock.mockImplementation(async (row: Record<string, unknown>) => row);
+    jobInsertMock.mockResolvedValue(undefined);
     queueAddMock.mockResolvedValue({ id: "bull-123" });
     jobUpdateMock.mockResolvedValue(undefined);
     mkdirMock.mockResolvedValue(undefined);
     writeFileMock.mockResolvedValue(undefined);
 
+    docFindOneMock.mockImplementation(async ({ id }: { id: string }) => {
+      const inserted = insertMock.mock.calls.at(-1)?.[0] as Record<string, unknown> | undefined;
+      return {
+        id,
+        workspaceId: TEST_CTX.workspaceId,
+        ownerId: TEST_CTX.userId,
+        title: "sample",
+        source: "sample.pdf",
+        category: null,
+        tags: [],
+        status: "pending",
+        chunkCount: 0,
+        filePath: "/tmp/uploads/x.pdf",
+        mimeType: "application/pdf",
+        visibility: "workspace",
+        restrictedUserIds: [],
+        ...inserted,
+        id,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      };
+    });
+
     vi.mocked(getDataSource).mockResolvedValue({
       getRepository: (entity: unknown) => {
         if (entity === DocumentEntity) {
-          return { create: createMock, save: saveMock };
+          return { insert: insertMock, findOneByOrFail: docFindOneMock };
         }
         if (entity === IngestJobEntity) {
           return {
-            create: createMock,
-            save: jobSaveMock.mockResolvedValue(ingestJobEntity),
+            insert: jobInsertMock,
             update: jobUpdateMock,
           };
         }
@@ -213,27 +206,86 @@ describe("uploadDocument enqueue contract", () => {
     const { document, job } = await uploadDocument(makeFile(), TEST_CTX);
 
     expect(document.status).toBe("pending");
-    expect(job?.id).toBe("job-uuid");
-    expect(queueAddMock).toHaveBeenCalledWith(
-      expect.stringContaining("ingest-doc-uuid"),
+    expect(document.createdAt).toBeInstanceOf(Date);
+    expect(insertMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        documentId: "doc-uuid",
+        status: "pending",
         mimeType: "application/pdf",
       }),
     );
-    expect(jobUpdateMock).toHaveBeenCalledWith({ id: "job-uuid" }, { bullJobId: "bull-123" });
+    expect(docFindOneMock).toHaveBeenCalledWith(expect.objectContaining({ id: document.id }));
+    expect(jobInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: document.id,
+        status: "queued",
+      }),
+    );
+    expect(job?.id).toBeTruthy();
+    expect(queueAddMock).toHaveBeenCalledWith(
+      expect.stringContaining(`ingest-${document.id}`),
+      expect.objectContaining({
+        documentId: document.id,
+        mimeType: "application/pdf",
+      }),
+    );
+    expect(jobUpdateMock).toHaveBeenCalledWith({ id: job?.id }, { bullJobId: "bull-123" });
+  });
+
+  it("serializeDocumentRow after upload has ISO timestamps", async () => {
+    const { document, job } = await uploadDocument(makeFile(), TEST_CTX);
+    const row = serializeDocumentRow(document, job);
+    expect(row.createdAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(row.updatedAt).toBe("2026-01-01T00:00:00.000Z");
   });
 
   it("passes category and tags into ingest queue payload", async () => {
     await uploadDocument(makeFile(), TEST_CTX, { category: "docs", tags: ["ai", "rag"] });
 
     expect(queueAddMock).toHaveBeenCalledWith(
-      "ingest-doc-uuid",
+      expect.stringMatching(/^ingest-/),
       expect.objectContaining({
         category: "docs",
         tags: ["ai", "rag"],
       }),
     );
+  });
+
+  it("registers remote Vercel Blob URL without writing local file", async () => {
+    const { document, job } = await uploadDocumentFromRemote(
+      {
+        fileUrl: "https://abc123.blob.vercel-storage.com/uploads/x.pdf",
+        fileName: "guide.pdf",
+        mimeType: "application/pdf",
+        size: 5_500_000,
+      },
+      TEST_CTX,
+      { title: "guide" },
+    );
+
+    expect(document.status).toBe("pending");
+    expect(job?.id).toBeTruthy();
+    expect(writeFileMock).not.toHaveBeenCalled();
+    expect(queueAddMock).toHaveBeenCalledWith(
+      expect.stringContaining(`ingest-${document.id}`),
+      expect.objectContaining({
+        filePath: "https://abc123.blob.vercel-storage.com/uploads/x.pdf",
+        mimeType: "application/pdf",
+      }),
+    );
+  });
+
+  it("rejects untrusted remote URL", async () => {
+    await expect(
+      uploadDocumentFromRemote(
+        {
+          fileUrl: "https://evil.example.com/x.pdf",
+          fileName: "x.pdf",
+          mimeType: "application/pdf",
+          size: 1000,
+        },
+        TEST_CTX,
+      ),
+    ).rejects.toMatchObject({ code: "untrusted_url" });
   });
 });
 
@@ -258,22 +310,9 @@ describe("reindexDocument (INGEST-05)", () => {
       restrictedUserIds: [],
     };
 
-    const ingestJobEntity = {
-      id: "job-reindex",
-      workspaceId,
-      documentId: documentEntity.id,
-      status: "queued",
-      progress: 0,
-      bullJobId: null,
-    };
-
     docFindOneMock.mockResolvedValue(documentEntity);
     docUpdateMock.mockResolvedValue(undefined);
-    createMock.mockImplementation((data: Record<string, unknown>) => ({
-      ...data,
-      id: data.documentId ? ingestJobEntity.id : documentEntity.id,
-    }));
-    jobSaveMock.mockResolvedValue(ingestJobEntity);
+    jobInsertMock.mockResolvedValue(undefined);
     queueAddMock.mockResolvedValue({ id: "bull-reindex-456" });
     jobUpdateMock.mockResolvedValue(undefined);
 
@@ -287,8 +326,7 @@ describe("reindexDocument (INGEST-05)", () => {
         }
         if (entity === IngestJobEntity) {
           return {
-            create: createMock,
-            save: jobSaveMock,
+            insert: jobInsertMock,
             update: jobUpdateMock,
           };
         }
@@ -315,9 +353,15 @@ describe("reindexDocument (INGEST-05)", () => {
         mimeType: "application/pdf",
       }),
     );
-    expect(result?.job.id).toBe("job-reindex");
+    expect(result?.job.id).toBeTruthy();
+    expect(jobInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "doc-reindex",
+        status: "queued",
+      }),
+    );
     expect(jobUpdateMock).toHaveBeenCalledWith(
-      { id: "job-reindex" },
+      { id: result?.job.id },
       { bullJobId: "bull-reindex-456" },
     );
   });
@@ -358,17 +402,14 @@ describe("updateDocumentMetadata (KB-02)", () => {
     };
 
     docFindOneMock.mockResolvedValue(documentEntity);
-    saveMock.mockImplementation(async (entity: Record<string, unknown>) => ({
-      ...documentEntity,
-      ...entity,
-    }));
+    docUpdateMock.mockResolvedValue(undefined);
 
     vi.mocked(getDataSource).mockResolvedValue({
       getRepository: (entity: unknown) => {
         if (entity === DocumentEntity) {
           return {
             findOne: docFindOneMock,
-            save: saveMock,
+            update: docUpdateMock,
           };
         }
         throw new Error("unexpected entity");
@@ -380,7 +421,10 @@ describe("updateDocumentMetadata (KB-02)", () => {
     const result = await updateDocumentMetadata("doc-meta", TEST_CTX, { category: null });
 
     expect(result?.category).toBeNull();
-    expect(saveMock).toHaveBeenCalledWith(expect.objectContaining({ category: null }));
+    expect(docUpdateMock).toHaveBeenCalledWith(
+      { id: "doc-meta", workspaceId },
+      { category: null },
+    );
   });
 });
 

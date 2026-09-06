@@ -1,5 +1,7 @@
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
+import { randomUUID } from "node:crypto";
 
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
@@ -22,6 +24,10 @@ function assertAllowedMime(mimeType: string): void {
   }
 }
 
+function isHttpUrl(filePath: string): boolean {
+  return /^https?:\/\//i.test(filePath);
+}
+
 function resolveSafeFilePath(filePath: string): string {
   const resolved = path.resolve(filePath);
   const uploadsResolved = path.resolve(UPLOADS_ROOT);
@@ -29,6 +35,32 @@ function resolveSafeFilePath(filePath: string): string {
     throw new Error(`filePath outside uploads directory: ${filePath}`);
   }
   return resolved;
+}
+
+async function materializeHttpUrlToTempFile(uri: string): Promise<string> {
+  let bytes: Uint8Array;
+  const isVercelBlob = /blob\.vercel-storage\.com/i.test(uri);
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+
+  if (isVercelBlob && token) {
+    const { get } = await import("@vercel/blob");
+    const result = await get(uri, { access: "private", token });
+    if (!result?.stream) {
+      throw new Error(`Empty Vercel Blob: ${uri}`);
+    }
+    bytes = new Uint8Array(await new Response(result.stream).arrayBuffer());
+  } else {
+    const res = await fetch(uri);
+    if (!res.ok) {
+      throw new Error(`Failed to download ${uri}: HTTP ${res.status}`);
+    }
+    bytes = new Uint8Array(await res.arrayBuffer());
+  }
+
+  const ext = path.extname(new URL(uri).pathname) || ".bin";
+  const tempPath = path.join(os.tmpdir(), `pgpt-ingest-${randomUUID()}${ext}`);
+  await fs.writeFile(tempPath, Buffer.from(bytes));
+  return tempPath;
 }
 
 async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
@@ -77,6 +109,9 @@ export async function parseDocument(filePath: string, mimeType: string): Promise
   let tempPath: string | undefined;
   if (isS3Uri(filePath)) {
     tempPath = await materializeS3UriToTempFile(filePath);
+    localPath = tempPath;
+  } else if (isHttpUrl(filePath)) {
+    tempPath = await materializeHttpUrlToTempFile(filePath);
     localPath = tempPath;
   } else {
     localPath = resolveSafeFilePath(filePath);

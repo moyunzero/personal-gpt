@@ -21,6 +21,13 @@ import { traceIngestStep } from "./pipeline/tracing";
 import { upsertChunks } from "./pipeline/upsert";
 import { ingestFailuresTotal } from "../metrics";
 
+/** 生产无 Neo4j 时可关；Compose 本地默认 ENABLE_GRAPH_RAG=true */
+export function isGraphIngestEnabled(
+  source: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return source.ENABLE_GRAPH_RAG === "true";
+}
+
 @Injectable()
 @Processor(INGEST_QUEUE_NAME, { concurrency: 2 })
 export class IngestProcessor extends WorkerHost {
@@ -41,7 +48,8 @@ export class IngestProcessor extends WorkerHost {
     const { workspaceId, documentId, filePath, mimeType, title, category, tags } = job.data;
 
     const maxBytes = getEnv().UPLOAD_MAX_BYTES;
-    if (!isS3Uri(filePath)) {
+    const isRemote = isS3Uri(filePath) || /^https?:\/\//i.test(filePath);
+    if (!isRemote) {
       const stat = await fs.stat(filePath);
       if (stat.size > maxBytes) {
         throw new Error(`File exceeds upload limit: ${stat.size} bytes`);
@@ -96,9 +104,15 @@ export class IngestProcessor extends WorkerHost {
       await job.updateProgress(90);
       await this.updateIngestJob(ingestJob?.id, { progress: 90 });
 
-      await traceIngestStep("graph-extract", traceCtx, () =>
-        extractAndUpsertGraph({ workspaceId, documentId, chunks }, { dataSource: this.dataSource }),
-      );
+      if (isGraphIngestEnabled()) {
+        await traceIngestStep("graph-extract", traceCtx, () =>
+          extractAndUpsertGraph({ workspaceId, documentId, chunks }, { dataSource: this.dataSource }),
+        );
+      } else {
+        this.logger.log(
+          `Skip graph-extract for ${documentId} (ENABLE_GRAPH_RAG!=true; vector ingest only)`,
+        );
+      }
       await job.updateProgress(100);
 
       await this.documentRepo.update(

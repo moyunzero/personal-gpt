@@ -3,6 +3,10 @@ import { DataAPIClient } from "@datastax/astra-db-ts";
 import type { Corpus } from "../rag/corpus";
 import { resolveCorpusTargets } from "../rag/corpus";
 import type { ChunkRecord, RetrievedChunk, VectorSearchParams, VectorStore } from "./vector-store";
+import {
+  createAstraRelayVectorStore,
+  isAstraRelayConfigured,
+} from "./vector-store.astra-relay";
 
 export interface AstraCollectionHandle {
   find: (
@@ -68,6 +72,14 @@ function mapAstraDoc(doc: Record<string, unknown>): RetrievedChunk {
 export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): VectorStore {
   let collection = options.collection;
 
+  // CloudBase→Astra 403 时：未注入 mock collection 且配置了 relay，走 Vercel 中继。
+  if (!collection && isAstraRelayConfigured()) {
+    return createAstraRelayVectorStore({
+      corpus: options.corpus,
+      collectionName: options.collectionName,
+    });
+  }
+
   if (!collection) {
     const collectionName = resolveAstraCollectionName(options);
     const endpoint = options.endpoint ?? process.env.ASTRA_DB_API_ENDPOINT;
@@ -78,7 +90,11 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
     }
 
     const client = new DataAPIClient(token);
-    const db = client.db(endpoint, { token });
+    const keyspace = process.env.ASTRA_DB_NAMESPACE?.trim() || undefined;
+    const db = client.db(endpoint, {
+      token,
+      ...(keyspace ? { keyspace } : {}),
+    });
     collection = db.collection(collectionName) as unknown as AstraCollectionHandle;
   }
 

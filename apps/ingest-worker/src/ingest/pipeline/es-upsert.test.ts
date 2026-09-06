@@ -28,6 +28,7 @@ vi.mock("@personal-gpt/shared", () => ({
   ensureEsIndexes: (...args: unknown[]) => ensureEsIndexes(...args),
   deleteGraphForDocument: vi.fn().mockResolvedValue(undefined),
   deleteCatalogForDocument: vi.fn().mockResolvedValue(undefined),
+  isEsConfigured: () => true,
 }));
 
 vi.mock("@personal-gpt/shared/stores/vector-store.astra", async (importOriginal) => {

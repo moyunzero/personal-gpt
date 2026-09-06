@@ -1,5 +1,6 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import { useCallback, useRef, useState } from "react";
 
 import type { KbDocumentItem } from "./KbDocumentList";
@@ -29,8 +30,32 @@ const EMPTY_META: UploadMeta = {
   visibility: "workspace",
 };
 
+const MIME_EXT: Record<string, string> = {
+  "application/pdf": "pdf",
+  "text/markdown": "md",
+  "text/plain": "txt",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+};
+
+async function readJsonResponse(res: Response): Promise<{ error?: string; document?: KbDocumentItem }> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as { error?: string; document?: KbDocumentItem };
+  } catch {
+    throw new Error(text.trim().slice(0, 200) || `上传失败（HTTP ${res.status}）`);
+  }
+}
+
+function extensionForFile(file: File): string {
+  const fromMime = MIME_EXT[file.type];
+  if (fromMime) return fromMime;
+  const match = /\.([a-z0-9]+)$/i.exec(file.name);
+  return match?.[1]?.toLowerCase() ?? "bin";
+}
+
 /**
  * 两步上传：选文件 → 填属性（可选）→ 确认上传（D-10）。
+ * 生产优先浏览器直传 Vercel Blob，避免 Serverless 4.5MB 限制。
  */
 export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,36 +79,79 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
     resetPicker();
   };
 
+  const registerDocument = async (
+    payload: FormData | Record<string, unknown>,
+  ): Promise<KbDocumentItem> => {
+    const res = await fetch("/api/kb/documents", {
+      method: "POST",
+      body: payload instanceof FormData ? payload : JSON.stringify(payload),
+      headers: payload instanceof FormData ? undefined : { "Content-Type": "application/json" },
+    });
+    const data = await readJsonResponse(res);
+    if (!res.ok || !data.document) {
+      throw new Error(data.error ?? "上传失败");
+    }
+    return data.document;
+  };
+
+  const uploadViaBlobThenRegister = async (file: File, uploadMeta: UploadMeta) => {
+    const ext = extensionForFile(file);
+    const pathname = `uploads/${crypto.randomUUID()}.${ext}`;
+    const blob = await upload(pathname, file, {
+      access: "private",
+      handleUploadUrl: "/api/kb/blob-upload",
+      contentType: file.type || undefined,
+      multipart: file.size > 4 * 1024 * 1024,
+    });
+
+    const category = uploadMeta.category.trim();
+    const tags = uploadMeta.tags.trim();
+    const title = uploadMeta.title.trim();
+
+    return registerDocument({
+      fileUrl: blob.url,
+      fileName: file.name,
+      mimeType: file.type,
+      size: file.size,
+      visibility: uploadMeta.visibility,
+      ...(category ? { category } : {}),
+      ...(tags ? { tags } : {}),
+      ...(title ? { title } : {}),
+    });
+  };
+
+  const uploadViaMultipart = async (file: File, uploadMeta: UploadMeta) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const category = uploadMeta.category.trim();
+    const tags = uploadMeta.tags.trim();
+    const title = uploadMeta.title.trim();
+    if (category) formData.append("category", category);
+    if (tags) formData.append("tags", tags);
+    if (title) formData.append("title", title);
+    formData.append("visibility", uploadMeta.visibility);
+
+    return registerDocument(formData);
+  };
+
   const uploadFile = useCallback(
     async (file: File, uploadMeta: UploadMeta) => {
       setError(null);
       setUploading(true);
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const category = uploadMeta.category.trim();
-        const tags = uploadMeta.tags.trim();
-        const title = uploadMeta.title.trim();
-        if (category) formData.append("category", category);
-        if (tags) formData.append("tags", tags);
-        if (title) formData.append("title", title);
-        formData.append("visibility", uploadMeta.visibility);
-
-        const res = await fetch("/api/kb/documents", {
-          method: "POST",
-          body: formData,
-        });
-        const data = (await res.json()) as {
-          error?: string;
-          document?: KbDocumentItem;
-        };
-
-        if (!res.ok || !data.document) {
-          throw new Error(data.error ?? "上传失败");
+        let document: KbDocumentItem;
+        try {
+          document = await uploadViaBlobThenRegister(file, uploadMeta);
+        } catch (blobErr) {
+          // 大文件不能回退 multipart（会撞 Serverless 4.5MB）；小文件可回退到本地/MinIO 路径
+          if (file.size > 4.5 * 1024 * 1024) {
+            throw blobErr;
+          }
+          document = await uploadViaMultipart(file, uploadMeta);
         }
 
-        onUploaded(data.document);
+        onUploaded(document);
         setMeta(EMPTY_META);
         setPendingFile(null);
         setShowMeta(false);

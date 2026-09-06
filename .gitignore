@@ -103,3 +103,15 @@ script/bench-output/
 # CodeGraph local index (machine-specific)
 .codegraph/*
 !.codegraph/.gitignore
+
+# CloudBase 本地构建 staging / 临时文件（勿入库）
+.cloudrun-agent-staging/
+.cloudrun-ingest-staging/
+.tmp/
+cloudbase-manager-*.tgz
+
+# 含 session token 的一次性 Playwright 脚本
+tests/acceptance/**/playwright-*.mjs
+
+# 本地 eval 产物
+tests/eval/**/*RESULT*.json

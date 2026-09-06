@@ -31,6 +31,9 @@ function authEnv(name: string): string {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  pages: {
+    error: "/auth/error",
+  },
   // Build/CI may lack secrets; runtime still needs real EMAIL_SERVER to deliver mail.
   secret: authEnv("AUTH_SECRET") || authEnv("NEXTAUTH_SECRET") || "ci-build-placeholder",
   // Default adapter entities live in node_modules (serverExternalPackages) so
@@ -47,12 +50,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const confirmUrl = toConfirmUrl(url);
         const { host } = new URL(confirmUrl);
         const transport = createTransport(provider.server);
-        const result = await transport.sendMail({
-          to: identifier,
-          from: provider.from,
-          subject: `Sign in to ${host}`,
-          text: `Sign in to ${host}\n${confirmUrl}\n\n`,
-          html: `<body style="background:#f9f9f9;font-family:Helvetica,Arial,sans-serif">
+        try {
+          const result = await transport.sendMail({
+            to: identifier,
+            from: provider.from,
+            subject: `Sign in to ${host}`,
+            text: `Sign in to ${host}\n${confirmUrl}\n\n`,
+            html: `<body style="background:#f9f9f9;font-family:Helvetica,Arial,sans-serif">
   <table width="100%" border="0" cellspacing="20" cellpadding="0" style="background:#fff;max-width:600px;margin:auto;border-radius:10px">
     <tr><td align="center" style="padding:10px 0;font-size:22px;color:#444">Sign in to <strong>${host}</strong></td></tr>
     <tr><td align="center" style="padding:20px 0">
@@ -64,10 +68,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     <tr><td align="center" style="padding:0 0 10px;font-size:16px;color:#444">If you did not request this email you can safely ignore it.</td></tr>
   </table>
 </body>`,
-        });
-        const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(Boolean);
-        if (failed.length) {
-          throw new Error(`Email(s) (${failed.join(", ")}) could not be sent`);
+          });
+          const failed = [...(result.rejected ?? []), ...(result.pending ?? [])].filter(Boolean);
+          if (failed.length) {
+            throw new Error(`Email(s) (${failed.join(", ")}) could not be sent`);
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          // Resend 未验证域名时只能给账号本人发信 → Auth.js 会显示 Configuration
+          if (/testing emails|verify a domain|resend\.com\/domains/i.test(msg)) {
+            console.error("[auth] Resend test-mode blocked recipient", { to: identifier });
+            throw new Error(
+              "EmailSignin: Resend 测试模式仅允许向账号本人邮箱发信。请在 resend.com/domains 验证域名并更新 EMAIL_FROM。",
+            );
+          }
+          console.error("[auth] sendVerificationRequest failed", msg);
+          throw err;
         }
       },
     }),

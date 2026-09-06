@@ -3,7 +3,7 @@ import { createUIMessageStreamResponse } from "ai";
 import { randomUUID } from "node:crypto";
 
 import { resolveRetrievalContext } from "@/lib/auth/acl-resolver";
-import { requireSession } from "@/lib/auth/session";
+import { getOptionalSession } from "@/lib/auth/session";
 import {
   ensureChatSession,
   persistChatTurn,
@@ -24,6 +24,12 @@ import { createChatStream } from "@/lib/chat/stream";
 import "@/lib/env";
 import { logger } from "@/lib/logger";
 import { runApiGuards } from "@/lib/middleware/api-guards";
+import {
+  checkGuestChatRateLimit,
+  getClientIp,
+} from "@/lib/ratelimit";
+import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
+import { createHash } from "node:crypto";
 
 const MAX_CHAT_MESSAGES = 50;
 const GRAPH_RAG_TIMEOUT_MS = 12_000;
@@ -138,14 +144,40 @@ export async function POST(req: Request) {
   }
 
   try {
-    const authResult = await requireSession();
-    if (authResult.error) {
-      return new Response(JSON.stringify({ error: "Unauthorized", requestId }), {
-        status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    const session = await getOptionalSession();
+    const isGuest = !session;
+    const clientIp = getClientIp(req);
+
+    if (isGuest) {
+      const guestRl = await checkGuestChatRateLimit(clientIp, requestId);
+      if (!guestRl.success) {
+        return new Response(
+          JSON.stringify({
+            error: "Guest rate limit exceeded. Sign in for higher limits.",
+            code: "guest_rate_limit",
+            requestId,
+            retryAfter: guestRl.retryAfterSeconds,
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+              "Retry-After": String(guestRl.retryAfterSeconds),
+            },
+          },
+        );
+      }
     }
-    const retrievalCtx = await resolveRetrievalContext(authResult.session);
+
+    const guestUserId = `guest:${createHash("sha256").update(clientIp).digest("hex").slice(0, 16)}`;
+    const retrievalCtx = session
+      ? await resolveRetrievalContext(session)
+      : {
+          userId: guestUserId,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          allowedDocumentIds: [] as string[],
+        };
 
     const guarded = await runApiGuards(
       req,
@@ -162,9 +194,9 @@ export async function POST(req: Request) {
           thread_id?: unknown;
         };
         const { messages } = body;
-        // D-27/D-28 / T-03-seed: default user; seed only when explicit
-        const corpus = parseCorpus(body.corpus);
-        const userKey = parseUserKey(body.userKey);
+        // 游客强制种子库，避免扫私人知识库
+        const corpus = isGuest ? "seed" : parseCorpus(body.corpus);
+        const userKey = isGuest ? undefined : parseUserKey(body.userKey);
 
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
           return new Response("No messages provided", {
@@ -182,22 +214,24 @@ export async function POST(req: Request) {
           typeof body.thread_id === "string" && body.thread_id.trim()
             ? body.thread_id.trim()
             : createThreadId();
-        let chatSession;
-        try {
-          chatSession = await ensureChatSession({
-            threadId: rawThreadId,
-            userId: retrievalCtx.userId,
-            workspaceId: retrievalCtx.workspaceId,
-            mode: "chat",
-          });
-        } catch (err) {
-          if (err instanceof ThreadOwnershipError) {
-            return new Response(JSON.stringify({ error: "Forbidden thread_id", requestId }), {
-              status: 403,
-              headers: { "Content-Type": "application/json", ...corsHeaders },
+        let chatSession: Awaited<ReturnType<typeof ensureChatSession>> | null = null;
+        if (!isGuest) {
+          try {
+            chatSession = await ensureChatSession({
+              threadId: rawThreadId,
+              userId: retrievalCtx.userId,
+              workspaceId: retrievalCtx.workspaceId,
+              mode: "chat",
             });
+          } catch (err) {
+            if (err instanceof ThreadOwnershipError) {
+              return new Response(JSON.stringify({ error: "Forbidden thread_id", requestId }), {
+                status: 403,
+                headers: { "Content-Type": "application/json", ...corsHeaders },
+              });
+            }
+            throw err;
           }
-          throw err;
         }
 
         // 取最后一条做向量搜索 + 长度校验
@@ -217,6 +251,7 @@ export async function POST(req: Request) {
         });
         log.debug("query route", {
           corpus,
+          guest: isGuest,
           route: routeDecision.route,
           reason: routeDecision.reason,
           fastPath: routeDecision.fastPath ?? false,
@@ -306,14 +341,19 @@ export async function POST(req: Request) {
             memoryBlock = "";
           }
         }
+        const guestHint = isGuest
+          ? "\n\n## 模式说明\n当前为游客试用：仅种子知识库、无会话持久化。引导用户登录后可使用个人知识库与 Agent。"
+          : "";
         const systemPrompt = memoryBlock
-          ? `${systemPromptBase}${graphBlock}\n\n${memoryBlock}`
-          : `${systemPromptBase}${graphBlock}`;
+          ? `${systemPromptBase}${graphBlock}${guestHint}\n\n${memoryBlock}`
+          : `${systemPromptBase}${graphBlock}${guestHint}`;
 
-        try {
-          await persistUserMessage({ session: chatSession, userContent: lastContent });
-        } catch (err) {
-          log.warn("persistUserMessage failed (ignored)", { err });
+        if (chatSession) {
+          try {
+            await persistUserMessage({ session: chatSession, userContent: lastContent });
+          } catch (err) {
+            log.warn("persistUserMessage failed (ignored)", { err });
+          }
         }
 
         const stream = createChatStream({
@@ -323,11 +363,13 @@ export async function POST(req: Request) {
           citations,
           graphPaths: graphPathsForUi,
           onComplete: async (assistantText) => {
-            await persistChatTurn({
-              session: chatSession,
-              userContent: lastContent,
-              assistantContent: assistantText,
-            });
+            if (chatSession) {
+              await persistChatTurn({
+                session: chatSession,
+                userContent: lastContent,
+                assistantContent: assistantText,
+              });
+            }
             if (userKey) {
               await persistTurnMemory(
                 { workspaceId: retrievalCtx.workspaceId, userKey },

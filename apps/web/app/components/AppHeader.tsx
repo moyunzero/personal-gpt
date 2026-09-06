@@ -15,6 +15,8 @@ type AppHeaderProps = {
   onModeChange?: (mode: ChatMode) => void;
   modeDisabled?: boolean;
   onNewThread?: () => void;
+  /** null=加载中；true=已登录；false=游客 */
+  isAuthenticated?: boolean | null;
 };
 
 /**
@@ -26,6 +28,7 @@ export default function AppHeader({
   onModeChange,
   modeDisabled = false,
   onNewThread,
+  isAuthenticated = null,
 }: AppHeaderProps) {
   return (
     <header className="chat-header">
@@ -56,6 +59,16 @@ export default function AppHeader({
               >
                 新会话
               </button>
+            ) : null}
+            {isAuthenticated === false ? (
+              <a href="/api/auth/signin" className="app-header-link accent">
+                登录
+              </a>
+            ) : null}
+            {isAuthenticated === true ? (
+              <a href="/api/auth/signout" className="app-header-link ghost">
+                退出
+              </a>
             ) : null}
           </nav>
         </div>

@@ -25,6 +25,7 @@
     "@personal-gpt/shared": "*",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
+    "@vercel/blob": "^2",
     "ai": "6.0.177",
     "bullmq": "5.56.0",
     "ioredis": "5.11.1",

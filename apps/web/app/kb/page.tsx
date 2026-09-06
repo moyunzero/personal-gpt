@@ -71,7 +71,7 @@ export default function KbPage() {
   return (
     <AppShell activePage="kb">
       <main className="kb-page">
-        <AppHeader activePage="kb" />
+        <AppHeader activePage="kb" isAuthenticated={true} />
 
         <div className="kb-content">
           <header className="kb-page-header">

@@ -11,6 +11,9 @@ const WINDOW = "60 s" as const;
 
 const CHAT_LIMIT = 10;
 const KB_LIMIT = 30;
+/** 游客试用：每 IP 每小时 5 次（对齐 ChatGPT 限次试用） */
+const GUEST_CHAT_LIMIT = 5;
+const GUEST_WINDOW = "1 h" as const;
 
 let ioredisClient: Redis | null | undefined;
 
@@ -37,11 +40,12 @@ export function buildLimiter(
   token: string | undefined,
   prefix: string,
   limit: number,
+  window: `${number} ${"s" | "m" | "h" | "d"}` = WINDOW,
 ): Ratelimit | null {
   if (!url || !token) return null;
   return new Ratelimit({
     redis: new UpstashRedis({ url, token }),
-    limiter: Ratelimit.slidingWindow(limit, WINDOW),
+    limiter: Ratelimit.slidingWindow(limit, window),
     analytics: false,
     prefix,
   });
@@ -59,6 +63,14 @@ const kbLimiter = buildLimiter(
   env.UPSTASH_REDIS_REST_TOKEN,
   "ratelimit:kb",
   KB_LIMIT,
+);
+
+const guestChatLimiter = buildLimiter(
+  env.UPSTASH_REDIS_REST_URL,
+  env.UPSTASH_REDIS_REST_TOKEN,
+  "ratelimit:guest-chat",
+  GUEST_CHAT_LIMIT,
+  GUEST_WINDOW,
 );
 
 export interface RateLimitResult {
@@ -189,6 +201,25 @@ export async function checkKbRateLimit(
   requestId: string,
 ): Promise<RateLimitResult> {
   return checkUserRateLimit(identifier, requestId, "kb");
+}
+
+/** 游客试用聊天：5 req / 1h，按 IP（或传入的 guest key） */
+export async function checkGuestChatRateLimit(
+  identifier: string,
+  requestId: string,
+): Promise<RateLimitResult> {
+  const log = logger.child({ scope: "ratelimit.guest-chat", requestId });
+  if (!guestChatLimiter) {
+    // Upstash 未配时退回通用 chat 桶，仍 fail-open/限流逻辑一致
+    return checkUserRateLimit(`guest:${identifier}`, requestId, "chat");
+  }
+  return checkWithLimiter(
+    guestChatLimiter,
+    identifier,
+    requestId,
+    "ratelimit.guest-chat",
+    GUEST_CHAT_LIMIT,
+  );
 }
 
 export function rateLimitJsonResponse(result: RateLimitResult): Response {
