@@ -19,6 +19,7 @@ export interface RetrievedDoc {
   keywords?: string[];
   documentId?: string;
   chunkIndex?: number;
+  page?: number;
 }
 
 export type VectorErrorKind = "timeout" | "api-error";
@@ -44,6 +45,7 @@ export function mapDocsToCitations(docs: RetrievedDoc[]): Citation[] {
     source: doc.source,
     category: doc.category,
     chunkIndex: doc.chunkIndex,
+    ...(typeof doc.page === "number" && Number.isFinite(doc.page) ? { page: doc.page } : {}),
   }));
 }
 

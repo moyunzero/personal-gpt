@@ -91,6 +91,7 @@ function mapHitsToDocs(hits: RetrievedChunk[]): RetrievedDoc[] {
     $similarity: hit.similarity,
     documentId: hit.documentId,
     chunkIndex: hit.chunkIndex,
+    ...(typeof hit.page === "number" && Number.isFinite(hit.page) ? { page: hit.page } : {}),
   }));
 }
 

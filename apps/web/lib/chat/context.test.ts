@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { classifyVectorError, formatContextBlock, formatContextBlocks } from "./context";
+import { classifyVectorError, formatContextBlock, formatContextBlocks, mapDocsToCitations } from "./context";
 
 describe("formatContextBlock", () => {
   it("把文档包成带 source + trusted=false 的 <context> 标签", () => {
@@ -70,6 +70,52 @@ describe("formatContextBlocks", () => {
 
   it("单条调用不传下标时不写编号", () => {
     expect(formatContextBlock({ content: "A", source: "prompt-suggestion" })).not.toContain("[S1]");
+  });
+
+  it("page 不写进 context 正文", () => {
+    const block = formatContextBlock({
+      content: "正文",
+      source: "report.pdf",
+      page: 4,
+    });
+    expect(block).toContain("正文");
+    expect(block).not.toContain("第 4 页");
+  });
+});
+
+describe("mapDocsToCitations page", () => {
+  it("没有 page 时结果没有 page 键", () => {
+    const [citation] = mapDocsToCitations([
+      {
+        content: "正文",
+        source: "report.pdf",
+        category: "kb",
+        chunkIndex: 1,
+      },
+    ]);
+    expect(citation).toMatchObject({
+      source: "report.pdf",
+      category: "kb",
+      chunkIndex: 1,
+    });
+    expect(citation).not.toHaveProperty("page");
+  });
+
+  it("page 为 4 时 citation.page 为 4", () => {
+    const [citation] = mapDocsToCitations([{ content: "正文", page: 4 }]);
+    expect(citation?.page).toBe(4);
+  });
+
+  it("字符串或非有限数字不写入 page 键", () => {
+    const stringPage = mapDocsToCitations([
+      { content: "正文", page: "4" as unknown as number },
+    ]);
+    expect(stringPage[0]).not.toHaveProperty("page");
+
+    for (const page of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      const [citation] = mapDocsToCitations([{ content: "正文", page }]);
+      expect(citation).not.toHaveProperty("page");
+    }
   });
 });
 
