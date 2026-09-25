@@ -15,8 +15,8 @@ import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity"
 import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
 import { extractAndUpsertGraph } from "./pipeline/graph-extract";
-import { parseDocument } from "./pipeline/parse";
-import { splitText, toChunkRecords } from "./pipeline/split";
+import { parseDocument, parsePdfPages } from "./pipeline/parse";
+import { splitPdfPages, splitText, toChunkRecords } from "./pipeline/split";
 import { traceIngestStep } from "./pipeline/tracing";
 import { upsertChunks } from "./pipeline/upsert";
 import { ingestFailuresTotal } from "../metrics";
@@ -72,13 +72,25 @@ export class IngestProcessor extends WorkerHost {
     };
 
     try {
-      const text = await traceIngestStep("parse", traceCtx, () =>
-        parseDocument(filePath, mimeType),
-      );
-      await job.updateProgress(25);
-      await this.updateIngestJob(ingestJob?.id, { progress: 25 });
-
-      const chunks = await traceIngestStep("split", traceCtx, () => splitText(text));
+      let chunks: string[];
+      let pages: number[] | undefined;
+      if (mimeType === "application/pdf") {
+        const parsed = await traceIngestStep("parse", traceCtx, () => parsePdfPages(filePath));
+        await job.updateProgress(25);
+        await this.updateIngestJob(ingestJob?.id, { progress: 25 });
+        const pieces = await traceIngestStep("split", traceCtx, () =>
+          splitPdfPages(parsed.pages, parsed.headings),
+        );
+        chunks = pieces.map((piece) => piece.text);
+        pages = pieces.map((piece) => piece.page);
+      } else {
+        const text = await traceIngestStep("parse", traceCtx, () =>
+          parseDocument(filePath, mimeType),
+        );
+        await job.updateProgress(25);
+        await this.updateIngestJob(ingestJob?.id, { progress: 25 });
+        chunks = await traceIngestStep("split", traceCtx, () => splitText(text));
+      }
       await job.updateProgress(50);
       await this.updateIngestJob(ingestJob?.id, { progress: 50 });
 
@@ -89,14 +101,18 @@ export class IngestProcessor extends WorkerHost {
       const document = await this.documentRepo.findOne({
         where: { id: documentId, workspaceId },
       });
-      const records = toChunkRecords(chunks, vectors, {
+      const recordMeta = {
         workspaceId,
         documentId,
         title: title ?? document?.title,
         source: document?.source ?? undefined,
         category: category ?? document?.category ?? undefined,
         tags: tags ?? document?.tags,
-      });
+      };
+      const records =
+        mimeType === "application/pdf"
+          ? toChunkRecords(chunks, vectors, recordMeta, pages)
+          : toChunkRecords(chunks, vectors, recordMeta);
 
       await traceIngestStep("upsert", traceCtx, () => upsertChunks(records));
       await job.updateProgress(90);

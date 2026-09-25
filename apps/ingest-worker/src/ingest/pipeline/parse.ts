@@ -78,15 +78,121 @@ async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   }
 }
 
-async function parsePdf(filePath: string): Promise<string> {
-  const buffer = await fs.readFile(filePath);
+const PAGE_MARKER_LINE = /^\s*--\s*\d+\s+of\s+\d+\s*--\s*$/;
+
+export const PDF_NO_SELECTABLE_TEXT = "这份 PDF 没有可选中的正文。";
+
+export function pdfBodyText(pages: ReadonlyArray<{ text: string }>): string {
+  return pages
+    .map((page) => stripPageMarkerLines(page.text))
+    .join("")
+    .replace(/\s+/g, "");
+}
+
+export function assertPdfHasBody(pages: ReadonlyArray<{ text: string }>): void {
+  if (pdfBodyText(pages).length === 0) {
+    throw new Error(PDF_NO_SELECTABLE_TEXT);
+  }
+}
+
+function stripPageMarkerLines(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !PAGE_MARKER_LINE.test(line))
+    .join("\n");
+}
+
+type OutlineNode = { title?: string; items?: OutlineNode[] };
+
+function collectOutlineTitles(nodes: OutlineNode[] | undefined, titles: string[]): void {
+  if (!nodes) return;
+  for (const node of nodes) {
+    const title = node.title?.trim();
+    if (title) titles.push(title);
+    collectOutlineTitles(node.items, titles);
+  }
+}
+
+async function readPdfBuffer(buffer: Buffer): Promise<{
+  pages: { num: number; text: string }[];
+  headings: string[];
+}> {
   const parser = new PDFParse({ data: buffer });
   try {
-    const result = await parser.getText();
-    return result.text.trim();
+    const result = await parser.getText({ pageJoiner: "" });
+    const info = await parser.getInfo();
+    const headings: string[] = [];
+    collectOutlineTitles(info.outline as OutlineNode[] | undefined, headings);
+    const rawPages = (result.pages ?? []) as Array<{ num?: number; text?: string }>;
+    return {
+      headings,
+      pages: rawPages.map((page, index) => ({
+        num: page.num ?? index + 1,
+        text: (page.text ?? "").trim(),
+      })),
+    };
   } finally {
     await parser.destroy();
   }
+}
+
+export async function parsePdfPages(filePath: string): Promise<{
+  pages: { num: number; text: string }[];
+  headings: string[];
+}> {
+  const opened = await openLocalCopy(filePath);
+  try {
+    const stat = await fs.stat(opened.localPath);
+    if (!stat.isFile()) {
+      throw new Error(`Not a file: ${opened.localPath}`);
+    }
+    const buffer = await fs.readFile(opened.localPath);
+    const parsed = await withTimeout(readPdfBuffer(buffer), "parsePdfPages");
+    assertPdfHasBody(parsed.pages);
+    return parsed;
+  } finally {
+    await opened.cleanup?.();
+  }
+}
+
+export async function readIngestBytes(filePath: string): Promise<Buffer> {
+  const opened = await openLocalCopy(filePath);
+  try {
+    return await fs.readFile(opened.localPath);
+  } finally {
+    await opened.cleanup?.();
+  }
+}
+
+async function openLocalCopy(
+  filePath: string,
+): Promise<{ localPath: string; cleanup?: () => Promise<void> }> {
+  if (isS3Uri(filePath)) {
+    const tempPath = await materializeS3UriToTempFile(filePath);
+    return {
+      localPath: tempPath,
+      cleanup: () => fs.unlink(tempPath).catch(() => undefined),
+    };
+  }
+  if (isHttpUrl(filePath)) {
+    const tempPath = await materializeHttpUrlToTempFile(filePath);
+    return {
+      localPath: tempPath,
+      cleanup: () => fs.unlink(tempPath).catch(() => undefined),
+    };
+  }
+  return { localPath: resolveSafeFilePath(filePath) };
+}
+
+async function parsePdf(filePath: string): Promise<string> {
+  const buffer = await fs.readFile(filePath);
+  const parsed = await readPdfBuffer(buffer);
+  assertPdfHasBody(parsed.pages);
+  return parsed.pages
+    .map((page) => stripPageMarkerLines(page.text).trim())
+    .filter((text) => text.length > 0)
+    .join("\n")
+    .trim();
 }
 
 async function parseDocx(filePath: string): Promise<string> {
