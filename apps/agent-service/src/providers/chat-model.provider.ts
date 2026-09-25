@@ -45,6 +45,7 @@ export function createChatModel(
 
   const model = options.model ?? (source.AGENT_MODEL?.trim() || agent.models[0]);
   const temperature = options.temperature ?? agent.temperature;
+  console.log("chat model was selected", { provider: agent.provider, model });
 
   if (agent.provider === "openai") {
     const openaiBase = source.OPENAI_BASE_URL?.trim();

@@ -1,7 +1,7 @@
 /**
  * chat-model.provider 单测：默认模型与 provider 解析。
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_CEREBRAS_MODEL,
@@ -22,11 +22,15 @@ describe("chat-model.provider", () => {
     CHAT_PROVIDER: process.env.CHAT_PROVIDER,
   };
 
+  let logSpy: ReturnType<typeof vi.spyOn> | undefined;
+
   afterEach(() => {
     for (const [k, v] of Object.entries(prev)) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;
     }
+    logSpy?.mockRestore();
+    logSpy = undefined;
   });
 
   it("resolveAgentProvider prefers AGENT_PROVIDER", () => {
@@ -49,6 +53,40 @@ describe("chat-model.provider", () => {
     const model = createChatModel();
     expect((model as { model: string }).model).toBe(DEFAULT_OPENAI_MODEL);
     expect((model as { model: string }).model).not.toBe(DEFAULT_GROQ_MODEL);
+  });
+
+  it("AGENT_MODEL wins over the provider default", () => {
+    const model = createChatModel({}, {
+      AGENT_PROVIDER: "cerebras",
+      CEREBRAS_API_KEY: "csk",
+      AGENT_MODEL: "custom-agent-model",
+    } as NodeJS.ProcessEnv);
+    expect((model as { model: string }).model).toBe("custom-agent-model");
+  });
+
+  it("uses the Groq agent default instead of the chat fallback list", () => {
+    const model = createChatModel({}, {
+      AGENT_PROVIDER: "groq",
+      GROQ_API_KEY: "gsk",
+    } as NodeJS.ProcessEnv);
+    const modelId = (model as { model: string }).model;
+    expect(modelId).toBe(DEFAULT_GROQ_MODEL);
+    expect(modelId).not.toBe("qwen/qwen3.6-27b");
+  });
+
+  it("logs the selected provider and model without the apiKey", () => {
+    const apiKey = "super-secret-agent-key";
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    createChatModel({}, {
+      AGENT_PROVIDER: "groq",
+      GROQ_API_KEY: apiKey,
+      AGENT_MODEL: "openai/gpt-oss-120b",
+    } as NodeJS.ProcessEnv);
+    const match = logSpy.mock.calls.find(
+      (args) => typeof args[0] === "string" && args[0].includes("chat model was selected"),
+    );
+    expect(match?.[1]).toEqual({ provider: "groq", model: "openai/gpt-oss-120b" });
+    expect(JSON.stringify(match)).not.toContain(apiKey);
   });
 
   it("builds Cerebras when CHAT_PROVIDER is invalid", () => {
