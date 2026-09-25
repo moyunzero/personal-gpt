@@ -55,6 +55,7 @@ import { resolveIntentPlanForAgent } from "../routing/intent-plan";
 import { readIntentRouterConfig } from "@personal-gpt/shared/routing";
 import type { IntentPlan, RouterLayer } from "@personal-gpt/shared/routing";
 import type { AgentExecutionRoute } from "@personal-gpt/shared";
+import { resolveAgentModelSide } from "@personal-gpt/shared/ai/chat-model-config";
 import {
   clearWebSearchCallCount,
   formatWebReferencesMarkdown,
@@ -392,13 +393,18 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
 }
 
 function assertModelConfigured(): void {
-  const cerebras = process.env.CEREBRAS_API_KEY?.trim();
-  const groq = process.env.GROQ_API_KEY?.trim();
-  const openai = process.env.OPENAI_API_KEY?.trim();
-  if (!cerebras && !groq && !openai) {
-    throw new ModelConfigError(
-      "聊天模型未配置：请设置 CEREBRAS_API_KEY、GROQ_API_KEY 或 OPENAI_API_KEY · 可重试或改回 Chat",
-    );
+  const retryOrChat = "可重试或改回 Chat";
+  try {
+    const side = resolveAgentModelSide(process.env);
+    if (!side) {
+      throw new ModelConfigError(
+        `聊天模型未配置：请设置 CEREBRAS_API_KEY、GROQ_API_KEY 或 OPENAI_API_KEY · ${retryOrChat}`,
+      );
+    }
+  } catch (err) {
+    if (err instanceof ModelConfigError) throw err;
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new ModelConfigError(`${detail} · ${retryOrChat}`);
   }
 }
 

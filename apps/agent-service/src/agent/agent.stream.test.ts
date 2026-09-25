@@ -300,6 +300,39 @@ describe("Agent SSE stream (AGENT-04)", () => {
     ).rejects.toBeInstanceOf(ModelConfigError);
   });
 
+  it("surfaces 503 when AGENT_PROVIDER=openai without OPENAI_API_KEY", async () => {
+    process.env.AGENT_PROVIDER = "openai";
+    process.env.GROQ_API_KEY = "test-groq-key";
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.CEREBRAS_API_KEY;
+    const { AgentService, ModelConfigError } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200 } as unknown as import("express").Response;
+    try {
+      await service.streamChat(
+        {
+          messages: [
+            {
+              id: "4",
+              role: "user",
+              parts: [{ type: "text", text: "你好" }],
+            },
+          ],
+        },
+        res,
+      );
+      throw new Error("expected ModelConfigError");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ModelConfigError);
+      const message = err instanceof Error ? err.message : "";
+      expect(message).toContain("OPENAI_API_KEY");
+      expect(message).toContain("可重试或改回 Chat");
+      expect(message).not.toContain("test-groq-key");
+    } finally {
+      delete process.env.AGENT_PROVIDER;
+    }
+  });
+
   it("awaits pipeUIMessageStreamToResponse before streamChat resolves", async () => {
     let pipeFinished = false;
     pipeUIMessageStreamToResponseMock.mockImplementation(async ({ stream }) => {
