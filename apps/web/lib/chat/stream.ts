@@ -1,3 +1,4 @@
+import { filterCitationsBySourceMarkers } from "@personal-gpt/shared";
 import { chatModel, resolveChatModels } from "@personal-gpt/shared/ai/chat-provider";
 import type { Citation } from "@personal-gpt/shared/types/kb";
 import { streamText, createUIMessageStream } from "ai";
@@ -27,7 +28,7 @@ export interface ChatStreamOptions {
  * 构造与 useChat() 兼容的 UI Message Stream，按 MODELS 顺序尝试，
  * 首个成功的模型直接 return，全失败时写一个 error chunk。
  *
- * 文本流全部 flush 后，若 citations 非空则追加 data-citations part（D-07/D-09）。
+ * 文本流全部 flush 后，按回答里的 [S n] 过滤 citations，仅非空时追加 data-citations。
  */
 export function createChatStream({
   systemPrompt,
@@ -106,11 +107,12 @@ export function createChatStream({
             }
           }
 
-          if (citations.length > 0) {
+          const usedCitations = filterCitationsBySourceMarkers(assistantText, citations);
+          if (usedCitations.length > 0) {
             writer.write({
               type: "data-citations",
               id: `citations-${messageId}`,
-              data: { citations },
+              data: { citations: usedCitations },
             });
           }
 

@@ -15,6 +15,8 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("示例内容");
     expect(prompt).toContain("不相关则完全忽略");
     expect(prompt).toContain("通用知识");
+    expect(prompt).toContain("[S 编号]");
+    expect(prompt).toContain("一个编号都不写");
   });
 
   it("no-docs 分支：要求直接回答，不拒绝", () => {

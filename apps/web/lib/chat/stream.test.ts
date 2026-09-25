@@ -63,7 +63,7 @@ describe("createChatStream citations", () => {
   });
 
   it("writes data-citations after text stream completes (RAG-01)", async () => {
-    mockSuccessfulTextStream("基于知识库的回答");
+    mockSuccessfulTextStream("基于知识库的回答 [S1]");
 
     const citations: Citation[] = [
       {
@@ -120,6 +120,61 @@ describe("createChatStream citations", () => {
 
     const parts = await collectStreamParts(stream);
 
+    expect(parts.some((part) => (part as { type: string }).type === "data-citations")).toBe(false);
+  });
+
+  it("writes only the first citation when the answer contains [S1]", async () => {
+    mockSuccessfulTextStream("只采用第一条 [S1]。");
+
+    const citations: Citation[] = [
+      {
+        documentId: "doc-1",
+        title: "第一条",
+        similarity: 0.9,
+        snippet: "甲",
+      },
+      {
+        documentId: "doc-2",
+        title: "第二条",
+        similarity: 0.8,
+        snippet: "乙",
+      },
+    ];
+
+    const stream = createChatStream({
+      systemPrompt: "system",
+      messages: [{ role: "user", content: "问题" }],
+      requestId: "req-s1",
+      citations,
+    });
+
+    const parts = await collectStreamParts(stream);
+    const dataPart = parts.find((part) => (part as { type: string }).type === "data-citations") as
+      | { data: { citations: Citation[] } }
+      | undefined;
+
+    expect(dataPart?.data.citations).toHaveLength(1);
+    expect(dataPart?.data.citations[0]?.documentId).toBe("doc-1");
+  });
+
+  it("does not write data-citations when the answer has no source markers", async () => {
+    mockSuccessfulTextStream("这是通识回答。");
+
+    const stream = createChatStream({
+      systemPrompt: "system",
+      messages: [{ role: "user", content: "问题" }],
+      requestId: "req-none",
+      citations: [
+        {
+          documentId: "doc-1",
+          title: "第一条",
+          similarity: 0.9,
+          snippet: "甲",
+        },
+      ],
+    });
+
+    const parts = await collectStreamParts(stream);
     expect(parts.some((part) => (part as { type: string }).type === "data-citations")).toBe(false);
   });
 

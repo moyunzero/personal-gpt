@@ -104,7 +104,7 @@ describe("Phase 1 regression #2: citation on relevant question", () => {
 
     streamTextMock.mockReturnValue({
       fullStream: (async function* () {
-        yield { type: "text-delta", text: "根据知识库，Personal GPT 是…" };
+        yield { type: "text-delta", text: "根据知识库 [S1]，Personal GPT 是…" };
         yield { type: "finish" };
       })(),
     });

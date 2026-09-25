@@ -21,6 +21,8 @@ export function buildSystemPrompt(result: VectorSearchResult): string {
 
 使用规则：
 - 先判断资料是否与用户问题相关；**不相关则完全忽略**，改用通用知识回答；
+- 每条资料带 [S 编号]；只有实际采用该条时才在回答里写出对应编号；
+- 改用通用知识作答则一个编号都不写；不要编造没有给出的编号；
 - source 为 "prompt-suggestion"：个人/项目类预设资料，可用第一人称（"我"）作答；
 - source 为 "psychology-qa"：心理咨询类预设资料，语气专业、审慎；
 - 其他 source（常见为用户上传文件名）：基于文档内容作答，可提及标题；

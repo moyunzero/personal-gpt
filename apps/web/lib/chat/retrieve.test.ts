@@ -86,4 +86,35 @@ describe("getRelevantContext", () => {
 
     expect(result.kind).toBe("no-docs");
   });
+
+  it("drops a second hit below 0.55 from the numbered list", async () => {
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "高相关段落",
+        similarity: 0.9,
+        source: "legacy",
+        title: "高命中",
+        documentId: "doc-high",
+        chunkIndex: 0,
+      },
+      {
+        text: "低相关段落",
+        similarity: 0.54,
+        source: "legacy",
+        title: "低命中",
+        documentId: "doc-low",
+        chunkIndex: 1,
+      },
+    ]);
+
+    const result = await getRelevantContext("介绍一下某个项目背景", "req-5");
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0]?.documentId).toBe("doc-high");
+    expect(result.blocks).toContain("[S1]");
+    expect(result.blocks).not.toContain("[S2]");
+    expect(result.blocks).not.toContain("低相关段落");
+  });
 });

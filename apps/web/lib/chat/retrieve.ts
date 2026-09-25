@@ -213,7 +213,10 @@ export async function getRelevantContext(
           return { kind: "no-docs" } as const;
         }
 
-        const relevantDocs = mapHitsToDocs(mergedHits);
+        const numberedHits = mergedHits.filter(
+          (hit) => hit.similarity >= TOP1_SIMILARITY_THRESHOLD,
+        );
+        const relevantDocs = mapHitsToDocs(numberedHits);
         const blocks = formatContextBlocks(relevantDocs);
         const citations = mapDocsToCitations(relevantDocs);
         const sources = Array.from(new Set(relevantDocs.map((doc) => doc.source ?? "unknown")));

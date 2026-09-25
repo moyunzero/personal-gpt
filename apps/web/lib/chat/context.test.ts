@@ -58,14 +58,18 @@ describe("formatContextBlocks", () => {
     expect(formatContextBlocks([])).toBe("");
   });
 
-  it("多个文档用空行分隔", () => {
+  it("多个文档用空行分隔，并按 1 起写成 [S n]", () => {
     const blocks = formatContextBlocks([
       { content: "A", source: "prompt-suggestion" },
       { content: "B", source: "psychology-qa" },
     ]);
     expect(blocks.split("</context>").length - 1).toBe(2);
-    expect(blocks).toContain("A");
-    expect(blocks).toContain("B");
+    expect(blocks).toContain("[S1]\nA");
+    expect(blocks).toContain("[S2]\nB");
+  });
+
+  it("单条调用不传下标时不写编号", () => {
+    expect(formatContextBlock({ content: "A", source: "prompt-suggestion" })).not.toContain("[S1]");
   });
 });
 

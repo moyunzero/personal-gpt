@@ -7,6 +7,7 @@ export * from "./ai/rag-helper";
 export * from "./constants/workspace";
 export * from "./constants/queue";
 export * from "./types/kb";
+export { filterCitationsBySourceMarkers } from "./kb/used-citations";
 export * from "./types/agent";
 export * from "./schemas/env";
 export * from "./utils/ingest";
