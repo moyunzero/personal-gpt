@@ -47,8 +47,34 @@ describe("formatKbAnswerFromCitations", () => {
     );
     expect(out).toMatch(/根据知识库检索结果/);
     expect(out).toMatch(/五花肉切块焯水/);
-    expect(out).toMatch(/红烧肉的做法/);
+    expect(out).toMatch(/\[S1\] 红烧肉的做法/);
     expect(out).toMatch(/recipe\.md/);
+  });
+
+  it("keeps [S n] tied to the original array index after similarity sort", () => {
+    const out = formatKbAnswerFromCitations(
+      [
+        {
+          documentId: "doc-low",
+          title: "先入库",
+          source: "a.md",
+          similarity: 0.7,
+          snippet: "较低相似度的片段。",
+          chunkIndex: 0,
+        },
+        {
+          documentId: "doc-high",
+          title: "后入库",
+          source: "b.md",
+          similarity: 0.95,
+          snippet: "较高相似度的片段，排序后仍是第二条。",
+          chunkIndex: 1,
+        },
+      ],
+      "q",
+    );
+    expect(out).toMatch(/\[S2\] 后入库/);
+    expect(out).toMatch(/\[S1\] 先入库/);
   });
 
   it("returns empty for no citations", () => {

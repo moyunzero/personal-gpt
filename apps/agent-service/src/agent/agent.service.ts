@@ -11,7 +11,7 @@ import type { Response } from "express";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import type { Citation } from "@personal-gpt/shared";
-import { loadMemoryContextBlock, persistTurnMemory } from "@personal-gpt/shared";
+import { filterCitationsBySourceMarkers, loadMemoryContextBlock, persistTurnMemory } from "@personal-gpt/shared";
 import { z } from "zod";
 
 import { raceExternalCall } from "./race-external-call";
@@ -45,7 +45,9 @@ import {
 } from "../observability/agent-trace";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import {
+  beginKbCitationTurn,
   clearKbSearchContextForThread,
+  clearKbSourceOrdinal,
   setKbSearchContextForThread,
 } from "../tools/kb-search-context";
 import { extractKbSearchQuery } from "../tools/extract-kb-query";
@@ -77,9 +79,9 @@ import {
  * 从 kb_search 工具返回文本解析真实 Citation（禁止依赖模型在正文里自造 DOC-*）。
  */
 export function parseKbCitationsFromToolText(text: string): Citation[] {
-  if (!text.includes("[citation") || !text.includes("documentId:")) return [];
+  if (!/\[(?:citation\s+\d+|S\d+)\]/i.test(text) || !text.includes("documentId:")) return [];
   const minSim = resolveKbMinSimilarity();
-  const blocks = text.split(/\[citation\s+\d+\]/i).slice(1);
+  const blocks = text.split(/\[(?:citation\s+\d+|S\d+)\]/i).slice(1);
   const out: Citation[] = [];
   for (const block of blocks) {
     const title = block.match(/title:\s*(.+)/i)?.[1]?.trim();
@@ -145,7 +147,11 @@ function collectCitationsFromUpdate(
       if (trace) {
         // 仅认「工具原文」形态，避免专科复述被当成重复 tool 事件
         const trimmed = content.trim();
-        if (/KB_SEARCH_STATUS:/i.test(content) || content.includes("[citation")) {
+        if (
+          /KB_SEARCH_STATUS:/i.test(content) ||
+          content.includes("[citation") ||
+          (/\[S\d+\]/.test(content) && content.includes("documentId:"))
+        ) {
           trace.recordTool({
             name: "kb_search",
             agent: nodeName,
@@ -1301,6 +1307,7 @@ export class AgentService {
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
+        beginKbCitationTurn(runId);
         setKbSearchContextForThread(runId, {
           userText,
           workspaceId,
@@ -1871,7 +1878,9 @@ export class AgentService {
                     status: t.status,
                   })),
                 );
-                const citations = [...citationBag.values()];
+                const citations = filterCitationsBySourceMarkers(finalBuf, [
+                  ...citationBag.values(),
+                ]);
                 // D-22：checkpoint 为真相源；SSE data-* 仅投影
                 try {
                   await executionGraph.updateState(
@@ -1977,6 +1986,7 @@ export class AgentService {
           }
         } finally {
           clearKbSearchContextForThread(runId);
+          clearKbSourceOrdinal(runId);
           clearWebSearchCallCount(runId);
         }
       },
