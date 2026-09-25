@@ -51,11 +51,20 @@ function parseModelList(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+function gatewayPairSet(source: NodeJS.ProcessEnv): boolean {
+  return Boolean(source.GATEWAY_BASE_URL?.trim() && source.GATEWAY_API_KEY?.trim());
+}
+
 /**
  * 聊天 fallback 模型列表。
- * CHAT_MODELS 覆盖；否则 groq 用 GROQ_CHAT_MODELS，openai 用单模型默认。
+ * 网关对齐全时只返回聊天侧的一个 id；否则 CHAT_MODELS 覆盖，groq 用 GROQ_CHAT_MODELS，openai 用单模型默认。
  */
 export function resolveChatModels(source: NodeJS.ProcessEnv = process.env): string[] {
+  if (gatewayPairSet(source)) {
+    const { chat } = resolveChatModelConfig(source, "chat");
+    return chat?.models ?? [];
+  }
+
   const override = parseModelList(source.CHAT_MODELS);
   if (override.length > 0) return override;
 

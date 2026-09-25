@@ -20,6 +20,8 @@ describe("chat-model.provider", () => {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
     CHAT_PROVIDER: process.env.CHAT_PROVIDER,
+    GATEWAY_BASE_URL: process.env.GATEWAY_BASE_URL,
+    GATEWAY_API_KEY: process.env.GATEWAY_API_KEY,
   };
 
   let logSpy: ReturnType<typeof vi.spyOn> | undefined;
@@ -96,6 +98,37 @@ describe("chat-model.provider", () => {
     process.env.CHAT_PROVIDER = "not-a-chat-provider";
     const model = createChatModel();
     expect((model as { model: string }).model).toBe(DEFAULT_CEREBRAS_MODEL);
+  });
+
+  it("passes the gateway baseURL and the chat model id into ChatOpenAI", () => {
+    const gatewayKey = "gw-secret-value-not-in-log";
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const model = createChatModel({}, {
+      GATEWAY_BASE_URL: "https://gw.example/v1",
+      GATEWAY_API_KEY: gatewayKey,
+      CEREBRAS_API_KEY: "csk-other",
+    } as NodeJS.ProcessEnv);
+    expect((model as { model: string }).model).toBe("gpt-4o-mini");
+    const clientConfig = (model as { clientConfig: { baseURL?: string; apiKey?: string } })
+      .clientConfig;
+    expect(clientConfig).toMatchObject({
+      baseURL: "https://gw.example/v1",
+      apiKey: gatewayKey,
+    });
+    const match = logSpy.mock.calls.find(
+      (args) => typeof args[0] === "string" && args[0].includes("chat model was selected"),
+    );
+    expect(JSON.stringify(match)).not.toContain(gatewayKey);
+  });
+
+  it("omits configuration when the gateway pair and OPENAI_BASE_URL are unset", () => {
+    const model = createChatModel({}, {
+      AGENT_PROVIDER: "openai",
+      OPENAI_API_KEY: "sk-direct",
+    } as NodeJS.ProcessEnv);
+    expect(
+      (model as { clientConfig: { baseURL?: string } }).clientConfig.baseURL,
+    ).toBeUndefined();
   });
 
   it("groq / cerebras keep their defaults", () => {

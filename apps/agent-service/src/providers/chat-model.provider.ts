@@ -48,6 +48,17 @@ export function createChatModel(
   console.log("chat model was selected", { provider: agent.provider, model });
 
   if (agent.provider === "openai") {
+    const gatewayBase = source.GATEWAY_BASE_URL?.trim();
+    const gatewayKey = source.GATEWAY_API_KEY?.trim();
+    if (gatewayBase && gatewayKey) {
+      return new ChatOpenAI({
+        model,
+        apiKey: agent.apiKey,
+        temperature,
+        configuration: { baseURL: agent.baseURL },
+      });
+    }
+
     const openaiBase = source.OPENAI_BASE_URL?.trim();
     return new ChatOpenAI({
       model,
