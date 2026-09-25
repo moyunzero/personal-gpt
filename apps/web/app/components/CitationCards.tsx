@@ -14,9 +14,27 @@ function formatSimilarity(similarity: number): string {
   return `${Math.round(similarity * 100)}%`;
 }
 
+function sharedPage(group: CitationDocumentGroup): number | undefined {
+  const first = group.snippets[0]?.page;
+  if (typeof first !== "number" || !Number.isFinite(first)) return undefined;
+  return group.snippets.every((snippet) => snippet.page === first) ? first : undefined;
+}
+
+function pagesFollowSnippets(group: CitationDocumentGroup): boolean {
+  if (group.snippets.length < 2) return false;
+  const pages = new Set<number>();
+  for (const snippet of group.snippets) {
+    if (typeof snippet.page !== "number" || !Number.isFinite(snippet.page)) return false;
+    pages.add(snippet.page);
+  }
+  return pages.size > 1;
+}
+
 function CitationCard({ group }: { group: CitationDocumentGroup }) {
   const [expanded, setExpanded] = useState(false);
   const panelId = `citation-${group.documentId}-panel`;
+  const page = sharedPage(group);
+  const labelPerSnippet = pagesFollowSnippets(group);
 
   return (
     <article className="citation-card">
@@ -29,6 +47,7 @@ function CitationCard({ group }: { group: CitationDocumentGroup }) {
       >
         <span className="citation-card-title">{group.title}</span>
         <span className="citation-card-meta">
+          {page != null ? <span>第 {page} 页</span> : null}
           <span className="citation-card-similarity">{formatSimilarity(group.similarity)}</span>
           <svg
             className={`citation-card-chevron${expanded ? " citation-card-chevron-open" : ""}`}
@@ -50,7 +69,9 @@ function CitationCard({ group }: { group: CitationDocumentGroup }) {
         <div id={panelId}>
           {group.snippets.map((item) => (
             <p key={item.sourceNumber} className="citation-card-snippet">
-              [S{item.sourceNumber}] {item.snippet}
+              {`[S${item.sourceNumber}] ${
+                labelPerSnippet && typeof item.page === "number" ? `第 ${item.page} 页 ` : ""
+              }${item.snippet}`}
             </p>
           ))}
         </div>

@@ -53,7 +53,8 @@ export function resolveAstraCollectionName(
   return resolveCorpusTargets(options.corpus ?? "user").astraCollection;
 }
 
-function mapAstraDoc(doc: Record<string, unknown>): RetrievedChunk {
+export function mapAstraDoc(doc: Record<string, unknown>): RetrievedChunk {
+  const page = doc.page;
   return {
     text: String(doc.content ?? doc.text ?? ""),
     similarity: Number(doc.$similarity ?? 0),
@@ -62,6 +63,7 @@ function mapAstraDoc(doc: Record<string, unknown>): RetrievedChunk {
     category: doc.category as string | undefined,
     documentId: doc.documentId as string | undefined,
     chunkIndex: doc.chunkIndex as number | undefined,
+    ...(typeof page === "number" && Number.isFinite(page) ? { page } : {}),
     keywords: doc.keywords as string[] | undefined,
   };
 }
@@ -165,6 +167,7 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
           keywords: 1,
           documentId: 1,
           chunkIndex: 1,
+          page: 1,
           _id: 0,
         },
       };

@@ -5,6 +5,7 @@ export interface CitationSnippetGroup {
   chunkIndex?: number;
   /** 1-based index in the filtered citation array, matching [S n] in the answer. */
   sourceNumber: number;
+  page?: number;
 }
 
 export interface CitationDocumentGroup {
@@ -38,6 +39,9 @@ export function groupCitationsByDocument(citations: Citation[]): CitationDocumen
       snippet: citation.snippet,
       chunkIndex: citation.chunkIndex,
       sourceNumber: index + 1,
+      ...(typeof citation.page === "number" && Number.isFinite(citation.page)
+        ? { page: citation.page }
+        : {}),
     });
   });
 

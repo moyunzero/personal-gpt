@@ -54,4 +54,28 @@ describe("groupCitationsByDocument", () => {
     expect(groups[0]?.snippets).toHaveLength(1);
     expect(groups[1]?.snippets).toHaveLength(1);
   });
+
+  it("puts a finite page on the snippet and omits the key when page is missing", () => {
+    const groups = groupCitationsByDocument([
+      {
+        documentId: "doc-a",
+        title: "手册",
+        similarity: 0.8,
+        snippet: "第一段",
+        page: 2,
+      },
+      {
+        documentId: "doc-a",
+        title: "手册",
+        similarity: 0.7,
+        snippet: "第二段",
+      },
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.snippets).toHaveLength(2);
+    expect(groups[0]?.snippets[0]?.page).toBe(2);
+    expect(groups[0]?.snippets[1]).not.toHaveProperty("page");
+    expect(groups[0]).not.toHaveProperty("page");
+  });
 });
