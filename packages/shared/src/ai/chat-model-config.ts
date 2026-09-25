@@ -37,6 +37,40 @@ function trimmed(value: string | undefined): string {
   return value?.trim() ?? "";
 }
 
+/** Both vars must be non-empty after trim. One side, or whitespace, stays on the vendor path. */
+function gatewayCredentials(
+  source: NodeJS.ProcessEnv,
+): { baseURL: string; apiKey: string } | null {
+  const baseURL = trimmed(source.GATEWAY_BASE_URL);
+  const apiKey = trimmed(source.GATEWAY_API_KEY);
+  if (!baseURL || !apiKey) return null;
+  return { baseURL, apiKey };
+}
+
+/** Gateway chat id: CHAT_MODEL, else the first CHAT_MODELS entry, else gpt-4o-mini. */
+function gatewayChatModelId(source: NodeJS.ProcessEnv): string {
+  const explicit = trimmed(source.CHAT_MODEL);
+  if (explicit) return explicit;
+  return parseModelList(source.CHAT_MODELS)[0] || DEFAULT_OPENAI_MODEL;
+}
+
+function gatewaySide(
+  source: NodeJS.ProcessEnv,
+  creds: { baseURL: string; apiKey: string },
+  side: ChatModelSideName,
+): ResolvedChatModelSide {
+  const chatId = gatewayChatModelId(source);
+  const model = side === "agent" ? trimmed(source.AGENT_MODEL) || chatId : chatId;
+  return {
+    provider: "openai",
+    name: "openai-compatible",
+    baseURL: creds.baseURL,
+    apiKey: creds.apiKey,
+    models: [model],
+    temperature: 0,
+  };
+}
+
 function parseModelList(raw: string | undefined): string[] {
   if (!raw?.trim()) return [];
   return raw
@@ -49,6 +83,7 @@ function parseModelList(raw: string | undefined): string[] {
 export function resolveChatProviderId(
   source: NodeJS.ProcessEnv = process.env,
 ): "groq" | "openai" | null {
+  if (gatewayCredentials(source)) return "openai";
   const forced = trimmed(source.CHAT_PROVIDER).toLowerCase();
   if (forced) {
     if (forced === "groq" || forced === "openai") return forced;
@@ -63,6 +98,7 @@ export function resolveChatProviderId(
 export function resolveAgentProviderId(
   source: NodeJS.ProcessEnv = process.env,
 ): ChatModelProviderId | null {
+  if (gatewayCredentials(source)) return "openai";
   const forced = trimmed(source.AGENT_PROVIDER).toLowerCase();
   if (forced) {
     if (forced === "cerebras" || forced === "groq" || forced === "openai") return forced;
@@ -108,6 +144,9 @@ function agentDefaultModel(provider: ChatModelProviderId): string {
 export function resolveChatModelSide(
   source: NodeJS.ProcessEnv = process.env,
 ): ResolvedChatModelSide | null {
+  const gateway = gatewayCredentials(source);
+  if (gateway) return gatewaySide(source, gateway, "chat");
+
   const provider = resolveChatProviderId(source);
   if (!provider) return null;
 
@@ -135,6 +174,9 @@ export function resolveChatModelSide(
 export function resolveAgentModelSide(
   source: NodeJS.ProcessEnv = process.env,
 ): ResolvedChatModelSide | null {
+  const gateway = gatewayCredentials(source);
+  if (gateway) return gatewaySide(source, gateway, "agent");
+
   const provider = resolveAgentProviderId(source);
   if (!provider) throw new Error(MISSING_AGENT_KEY);
 

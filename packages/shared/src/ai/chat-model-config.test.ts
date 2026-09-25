@@ -128,4 +128,127 @@ describe("chat-model-config", () => {
     });
     expect(resolved.chat).toBeNull();
   });
+
+  const gatewayUrl = "https://gateway.example/v1";
+  const gatewayKey = "gw-secret-value-not-in-errors";
+
+  function gatewaySource(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+    return {
+      GATEWAY_BASE_URL: gatewayUrl,
+      GATEWAY_API_KEY: gatewayKey,
+      GROQ_API_KEY: "gsk-chat-different",
+      CEREBRAS_API_KEY: "csk-agent-different",
+      CHAT_PROVIDER: "not-a-chat-provider",
+      AGENT_PROVIDER: "not-an-agent-provider",
+      ...extra,
+    } as NodeJS.ProcessEnv;
+  }
+
+  it("uses the gateway URL and key for both sides when the pair is set", () => {
+    for (const side of ["chat", "agent"] as const) {
+      const resolved = resolveChatModelConfig(gatewaySource(), side);
+      expect(resolved.chat).toMatchObject({
+        provider: "openai",
+        name: "openai-compatible",
+        baseURL: gatewayUrl,
+        apiKey: gatewayKey,
+      });
+      expect(resolved.agent).toMatchObject({
+        provider: "openai",
+        name: "openai-compatible",
+        baseURL: gatewayUrl,
+        apiKey: gatewayKey,
+      });
+      expect(resolved.chat?.apiKey).not.toBe("gsk-chat-different");
+      expect(resolved.agent?.apiKey).not.toBe("csk-agent-different");
+    }
+  });
+
+  it("picks the chat gateway id as CHAT_MODEL, else the first CHAT_MODELS entry, else gpt-4o-mini", () => {
+    const named = resolveChatModelConfig(
+      gatewaySource({ CHAT_MODEL: "named-chat", CHAT_MODELS: "first-list, second-list" }),
+      "chat",
+    );
+    expect(named.chat?.models).toEqual(["named-chat"]);
+
+    const listed = resolveChatModelConfig(
+      gatewaySource({ CHAT_MODELS: "first-list, second-list" }),
+      "chat",
+    );
+    expect(listed.chat?.models).toEqual(["first-list"]);
+
+    const fallback = resolveChatModelConfig(gatewaySource(), "chat");
+    expect(fallback.chat?.models).toEqual(["gpt-4o-mini"]);
+  });
+
+  it("keeps Agent to one model: AGENT_MODEL, else the chat gateway id", () => {
+    const named = resolveChatModelConfig(
+      gatewaySource({ CHAT_MODEL: "named-chat", AGENT_MODEL: "named-agent" }),
+      "agent",
+    );
+    expect(named.agent?.models).toEqual(["named-agent"]);
+    expect(named.chat?.models).toEqual(["named-chat"]);
+
+    const fallback = resolveChatModelConfig(gatewaySource({ CHAT_MODEL: "named-chat" }), "agent");
+    expect(fallback.agent?.models).toEqual(["named-chat"]);
+    expect(fallback.agent?.models).toHaveLength(1);
+  });
+
+  it("keeps Groq chat and Cerebras agent when only GATEWAY_API_KEY is set", () => {
+    const resolved = resolveChatModelConfig(
+      {
+        GATEWAY_API_KEY: gatewayKey,
+        CHAT_PROVIDER: "groq",
+        GROQ_API_KEY: "gsk-chat",
+        AGENT_PROVIDER: "cerebras",
+        CEREBRAS_API_KEY: "csk-agent",
+      } as NodeJS.ProcessEnv,
+      "chat",
+    );
+    expect(resolved.chat?.provider).toBe("groq");
+    expect(resolved.chat?.apiKey).toBe("gsk-chat");
+    expect(resolved.agent?.provider).toBe("cerebras");
+    expect(resolved.agent?.apiKey).toBe("csk-agent");
+  });
+
+  it("treats a whitespace gateway URL as unset", () => {
+    const resolved = resolveChatModelConfig(
+      {
+        GATEWAY_BASE_URL: "   ",
+        GATEWAY_API_KEY: gatewayKey,
+        CHAT_PROVIDER: "groq",
+        GROQ_API_KEY: "gsk-chat",
+        AGENT_PROVIDER: "cerebras",
+        CEREBRAS_API_KEY: "csk-agent",
+      } as NodeJS.ProcessEnv,
+      "agent",
+    );
+    expect(resolved.chat?.provider).toBe("groq");
+    expect(resolved.agent?.provider).toBe("cerebras");
+  });
+
+  it("omits the gateway key from a thrown chat-side error", () => {
+    expect(() =>
+      resolveChatModelConfig(
+        {
+          GATEWAY_API_KEY: gatewayKey,
+          CHAT_PROVIDER: "anthropic",
+        } as NodeJS.ProcessEnv,
+        "chat",
+      ),
+    ).toThrow(/Invalid CHAT_PROVIDER/);
+
+    try {
+      resolveChatModelConfig(
+        {
+          GATEWAY_API_KEY: gatewayKey,
+          CHAT_PROVIDER: "anthropic",
+        } as NodeJS.ProcessEnv,
+        "chat",
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      expect(message).not.toContain(gatewayKey);
+    }
+  });
 });
