@@ -109,4 +109,52 @@ describe("splitPdfPages", () => {
     expect(table).toHaveLength(1);
     expect(table[0]?.text).toContain("\t");
   });
+
+  it("does not split a lorem page on sentence boundaries", async () => {
+    const { splitPdfPages } = await import("./split");
+    const lorem = "Lorem ipsum dolor sit amet. Sed ut perspiciatis. Unde omnis iste natus.";
+    const chunks = await splitPdfPages([{ num: 8, text: lorem }]);
+    expect(chunks).toEqual([{ text: lorem, page: 8 }]);
+  });
+
+  it("splits chapter and numbered headings, and leaves a short prose line intact", async () => {
+    const { splitPdfPages } = await import("./split");
+    const chunks = await splitPdfPages([
+      {
+        num: 6,
+        text: "开场\n第一章 引言\n正文\nManagement discussion\n继续\n1.2 标题\n结尾",
+      },
+    ]);
+    expect(chunks.map((chunk) => chunk.text)).toEqual([
+      "开场",
+      "第一章 引言\n正文\nManagement discussion\n继续",
+      "1.2 标题\n结尾",
+    ]);
+    expect(chunks.every((chunk) => chunk.page === 6)).toBe(true);
+  });
+
+  it("prefers an exact outline title over a short chapter line", async () => {
+    const { splitPdfPages } = await import("./split");
+    const chunks = await splitPdfPages(
+      [{ num: 9, text: "前言\nReal Title\n正文\n第一章 不应切\n尾" }],
+      ["Real Title"],
+    );
+    expect(chunks.map((chunk) => chunk.text)).toEqual([
+      "前言",
+      "Real Title\n正文\n第一章 不应切\n尾",
+    ]);
+  });
+
+  it("splits a long table on row boundaries without breaking spaced numbers", async () => {
+    const { splitPdfPages } = await import("./split");
+    const row = "100 200\t300 400\t500 600";
+    const chunks = await splitPdfPages([
+      { num: 3, text: Array.from({ length: 50 }, () => row).join("\n") },
+    ]);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      expect(chunk.page).toBe(3);
+      expect(chunk.text.split("\n").every((line) => line === row)).toBe(true);
+    }
+  });
 });

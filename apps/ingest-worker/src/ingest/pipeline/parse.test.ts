@@ -1,10 +1,11 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getUploadsDir } from "../../../../../packages/shared/src/utils/paths";
+
+import { assertPdfHasBody, parsePdfPages, PDF_NO_SELECTABLE_TEXT, pdfBodyText } from "./parse";
 
 const pdfMocks = vi.hoisted(() => ({
   getText: vi.fn(),
@@ -20,12 +21,7 @@ vi.mock("pdf-parse", () => ({
   },
 }));
 
-import { assertPdfHasBody, parsePdfPages, PDF_NO_SELECTABLE_TEXT, pdfBodyText } from "./parse";
-
-const SAMPLE_PDF = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../../test/fixtures/sample.pdf",
-);
+const SAMPLE_PDF = path.resolve(process.cwd(), "test/fixtures/sample.pdf");
 
 afterEach(() => {
   pdfMocks.getText.mockReset();
