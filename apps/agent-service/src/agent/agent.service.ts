@@ -56,6 +56,7 @@ import { readIntentRouterConfig } from "@personal-gpt/shared/routing";
 import type { IntentPlan, RouterLayer } from "@personal-gpt/shared/routing";
 import type { AgentExecutionRoute } from "@personal-gpt/shared";
 import { resolveAgentModelSide } from "@personal-gpt/shared/ai/chat-model-config";
+import { createChatModel } from "../providers/chat-model.provider";
 import {
   clearWebSearchCallCount,
   formatWebReferencesMarkdown,
@@ -347,6 +348,8 @@ export type ParsedAgentChat = {
   threadId: string;
   workspaceId: string;
   userKey: string;
+  model?: string;
+  llmApiKey?: string;
 };
 
 const AgentUiMessageSchema = z
@@ -360,6 +363,8 @@ const AgentChatBodySchema = z.object({
   thread_id: z.string().optional().nullable(),
   workspaceId: z.string().optional().nullable(),
   userKey: z.string().optional().nullable(),
+  model: z.string().max(128).optional(),
+  llmApiKey: z.string().max(512).optional(),
 });
 
 const SAFE_THREAD_ID = /^[A-Za-z0-9_.:-]{1,128}$/;
@@ -371,7 +376,7 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
     throw new InvalidAgentBodyError("Invalid body: messages must be an array of message objects");
   }
 
-  const { messages, thread_id, workspaceId, userKey } = result.data;
+  const { messages, thread_id, workspaceId, userKey, model, llmApiKey } = result.data;
   const trimmedThread = typeof thread_id === "string" ? thread_id.trim() : "";
   if (trimmedThread && !SAFE_THREAD_ID.test(trimmedThread)) {
     throw new InvalidAgentBodyError(
@@ -389,6 +394,8 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
     threadId: threadRaw,
     workspaceId: resolveWorkspaceId(workspaceRaw),
     userKey: userKeyRaw,
+    ...(model?.trim() ? { model: model.trim() } : {}),
+    ...(llmApiKey ? { llmApiKey } : {}),
   };
 }
 
@@ -1370,16 +1377,27 @@ export class AgentService {
               const required = requiredEarly as SpecialistName[];
               const hideUntilEditor =
                 executionMode !== "single_specialist" && required.includes("editor");
+              const llm =
+                parsed.model && parsed.model.length > 0
+                  ? createChatModel(
+                      { model: parsed.model },
+                      parsed.llmApiKey
+                        ? { ...process.env, GATEWAY_API_KEY: parsed.llmApiKey }
+                        : process.env,
+                    )
+                  : undefined;
               const executionGraph =
                 routerConfig.enableIntentRouter && intentPlan
                   ? await buildExecutionGraph({
                       plan: intentPlan,
                       userText,
                       memoryContextBlock: memoryBlock || undefined,
+                      model: llm,
                     })
                   : await buildSupervisorGraph({
                       userText,
                       memoryContextBlock: memoryBlock || undefined,
+                      model: llm,
                     });
               const tracker = createProgressTracker(todos, steps, () => {
                 emitTracker(tracker, writer, parsed.threadId);

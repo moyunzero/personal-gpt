@@ -16,6 +16,9 @@ export interface ChatStreamOptions {
   citations?: Citation[];
   /** D-07: graph path cards — no cypher field */
   graphPaths?: GraphPathDisplay[];
+  /** When set, skip the env fallback list and use this model id once. */
+  modelIds?: string[];
+  credentialSource?: NodeJS.ProcessEnv;
   /** 流成功结束后回调（用于短期记忆 / Mem0 持久化）；失败不调用 */
   onComplete?: (assistantText: string) => void | Promise<void>;
 }
@@ -32,6 +35,8 @@ export function createChatStream({
   requestId,
   citations = [],
   graphPaths = [],
+  modelIds,
+  credentialSource,
   onComplete,
 }: ChatStreamOptions) {
   const log = logger.child({ scope: "chat.stream", requestId });
@@ -50,13 +55,13 @@ export function createChatStream({
         });
       }
 
-      const models = resolveChatModels();
+      const models = modelIds?.length ? modelIds : resolveChatModels();
       let assistantText = "";
       for (let i = 0; i < models.length; i++) {
         const modelName = models[i]!;
         try {
           const result = streamText({
-            model: chatModel(modelName),
+            model: chatModel(modelName, credentialSource),
             system: systemPrompt,
             messages,
             temperature: 0.7,

@@ -15,6 +15,7 @@ import {
 import { ensureChatSession, ThreadOwnershipError } from "@/lib/chat/chat-session.service";
 import { createThreadId, SAFE_THREAD_ID_PATTERN } from "@/lib/chat/thread-id";
 import { logger } from "@/lib/logger";
+import { lookupWorkspaceModelKey } from "@/lib/models/workspace-models";
 import { runApiGuards } from "@/lib/middleware/api-guards";
 
 import {
@@ -137,6 +138,18 @@ export async function POST(req: Request) {
       }
 
       parsedBody.thread_id = rawThread;
+      delete parsedBody.llmApiKey;
+      if (typeof parsedBody.model === "string" && parsedBody.model.trim()) {
+        const saved = await lookupWorkspaceModelKey(retrievalCtx.workspaceId, parsedBody.model);
+        if (!saved) {
+          timeout.clear();
+          return NextResponse.json({ error: "模型未添加" }, { status: 400 });
+        }
+        parsedBody.model = saved.modelId;
+        if (saved.apiKey) parsedBody.llmApiKey = saved.apiKey;
+      } else {
+        delete parsedBody.model;
+      }
       const outboundBody = JSON.stringify(parsedBody);
 
       let upstreamRes: Response;

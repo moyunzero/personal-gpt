@@ -725,6 +725,156 @@ main {
   justify-content: space-between;
   margin-bottom: var(--space-xs);
   padding: 0 4px;
+  gap: var(--space-sm);
+}
+
+.model-chip-wrap {
+  position: relative;
+}
+
+.model-chip {
+  position: relative;
+  border: 0;
+  background: var(--color-surface-card);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  border-radius: var(--radius-pill);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.model-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  width: 280px;
+  max-height: 280px;
+  overflow: auto;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: 6px;
+}
+
+.model-menu button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-ink);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.model-menu button small {
+  display: block;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.model-menu button.on {
+  background: var(--color-surface-cream-strong);
+}
+
+.model-menu a {
+  display: block;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--color-hairline);
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.settings-models {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+}
+
+.settings-kicker {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settings-title {
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 36px;
+  color: var(--color-ink);
+}
+
+.settings-lead,
+.settings-error {
+  color: var(--color-body);
+  line-height: 1.55;
+}
+
+.settings-error {
+  color: var(--color-error);
+}
+
+.settings-card {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xl);
+  padding: var(--space-md);
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--space-sm);
+  align-items: center;
+  margin-bottom: var(--space-sm);
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.settings-row select,
+.settings-add input {
+  width: 100%;
+  border: 1px solid var(--color-hairline);
+  background: var(--color-canvas);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}
+
+.settings-list {
+  margin: 0 0 var(--space-md);
+  padding-left: 18px;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.settings-add {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  gap: var(--space-xs);
+}
+
+.settings-add button {
+  border: 0;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-radius: var(--radius-md);
+  padding: 0 14px;
+  font-family: var(--font-body);
+  cursor: pointer;
 }
 
 .corpus-toggle {

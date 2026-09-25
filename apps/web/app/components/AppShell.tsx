@@ -7,7 +7,7 @@ import type { ChatMode } from "./ModeSegmentedControl";
 
 type AppShellProps = {
   children: ReactNode;
-  activePage: "chat" | "kb";
+  activePage: "chat" | "kb" | "settings";
   mode?: ChatMode;
   onModeChange?: (mode: ChatMode) => void;
   modeDisabled?: boolean;

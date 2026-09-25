@@ -23,6 +23,7 @@ import { getRelevantContext } from "@/lib/chat/retrieve";
 import { createChatStream } from "@/lib/chat/stream";
 import "@/lib/env";
 import { logger } from "@/lib/logger";
+import { lookupWorkspaceModelKey } from "@/lib/models/workspace-models";
 import { runApiGuards } from "@/lib/middleware/api-guards";
 import { checkGuestChatRateLimit, getClientIp } from "@/lib/ratelimit";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
@@ -189,6 +190,7 @@ export async function POST(req: Request) {
           corpus?: unknown;
           userKey?: unknown;
           thread_id?: unknown;
+          model?: unknown;
         };
         const { messages } = body;
         // 游客强制种子库，避免扫私人知识库
@@ -353,12 +355,34 @@ export async function POST(req: Request) {
           }
         }
 
+        const requestedModel = typeof body.model === "string" ? body.model.trim() : "";
+        let modelIds: string[] | undefined;
+        let credentialSource: NodeJS.ProcessEnv | undefined;
+        if (requestedModel && !isGuest) {
+          const saved = await lookupWorkspaceModelKey(retrievalCtx.workspaceId, requestedModel);
+          if (!saved) {
+            return new Response(JSON.stringify({ error: "模型未添加" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
+          }
+          modelIds = [saved.modelId];
+          if (saved.apiKey) {
+            credentialSource = {
+              ...process.env,
+              GATEWAY_API_KEY: saved.apiKey,
+            };
+          }
+        }
+
         const stream = createChatStream({
           systemPrompt,
           messages: formattedMessages,
           requestId,
           citations,
           graphPaths: graphPathsForUi,
+          modelIds,
+          credentialSource,
           onComplete: async (assistantText) => {
             if (chatSession) {
               await persistChatTurn({
