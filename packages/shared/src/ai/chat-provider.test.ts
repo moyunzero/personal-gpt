@@ -96,6 +96,16 @@ describe("chat-provider", () => {
     expect(resolveRagHelperModel()).toBe("helper-x");
   });
 
+  it("resolveChatProviderConfig ignores a broken AGENT_PROVIDER alias", () => {
+    vi.stubEnv("CHAT_PROVIDER", "groq");
+    vi.stubEnv("GROQ_API_KEY", "gsk-test");
+    vi.stubEnv("AGENT_PROVIDER", "not-a-provider");
+    expect(resolveChatProviderConfig()).toMatchObject({
+      provider: "groq",
+      apiKey: "gsk-test",
+    });
+  });
+
   it("chatModel builds without throwing when keys present", () => {
     vi.stubEnv("CHAT_PROVIDER", "openai");
     vi.stubEnv("OPENAI_API_KEY", "sk-test");

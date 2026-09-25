@@ -6,9 +6,9 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModel } from "ai";
 
+import { resolveChatModelConfig, resolveChatProviderId } from "./chat-model-config";
 import { GROQ_CHAT_MODELS, GROQ_RAG_HELPER_MODEL } from "./groq-models";
 
-const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const DEFAULT_OPENAI_CHAT_MODEL = "gpt-4o-mini";
 
 export type ChatProvider = "groq" | "openai";
@@ -20,53 +20,27 @@ export type ChatProviderConfig = {
   apiKey: string;
 };
 
-/** 解析 provider：CHAT_PROVIDER 优先；否则 groq → openai */
+/** 解析 provider：CHAT_PROVIDER 优先；否则 groq → openai。缺 key 仍返回强制 id。 */
 export function resolveChatProvider(source: NodeJS.ProcessEnv = process.env): ChatProvider | null {
-  const forced = source.CHAT_PROVIDER?.trim().toLowerCase();
-  if (forced) {
-    if (forced === "groq" || forced === "openai") {
-      return forced;
-    }
-    throw new Error(`Invalid CHAT_PROVIDER="${forced}". Expected groq | openai`);
-  }
-  if (source.GROQ_API_KEY?.trim()) return "groq";
-  if (source.OPENAI_API_KEY?.trim()) return "openai";
-  return null;
+  return resolveChatProviderId(source);
 }
 
-/** 构造 provider 连接参数；缺 key / 非法强制值时抛错 */
+/** 构造 provider 连接参数；缺 key / 非法强制值时抛错。不抛 Agent 侧错误。 */
 export function resolveChatProviderConfig(
   source: NodeJS.ProcessEnv = process.env,
 ): ChatProviderConfig {
-  const provider = resolveChatProvider(source);
-  if (provider === "groq") {
-    const apiKey = source.GROQ_API_KEY?.trim();
-    if (!apiKey) {
-      throw new Error("CHAT_PROVIDER=groq 但未设置 GROQ_API_KEY");
-    }
-    return {
-      provider: "groq",
-      name: "groq",
-      baseURL: GROQ_BASE_URL,
-      apiKey,
-    };
+  const { chat } = resolveChatModelConfig(source, "chat");
+  if (!chat || (chat.provider !== "groq" && chat.provider !== "openai")) {
+    throw new Error(
+      "缺少聊天模型密钥：请设置 GROQ_API_KEY，或 OPENAI_API_KEY（可选 OPENAI_BASE_URL / CHAT_PROVIDER）",
+    );
   }
-  if (provider === "openai") {
-    const apiKey = source.OPENAI_API_KEY?.trim();
-    if (!apiKey) {
-      throw new Error("CHAT_PROVIDER=openai 但未设置 OPENAI_API_KEY");
-    }
-    const baseURL = source.OPENAI_BASE_URL?.trim() || "https://api.openai.com/v1";
-    return {
-      provider: "openai",
-      name: "openai-compatible",
-      baseURL,
-      apiKey,
-    };
-  }
-  throw new Error(
-    "缺少聊天模型密钥：请设置 GROQ_API_KEY，或 OPENAI_API_KEY（可选 OPENAI_BASE_URL / CHAT_PROVIDER）",
-  );
+  return {
+    provider: chat.provider,
+    name: chat.name,
+    baseURL: chat.baseURL,
+    apiKey: chat.apiKey,
+  };
 }
 
 function parseModelList(raw: string | undefined): string[] {

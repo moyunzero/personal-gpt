@@ -19,6 +19,7 @@ describe("chat-model.provider", () => {
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+    CHAT_PROVIDER: process.env.CHAT_PROVIDER,
   };
 
   afterEach(() => {
@@ -48,6 +49,15 @@ describe("chat-model.provider", () => {
     const model = createChatModel();
     expect((model as { model: string }).model).toBe(DEFAULT_OPENAI_MODEL);
     expect((model as { model: string }).model).not.toBe(DEFAULT_GROQ_MODEL);
+  });
+
+  it("builds Cerebras when CHAT_PROVIDER is invalid", () => {
+    delete process.env.AGENT_MODEL;
+    process.env.AGENT_PROVIDER = "cerebras";
+    process.env.CEREBRAS_API_KEY = "csk-agent";
+    process.env.CHAT_PROVIDER = "not-a-chat-provider";
+    const model = createChatModel();
+    expect((model as { model: string }).model).toBe(DEFAULT_CEREBRAS_MODEL);
   });
 
   it("groq / cerebras keep their defaults", () => {
