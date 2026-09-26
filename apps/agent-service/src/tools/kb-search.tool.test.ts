@@ -235,6 +235,41 @@ describe("kb_search tool", () => {
     expect(2).toBeLessThanOrEqual(recursionLimit);
   });
 
+  it("writes a page line immediately after chunkIndex only for a finite page", async () => {
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "第三页条款",
+        similarity: 0.91,
+        title: "差旅政策",
+        source: "policy.pdf",
+        documentId: "doc-1",
+        chunkIndex: 2,
+        page: 7,
+      },
+    ]);
+    const { invokeKbSearch } = await import("./kb-search.tool");
+    const withPage = await invokeKbSearch({ query: "差旅报销" });
+    const withPageLines = withPage.split("\n");
+    const chunkLine = withPageLines.indexOf("chunkIndex: 2");
+    expect(chunkLine).toBeGreaterThanOrEqual(0);
+    expect(withPageLines[chunkLine + 1]).toBe("page: 7");
+
+    resetKbSourceOrdinal();
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "报销需提交发票原件",
+        similarity: 0.91,
+        title: "差旅政策",
+        source: "policy.md",
+        documentId: "doc-1",
+        chunkIndex: 0,
+      },
+    ]);
+    const withoutPage = await invokeKbSearch({ query: "差旅报销" });
+    expect(withoutPage).toMatch(/chunkIndex: 0/);
+    expect(withoutPage).not.toMatch(/^page:/m);
+  });
+
   it("does not import @datastax/astra-db-ts; retrieve uses hybridSearch", async () => {
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
