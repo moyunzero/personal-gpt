@@ -289,7 +289,7 @@ export async function POST(req: Request) {
                 ? namedDocuments.map((doc) => doc.id)
                 : retrievalCtx.allowedDocumentIds,
               namedDocument: namedDocuments.length > 0,
-              ...(askedPage != null ? { page: askedPage } : {}),
+              ...(namedDocuments.length > 0 && askedPage != null ? { page: askedPage } : {}),
             },
           );
         }

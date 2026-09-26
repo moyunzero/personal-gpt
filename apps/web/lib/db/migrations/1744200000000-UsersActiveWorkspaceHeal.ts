@@ -20,7 +20,7 @@ export class UsersActiveWorkspaceHeal1744200000000 implements MigrationInterface
     `);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "active_workspace_id"`);
+  public async down(): Promise<void> {
+    // active_workspace_id belongs to the earlier users migration.
   }
 }

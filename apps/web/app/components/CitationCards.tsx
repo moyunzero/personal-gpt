@@ -30,6 +30,14 @@ function pagesFollowSnippets(group: CitationDocumentGroup): boolean {
   return pages.size > 1;
 }
 
+const SEED_SOURCES = new Set(["prompt-suggestion", "psychology-qa"]);
+
+function canOpenOriginal(group: CitationDocumentGroup): boolean {
+  if (!group.documentId || group.documentId.startsWith("unknown-")) return false;
+  if (group.source && SEED_SOURCES.has(group.source)) return false;
+  return true;
+}
+
 function CitationCard({ group }: { group: CitationDocumentGroup }) {
   const [expanded, setExpanded] = useState(false);
   const panelId = `citation-${group.documentId}-panel`;
@@ -64,14 +72,16 @@ function CitationCard({ group }: { group: CitationDocumentGroup }) {
           </svg>
         </span>
       </button>
-      <a
-        className="citation-card-meta"
-        href={`/api/kb/documents/${group.documentId}/file${page != null ? `#page=${page}` : ""}`}
-        target="_blank"
-        rel="noreferrer"
-      >
-        {page != null ? `第 ${page} 页 · 打开原文` : "打开原文"}
-      </a>
+      {canOpenOriginal(group) ? (
+        <a
+          className="citation-card-meta"
+          href={`/api/kb/documents/${encodeURIComponent(group.documentId)}/file${page != null ? `#page=${page}` : ""}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {page != null ? `第 ${page} 页 · 打开原文` : "打开原文"}
+        </a>
+      ) : null}
       {expanded ? (
         <div id={panelId}>
           {group.snippets.map((item) => (

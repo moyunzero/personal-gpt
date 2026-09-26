@@ -12,6 +12,7 @@ export interface CitationDocumentGroup {
   documentId: string;
   title: string;
   similarity: number;
+  source?: string;
   snippets: CitationSnippetGroup[];
 }
 
@@ -27,6 +28,7 @@ export function groupCitationsByDocument(citations: Citation[]): CitationDocumen
         documentId: citation.documentId,
         title: citation.title,
         similarity: citation.similarity,
+        source: citation.source,
         snippets: [],
       };
       byDocument.set(citation.documentId, group);

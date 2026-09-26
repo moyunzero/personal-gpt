@@ -28,4 +28,35 @@ describe("CitationCards page", () => {
   it("同一文档有一段没有 page 时不显示第 4 页", () => {
     expect(markup([4, undefined])).not.toContain("第 4 页");
   });
+
+  it("不为种子资料或缺少文档 id 的引用提供打开原文", () => {
+    const seed = renderToStaticMarkup(
+      createElement(CitationCards, {
+        citations: [
+          {
+            documentId: "seed-1",
+            title: "种子",
+            similarity: 0.9,
+            snippet: "概述",
+            source: "prompt-suggestion",
+          },
+        ],
+      }),
+    );
+    const unknown = renderToStaticMarkup(
+      createElement(CitationCards, {
+        citations: [
+          {
+            documentId: "unknown-0",
+            title: "未知",
+            similarity: 0.4,
+            snippet: "片段",
+          },
+        ],
+      }),
+    );
+    expect(seed).not.toContain("打开原文");
+    expect(unknown).not.toContain("打开原文");
+    expect(markup([4])).toContain(encodeURIComponent("doc-a"));
+  });
 });

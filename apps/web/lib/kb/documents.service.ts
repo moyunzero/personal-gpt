@@ -221,32 +221,28 @@ async function enqueueIngestJob(
   });
 
   const queue = getIngestQueue();
+  const bullJobId = id;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let gaveUp = false;
   let bullJob;
   try {
     bullJob = await Promise.race([
-      queue.add(`ingest-${document.id}`, payload).then((job) => {
-        if (gaveUp) {
-          void job.remove().catch(() => undefined);
-        }
-        return job;
-      }),
+      queue.add(`ingest-${document.id}`, payload, { jobId: bullJobId }),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
-          gaveUp = true;
           reject(new Error("导入队列没有响应，请确认 Redis 已启动"));
         }, 8000);
       }),
     ]);
   } catch (error) {
-    gaveUp = true;
-    const message = error instanceof Error ? error.message : "导入队列不可用";
-    await jobRepo.update({ id }, { status: "failed", error: message });
-    await ds
-      .getRepository(DocumentEntity)
-      .update({ id: document.id, workspaceId }, { status: "failed" });
-    throw new UploadValidationError("queue_unavailable", message);
+    bullJob = await queue.getJob(bullJobId).catch(() => undefined);
+    if (!bullJob) {
+      const message = error instanceof Error ? error.message : "导入队列不可用";
+      await jobRepo.update({ id }, { status: "failed", error: message });
+      await ds
+        .getRepository(DocumentEntity)
+        .update({ id: document.id, workspaceId }, { status: "failed" });
+      throw new UploadValidationError("queue_unavailable", message);
+    }
   } finally {
     if (timer) clearTimeout(timer);
   }

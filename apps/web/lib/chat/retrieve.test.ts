@@ -152,4 +152,33 @@ describe("getRelevantContext", () => {
     expect(result.blocks).toContain("Lorem");
     expect(result.blocks.indexOf("opening")).toBeLessThan(result.blocks.indexOf("later"));
   });
+
+  it("keeps the highest-ranked named hits, then orders them by chunk", async () => {
+    const hits = [
+      {
+        text: "most relevant later chunk",
+        similarity: 0.9,
+        documentId: "pdf-1mb",
+        chunkIndex: 9,
+      },
+      ...Array.from({ length: 5 }, (_, index) => ({
+        text: `early filler ${index}`,
+        similarity: 0.1,
+        documentId: "pdf-1mb",
+        chunkIndex: index,
+      })),
+    ];
+    hybridSearchMock.mockResolvedValueOnce(hits);
+    const result = await getRelevantContext("sample-pdf-1mb文件讲的什么", "req-7", undefined, {
+      namedDocument: true,
+      documentIds: ["pdf-1mb"],
+    });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.blocks).toContain("most relevant later chunk");
+    expect(result.blocks).not.toContain("early filler 4");
+    expect(result.blocks.indexOf("early filler 0")).toBeLessThan(
+      result.blocks.indexOf("most relevant later chunk"),
+    );
+  });
 });

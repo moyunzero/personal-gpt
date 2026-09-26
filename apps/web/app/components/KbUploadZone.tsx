@@ -34,11 +34,14 @@ const EMPTY_META: UploadMeta = {
 const SERVERLESS_MULTIPART_LIMIT = 4.5 * 1024 * 1024;
 const LOCAL_MULTIPART_LIMIT = 20 * 1024 * 1024;
 
-/** Blob 没配好时，本地可以收页面上标明的 20MB。Blob 已配置但中途失败，仍停在 Serverless 的 4.5MB。 */
-export function multipartLimitAfterBlobFailure(error: unknown): number {
+/** 仅当服务端 multipart 上限不低于本地 20MB 时，Blob 未配置才改走本地上限。 */
+export function multipartLimitAfterBlobFailure(error: unknown, serverMaxBytes?: number): number {
   const message = error instanceof Error ? error.message : "";
   const blobNotConfigured = /Failed to retrieve the client token|blob_unavailable/i.test(message);
-  return blobNotConfigured ? LOCAL_MULTIPART_LIMIT : SERVERLESS_MULTIPART_LIMIT;
+  if (blobNotConfigured && serverMaxBytes != null && serverMaxBytes >= LOCAL_MULTIPART_LIMIT) {
+    return LOCAL_MULTIPART_LIMIT;
+  }
+  return SERVERLESS_MULTIPART_LIMIT;
 }
 
 const MIME_EXT: Record<string, string> = {
@@ -156,7 +159,7 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
       try {
         document = await uploadViaBlobThenRegister(file, uploadMeta);
       } catch (blobErr) {
-        const maxMultipart = multipartLimitAfterBlobFailure(blobErr);
+        const maxMultipart = multipartLimitAfterBlobFailure(blobErr, SERVERLESS_MULTIPART_LIMIT);
         if (file.size > maxMultipart) {
           throw blobErr;
         }

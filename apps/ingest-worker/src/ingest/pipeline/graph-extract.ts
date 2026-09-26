@@ -8,6 +8,7 @@ import {
 } from "@personal-gpt/shared";
 import type { DataSource } from "typeorm";
 
+import { openModelKey } from "../../../../web/lib/models/model-key";
 import { createEntityCatalogStore } from "../entity-catalog-store";
 import { graphExtractDurationSeconds } from "../../metrics";
 
@@ -55,6 +56,18 @@ export async function extractAndUpsertGraph(
   );
 }
 
+export function endpointFromSavedModelRow(
+  row: { model_id?: string; api_key?: string; base_url?: string } | undefined,
+): GraphModelEndpoint | undefined {
+  const stored = row?.api_key?.trim();
+  if (!row || !stored) return undefined;
+  try {
+    return workspaceGraphEndpoint({ ...row, api_key: openModelKey(stored) });
+  } catch {
+    return undefined;
+  }
+}
+
 async function workspaceChatModel(
   dataSource: DataSource | undefined,
   workspaceId: string,
@@ -74,7 +87,7 @@ async function workspaceChatModel(
        LIMIT 1`,
       [workspaceId],
     )) as { model_id?: string; api_key?: string; base_url?: string }[];
-    return workspaceGraphEndpoint(rows[0]);
+    return endpointFromSavedModelRow(rows[0]);
   } catch {
     return undefined;
   }

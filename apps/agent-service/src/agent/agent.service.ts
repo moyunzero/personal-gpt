@@ -121,7 +121,7 @@ export function parseKbCitationsFromToolText(text: string): Citation[] {
   return out;
 }
 
-function collectCitationsFromUpdate(
+export function collectCitationsFromUpdate(
   update: Record<string, unknown>,
   bag: Map<string, Citation>,
   tracker?: {
@@ -203,7 +203,10 @@ function collectCitationsFromUpdate(
         }
       }
       for (const c of parseKbCitationsFromToolText(content)) {
-        const key = `${c.documentId}:${c.chunkIndex ?? 0}`;
+        const key =
+          c.sourceNumber != null && c.sourceNumber >= 1
+            ? `s:${c.sourceNumber}`
+            : `${c.documentId}:${c.chunkIndex ?? 0}`;
         if (!bag.has(key)) bag.set(key, c);
         if (tracker) tracker.kbNoRelevantHit = false;
       }

@@ -142,9 +142,9 @@ single-flight).
 
 **Failure modes that are _not_ handled:**
 
-- Graph intent is terminal for Chat: `graphOnlyRetrieve` skips KB entirely
-  (`route.ts:256-263`) and the KB fallback only fires if the graph returned zero paths
-  (`route.ts:296-312`). If Neo4j is up but has no data, the user gets a no-context answer.
+- `graphOnlyRetrieve` skips the initial KB retrieval. An empty or failed graph retrieval
+  then runs the KB fallback. A no-context answer happens only when both retrievals return
+  no context (`apps/web/app/api/chat/route.ts`).
 - `decideWithSharedRouter` hardcodes `fastPath: true` on every decision
   (`query-router.ts:257`) — the field is meaningless in the default path.
 - If L1 cannot probe (`!kb.probed`), a non-matching query falls to `general` + `ambiguous: true`
@@ -188,8 +188,8 @@ single-flight).
 - **The Neo4j availability probe is copy-pasted**: identical cache/TTL/timeout/single-flight code
   at `apps/web/lib/chat/query-router.ts:51-97` and
   `apps/agent-service/src/routing/intent-plan.ts:18-67`. Only differing detail: `intent-plan.ts`
-  calls `timer.unref?.()` (`:34`), `query-router.ts` does not (`:64`) — an unref'd timer leak in
-  the web path.
+  calls `timer.unref?.()` (`:34`). `query-router.ts` does not, so that timeout can keep the
+  web process alive until it fires.
 - **Human-readable text as a data channel.** The Agent's L1 probe parses tool prose with a regex
   (`apps/agent-service/src/routing/intent-plan.ts:69-78`) against a format emitted at
   `apps/agent-service/src/tools/kb-search.tool.ts:70`. Same coupling in

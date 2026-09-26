@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { parseKbCitationsFromToolText } from "./agent.service";
+import { collectCitationsFromUpdate, parseKbCitationsFromToolText } from "./agent.service";
 
 const hitWithoutPage = `[S1]
 title: 差旅政策
@@ -50,5 +50,28 @@ snippet: yes`;
     expect(citations).toHaveLength(1);
     expect(citations[0]?.sourceNumber).toBe(2);
     expect(citations[0]?.documentId).toBe("doc-2");
+  });
+});
+
+describe("collectCitationsFromUpdate", () => {
+  it("keeps two printed labels for the same chunk", () => {
+    const text = `[S1]
+title: 手册
+source: a.pdf
+documentId: doc-1
+chunkIndex: 0
+similarity: 0.9
+snippet: one
+
+[S3]
+title: 手册
+source: a.pdf
+documentId: doc-1
+chunkIndex: 0
+similarity: 0.9
+snippet: one`;
+    const bag = new Map();
+    collectCitationsFromUpdate({ retriever: { messages: [{ content: text }] } }, bag);
+    expect([...bag.keys()]).toEqual(["s:1", "s:3"]);
   });
 });

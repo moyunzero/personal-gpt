@@ -36,10 +36,9 @@ function selectNamedHits(hits: RetrievedChunk[], page?: number): RetrievedChunk[
   const perDoc = ids.length > 1 ? 3 : RETRIEVAL_LIMIT;
   const out: RetrievedChunk[] = [];
   for (const id of ids) {
-    const group = filtered
-      .filter((hit) => hit.documentId === id)
-      .sort((a, b) => (a.chunkIndex ?? 0) - (b.chunkIndex ?? 0));
-    out.push(...group.slice(0, perDoc));
+    const ranked = filtered.filter((hit) => hit.documentId === id).slice(0, perDoc);
+    ranked.sort((a, b) => (a.chunkIndex ?? 0) - (b.chunkIndex ?? 0));
+    out.push(...ranked);
   }
   return out;
 }
