@@ -109,10 +109,10 @@ await withSession(async (token) => {
       await send.click();
       await page.waitForFunction(
         (index) => {
-          const loading = document.querySelector(".loading-dots");
-          const nodes = [...document.querySelectorAll(".message-assistant .message-body")].filter(
-            (node) => !node.querySelector(".loading-dots"),
-          );
+          const loading = globalThis.document.querySelector(".loading-dots");
+          const nodes = [
+            ...globalThis.document.querySelectorAll(".message-assistant .message-body"),
+          ].filter((node) => !node.querySelector(".loading-dots"));
           const body = nodes[index]?.textContent ?? "";
           return !loading && body.trim().length > 12;
         },
