@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const parseMock = vi.fn();
 const parsePdfMock = vi.fn();
+const readBytesMock = vi.fn();
 const splitMock = vi.fn();
 const splitPdfMock = vi.fn();
 const embedMock = vi.fn();
@@ -18,6 +19,8 @@ vi.mock("node:fs/promises", () => ({
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/parse", () => ({
   parseDocument: (...args: unknown[]) => parseMock(...args),
   parsePdfPages: (...args: unknown[]) => parsePdfMock(...args),
+  readIngestBytes: (...args: unknown[]) => readBytesMock(...args),
+  PDF_NO_SELECTABLE_TEXT: "这份 PDF 没有可选中的正文。",
 }));
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/split", () => ({
@@ -85,6 +88,7 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
       pages: [{ num: 1, text: "fixture text" }],
       headings: [],
     });
+    readBytesMock.mockResolvedValue(Buffer.from("%PDF"));
     splitMock.mockResolvedValue(chunks);
     splitPdfMock.mockResolvedValue(chunks.map((text, index) => ({ text, page: index + 1 })));
     embedMock.mockResolvedValue([

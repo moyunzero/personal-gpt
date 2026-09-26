@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const parseMock = vi.fn();
 const parsePdfMock = vi.fn();
+const readBytesMock = vi.fn();
 const splitMock = vi.fn();
 const splitPdfMock = vi.fn();
 const embedMock = vi.fn();
@@ -15,6 +16,8 @@ vi.mock("node:fs/promises", () => ({
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/parse", () => ({
   parseDocument: (...args: unknown[]) => parseMock(...args),
   parsePdfPages: (...args: unknown[]) => parsePdfMock(...args),
+  readIngestBytes: (...args: unknown[]) => readBytesMock(...args),
+  PDF_NO_SELECTABLE_TEXT: "这份 PDF 没有可选中的正文。",
 }));
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/split", () => ({
@@ -71,6 +74,7 @@ describe("Phase 1 regression #1: upload PDF → ready with chunks", () => {
       pages: [{ num: 1, text: "Personal GPT knowledge base fixture content." }],
       headings: [],
     });
+    readBytesMock.mockResolvedValue(Buffer.from("%PDF"));
     splitMock.mockResolvedValue(["chunk-a", "chunk-b", "chunk-c"]);
     splitPdfMock.mockResolvedValue([
       { text: "chunk-a", page: 1 },
