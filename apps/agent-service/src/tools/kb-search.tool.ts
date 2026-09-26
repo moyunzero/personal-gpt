@@ -64,16 +64,22 @@ function formatKbHitMessage(
 ): string {
   const lines = chunks.map((c, i) => {
     const snippet = c.text.length > SNIPPET_MAX ? `${c.text.slice(0, SNIPPET_MAX)}…` : c.text;
-    return [
+    const hitLines = [
       `[S${sourceStart + i}]`,
       `title: ${c.title ?? "未命名"}`,
       `source: ${c.source ?? "知识库"}`,
       `documentId: ${c.documentId ?? "unknown"}`,
       `chunkIndex: ${c.chunkIndex ?? 0}`,
+    ];
+    if (typeof c.page === "number" && Number.isFinite(c.page)) {
+      hitLines.push(`page: ${c.page}`);
+    }
+    hitLines.push(
       `similarity: ${c.similarity.toFixed(3)}`,
       `workspaceId: ${workspaceId}`,
       `snippet: ${snippet}`,
-    ].join("\n");
+    );
+    return hitLines.join("\n");
   });
 
   const fallbackNote =

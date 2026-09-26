@@ -90,9 +90,11 @@ export function parseKbCitationsFromToolText(text: string): Citation[] {
     const snippet = block.match(/snippet:\s*([\s\S]*?)(?=\n\s*\n|$)/i)?.[1]?.trim();
     const simRaw = block.match(/similarity:\s*([0-9.]+)/i)?.[1];
     const chunkRaw = block.match(/chunkIndex:\s*(\d+)/i)?.[1];
+    const pageRaw = block.match(/page:\s*([0-9]+(?:\.[0-9]+)?)/i)?.[1];
     if (!documentId || documentId === "unknown" || !title) continue;
     const similarity = simRaw ? Number(simRaw) : 0;
     if (!Number.isFinite(similarity) || similarity < minSim) continue;
+    const page = pageRaw === undefined ? undefined : Number(pageRaw);
     out.push({
       documentId,
       title,
@@ -100,6 +102,7 @@ export function parseKbCitationsFromToolText(text: string): Citation[] {
       snippet: snippet ?? "",
       similarity,
       chunkIndex: chunkRaw ? Number(chunkRaw) : undefined,
+      ...(typeof page === "number" && Number.isFinite(page) ? { page } : {}),
     });
   }
   return out;
