@@ -166,7 +166,6 @@ describe("uploadDocument enqueue contract", () => {
     docFindOneMock.mockImplementation(async ({ id }: { id: string }) => {
       const inserted = insertMock.mock.calls.at(-1)?.[0] as Record<string, unknown> | undefined;
       return {
-        id,
         workspaceId: TEST_CTX.workspaceId,
         ownerId: TEST_CTX.userId,
         title: "sample",

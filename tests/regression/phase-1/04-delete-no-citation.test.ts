@@ -26,6 +26,8 @@ vi.mock("@personal-gpt/shared", async (importOriginal) => {
   return {
     ...actual,
     deleteByDocumentId: (...args: unknown[]) => deleteByDocumentIdMock(...args),
+    isEsConfigured: () => true,
+    isAstraRelayConfigured: () => false,
     deleteGraphForDocument: vi.fn().mockResolvedValue(undefined),
     deleteCatalogForDocument: vi.fn().mockResolvedValue(undefined),
   };
