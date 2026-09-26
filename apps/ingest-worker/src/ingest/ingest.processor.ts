@@ -15,8 +15,9 @@ import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity"
 import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
 import { extractAndUpsertGraph } from "./pipeline/graph-extract";
-import { parseDocument, parsePdfPages } from "./pipeline/parse";
-import { splitPdfPages, splitText, toChunkRecords } from "./pipeline/split";
+import { resolvePdfChunks } from "./pipeline/mineru-parse";
+import { parseDocument } from "./pipeline/parse";
+import { splitText, toChunkRecords } from "./pipeline/split";
 import { traceIngestStep } from "./pipeline/tracing";
 import { upsertChunks } from "./pipeline/upsert";
 import { ingestFailuresTotal } from "../metrics";
@@ -75,14 +76,13 @@ export class IngestProcessor extends WorkerHost {
       let chunks: string[];
       let pages: number[] | undefined;
       if (mimeType === "application/pdf") {
-        const parsed = await traceIngestStep("parse", traceCtx, () => parsePdfPages(filePath));
+        const loaded = await resolvePdfChunks(filePath, {
+          trace: (step, fn) => traceIngestStep(step, traceCtx, fn),
+        });
+        chunks = loaded.chunks;
+        pages = loaded.pages;
         await job.updateProgress(25);
         await this.updateIngestJob(ingestJob?.id, { progress: 25 });
-        const pieces = await traceIngestStep("split", traceCtx, () =>
-          splitPdfPages(parsed.pages, parsed.headings),
-        );
-        chunks = pieces.map((piece) => piece.text);
-        pages = pieces.map((piece) => piece.page);
       } else {
         const text = await traceIngestStep("parse", traceCtx, () =>
           parseDocument(filePath, mimeType),
@@ -110,7 +110,7 @@ export class IngestProcessor extends WorkerHost {
         tags: tags ?? document?.tags,
       };
       const records =
-        mimeType === "application/pdf"
+        pages !== undefined
           ? toChunkRecords(chunks, vectors, recordMeta, pages)
           : toChunkRecords(chunks, vectors, recordMeta);
 
