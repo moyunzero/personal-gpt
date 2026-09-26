@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import { classifyVectorError, formatContextBlock, formatContextBlocks, mapDocsToCitations } from "./context";
+import {
+  classifyVectorError,
+  formatContextBlock,
+  formatContextBlocks,
+  mapDocsToCitations,
+} from "./context";
 
 describe("formatContextBlock", () => {
   it("把文档包成带 source + trusted=false 的 <context> 标签", () => {
@@ -107,9 +112,7 @@ describe("mapDocsToCitations page", () => {
   });
 
   it("字符串或非有限数字不写入 page 键", () => {
-    const stringPage = mapDocsToCitations([
-      { content: "正文", page: "4" as unknown as number },
-    ]);
+    const stringPage = mapDocsToCitations([{ content: "正文", page: "4" as unknown as number }]);
     expect(stringPage[0]).not.toHaveProperty("page");
 
     for (const page of [Number.NaN, Number.POSITIVE_INFINITY]) {

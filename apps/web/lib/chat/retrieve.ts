@@ -30,7 +30,9 @@ import { traceRetrieveStep } from "./tracing";
 
 function selectNamedHits(hits: RetrievedChunk[], page?: number): RetrievedChunk[] {
   const filtered = page != null ? hits.filter((hit) => hit.page === page) : hits;
-  const ids = [...new Set(filtered.map((hit) => hit.documentId).filter((id): id is string => Boolean(id)))];
+  const ids = [
+    ...new Set(filtered.map((hit) => hit.documentId).filter((id): id is string => Boolean(id))),
+  ];
   const perDoc = ids.length > 1 ? 3 : RETRIEVAL_LIMIT;
   const out: RetrievedChunk[] = [];
   for (const id of ids) {

@@ -49,9 +49,7 @@ describe("assertPdfHasBody", () => {
 });
 
 describe("parsePdfPages", () => {
-  async function withSamplePdf(
-    run: (filePath: string) => Promise<void>,
-  ): Promise<void> {
+  async function withSamplePdf(run: (filePath: string) => Promise<void>): Promise<void> {
     const dest = path.join(getUploadsDir(), "parse-pdf-pages-sample.pdf");
     await fs.mkdir(getUploadsDir(), { recursive: true });
     await fs.copyFile(SAMPLE_PDF, dest);

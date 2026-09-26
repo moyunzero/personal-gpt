@@ -38,9 +38,7 @@ function trimmed(value: string | undefined): string {
 }
 
 /** Both vars must be non-empty after trim. One side, or whitespace, stays on the vendor path. */
-function gatewayCredentials(
-  source: NodeJS.ProcessEnv,
-): { baseURL: string; apiKey: string } | null {
+function gatewayCredentials(source: NodeJS.ProcessEnv): { baseURL: string; apiKey: string } | null {
   const baseURL = trimmed(source.GATEWAY_BASE_URL);
   const apiKey = trimmed(source.GATEWAY_API_KEY);
   if (!baseURL || !apiKey) return null;

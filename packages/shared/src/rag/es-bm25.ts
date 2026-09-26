@@ -85,7 +85,9 @@ export async function indexChunks(index: string, chunks: EsChunkDoc[]): Promise<
       source: chunk.source,
       category: chunk.category,
       keywords: chunk.keywords,
-      ...(typeof chunk.page === "number" && Number.isFinite(chunk.page) ? { page: chunk.page } : {}),
+      ...(typeof chunk.page === "number" && Number.isFinite(chunk.page)
+        ? { page: chunk.page }
+        : {}),
     },
   ]);
   const result = await client.bulk({ refresh: true, operations });
@@ -130,7 +132,9 @@ function mapHit(hit: {
     documentId: source.documentId as string | undefined,
     chunkIndex: source.chunkIndex as number | undefined,
     keywords: source.keywords as string[] | undefined,
-    ...(typeof source.page === "number" && Number.isFinite(source.page) ? { page: source.page } : {}),
+    ...(typeof source.page === "number" && Number.isFinite(source.page)
+      ? { page: source.page }
+      : {}),
   };
 }
 

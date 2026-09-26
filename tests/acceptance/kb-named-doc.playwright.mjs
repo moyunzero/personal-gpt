@@ -88,10 +88,17 @@ await withSession(async (token) => {
     const input = page.locator(".composer-input");
     const send = page.locator(".composer-send");
 
-    check("seed switch label", (await page.locator(".corpus-toggle-label").innerText()).includes("只查种子库"));
+    check(
+      "seed switch label",
+      (await page.locator(".corpus-toggle-label").innerText()).includes("只查种子库"),
+    );
     await box.check();
     await hint.filter({ hasText: "种子库检索" }).waitFor({ timeout: 5000 });
-    check("seed-only hint", (await hint.innerText()).includes("种子库检索"), await hint.innerText());
+    check(
+      "seed-only hint",
+      (await hint.innerText()).includes("种子库检索"),
+      await hint.innerText(),
+    );
     await box.uncheck();
     await hint.filter({ hasText: "用户库检索" }).waitFor({ timeout: 5000 });
 
@@ -112,11 +119,17 @@ await withSession(async (token) => {
         before,
         { timeout: 120000 },
       );
-      return (await page.locator(".message-assistant .message-body").nth(before).innerText()).replace(/\s+/g, " ");
+      return (
+        await page.locator(".message-assistant .message-body").nth(before).innerText()
+      ).replace(/\s+/g, " ");
     }
 
     const about = await ask("sample-pdf-1mb文件讲的什么");
-    check("named file answer uses the document", !denied.test(about) && grounded.test(about), about);
+    check(
+      "named file answer uses the document",
+      !denied.test(about) && grounded.test(about),
+      about,
+    );
 
     const pageAnswer = await ask("sample-pdf-1mb 第 1 页讲什么");
     check(
@@ -125,8 +138,13 @@ await withSession(async (token) => {
       pageAnswer,
     );
   } catch (err) {
-    await page.screenshot({ path: "/tmp/kb-named-doc-failure.png", fullPage: true }).catch(() => {});
-    const text = await page.locator("body").innerText().catch(() => "");
+    await page
+      .screenshot({ path: "/tmp/kb-named-doc-failure.png", fullPage: true })
+      .catch(() => {});
+    const text = await page
+      .locator("body")
+      .innerText()
+      .catch(() => "");
     console.log("page-text", text.replace(/\s+/g, " ").slice(0, 500));
     throw err;
   } finally {

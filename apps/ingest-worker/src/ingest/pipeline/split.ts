@@ -97,7 +97,11 @@ function stripMarkers(text: string): string {
     .join("\n");
 }
 
-function splitHeadingBlocks(lines: string[], headings: readonly string[], heuristic: boolean): string[] {
+function splitHeadingBlocks(
+  lines: string[],
+  headings: readonly string[],
+  heuristic: boolean,
+): string[] {
   const blocks: string[][] = [];
   let current: string[] = [];
   for (const line of lines) {
@@ -181,7 +185,7 @@ function splitLongRow(line: string): string[] {
   }
   if (current) pieces.push(current);
   return pieces.flatMap((piece) =>
-    piece.length <= size ? [piece] : piece.match(new RegExp(`.{1,${size}}`, "g")) ?? [piece],
+    piece.length <= size ? [piece] : (piece.match(new RegExp(`.{1,${size}}`, "g")) ?? [piece]),
   );
 }
 

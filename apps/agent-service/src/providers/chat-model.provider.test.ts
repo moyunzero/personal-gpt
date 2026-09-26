@@ -126,9 +126,7 @@ describe("chat-model.provider", () => {
       AGENT_PROVIDER: "openai",
       OPENAI_API_KEY: "sk-direct",
     } as NodeJS.ProcessEnv);
-    expect(
-      (model as { clientConfig: { baseURL?: string } }).clientConfig.baseURL,
-    ).toBeUndefined();
+    expect((model as { clientConfig: { baseURL?: string } }).clientConfig.baseURL).toBeUndefined();
   });
 
   it("groq / cerebras keep their defaults", () => {

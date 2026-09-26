@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  CHAT_MODEL_VENDORS,
-  DEFAULT_CHAT_MODEL_ID,
-  unknownModelMessage,
-} from "./model-presets";
+import { CHAT_MODEL_VENDORS, DEFAULT_CHAT_MODEL_ID, unknownModelMessage } from "./model-presets";
 
 describe("CHAT_MODEL_VENDORS", () => {
   it("orders platforms by usage and keeps provider names separate from model names", () => {

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { Citation } from "../types/kb";
-import { filterCitationsBySourceMarkers, SourceMarkerStripper, stripSourceMarkers } from "./used-citations";
+import {
+  filterCitationsBySourceMarkers,
+  SourceMarkerStripper,
+  stripSourceMarkers,
+} from "./used-citations";
 
 const citations: Citation[] = [
   { documentId: "doc-1", title: "第一条", similarity: 0.9, snippet: "甲" },

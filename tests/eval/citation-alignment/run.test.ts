@@ -67,13 +67,25 @@ function scoreCase(item: GoldenCase): CaseScore {
   const shownSet = new Set(shown);
   const expectSet = new Set(item.expectTitles);
   const overlap = item.expectTitles.filter((title) => shownSet.has(title)).length;
-  const precision = shown.length === 0 ? (item.expectTitles.length === 0 ? 1 : 0) : overlap / shownSet.size;
-  const recall = item.expectTitles.length === 0 ? (shown.length === 0 ? 1 : 0) : overlap / expectSet.size;
+  const precision =
+    shown.length === 0 ? (item.expectTitles.length === 0 ? 1 : 0) : overlap / shownSet.size;
+  const recall =
+    item.expectTitles.length === 0 ? (shown.length === 0 ? 1 : 0) : overlap / expectSet.size;
   const forbidden = item.forbidTitles.some((title) => shownSet.has(title));
   const cardCountOk =
-    item.expectCardCount === undefined || groupCitationsByDocument(used).length === item.expectCardCount;
+    item.expectCardCount === undefined ||
+    groupCitationsByDocument(used).length === item.expectCardCount;
   const pass = precision === 1 && recall === 1 && !forbidden && !leaked && cardCountOk;
-  return { id: item.id, stratum: item.stratum, precision, recall, forbidden, leaked, cardCountOk, pass };
+  return {
+    id: item.id,
+    stratum: item.stratum,
+    precision,
+    recall,
+    forbidden,
+    leaked,
+    cardCountOk,
+    pass,
+  };
 }
 
 function mean(values: number[]): number {

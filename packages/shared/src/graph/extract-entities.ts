@@ -33,11 +33,16 @@ JSON shape: {"entities":[{"name":"string","entityType":"person"}],"relations":[{
 export type { GraphModelEndpoint };
 
 /** 工作区里当前选中的模型。缺 id、密钥或地址时不用。 */
-export function workspaceGraphEndpoint(row: {
-  model_id?: string | null;
-  api_key?: string | null;
-  base_url?: string | null;
-} | null | undefined): GraphModelEndpoint | undefined {
+export function workspaceGraphEndpoint(
+  row:
+    | {
+        model_id?: string | null;
+        api_key?: string | null;
+        base_url?: string | null;
+      }
+    | null
+    | undefined,
+): GraphModelEndpoint | undefined {
   const modelId = row?.model_id?.trim() ?? "";
   const apiKey = row?.api_key?.trim() ?? "";
   const baseURL = row?.base_url?.trim() || (modelId ? presetForModel(modelId)?.baseURL : "") || "";

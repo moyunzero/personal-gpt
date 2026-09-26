@@ -130,11 +130,7 @@ describe("parseWithMinerU", () => {
   it("uploads bytes with OCR and keeps the token off the PUT", async () => {
     process.env.MINERU_API_TOKEN = TOKEN;
     const calls: Call[] = [];
-    const markdown = await parseWithMinerU(
-      Buffer.from("pdf-bytes"),
-      "scan",
-      scriptedFetch(calls),
-    );
+    const markdown = await parseWithMinerU(Buffer.from("pdf-bytes"), "scan", scriptedFetch(calls));
     expect(markdown).toContain("表格还在");
     const apply = calls.find((call) => call.url.endsWith("/file-urls/batch"));
     const body = String(apply?.init?.body);

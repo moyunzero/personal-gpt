@@ -243,10 +243,9 @@ async function enqueueIngestJob(
     gaveUp = true;
     const message = error instanceof Error ? error.message : "导入队列不可用";
     await jobRepo.update({ id }, { status: "failed", error: message });
-    await ds.getRepository(DocumentEntity).update(
-      { id: document.id, workspaceId },
-      { status: "failed" },
-    );
+    await ds
+      .getRepository(DocumentEntity)
+      .update({ id: document.id, workspaceId }, { status: "failed" });
     throw new UploadValidationError("queue_unavailable", message);
   } finally {
     if (timer) clearTimeout(timer);

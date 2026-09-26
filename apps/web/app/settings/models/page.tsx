@@ -104,7 +104,8 @@ export default function ModelsSettingsPage() {
         <p className="settings-kicker">设置</p>
         <h1 className="settings-title">模型供应商</h1>
         <p className="settings-lead">
-          先选平台，再选该平台当前的模型。Groq 和 Google 带免费额度，其余按各家计费。自定义名称会先向平台核对，对不上就不会保存。
+          先选平台，再选该平台当前的模型。Groq 和 Google
+          带免费额度，其余按各家计费。自定义名称会先向平台核对，对不上就不会保存。
         </p>
         <div className="settings-card">
           {models.length > 0 ? (

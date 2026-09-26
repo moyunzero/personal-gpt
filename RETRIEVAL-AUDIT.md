@@ -50,7 +50,7 @@ backend-dependent.
   explicit `analyzer: "ik_smart"` (`es-bm25.ts:153-161`), bulk dual-write with error accounting
   (`es-bm25.ts:71-94`).
 - **However** `es-client.ts:9-11` documents that production/Vercel normally has no ES, and
-  `isEsConfigured()` gates *writes* only (`apps/ingest-worker/src/ingest/pipeline/upsert.ts:36-38`,
+  `isEsConfigured()` gates _writes_ only (`apps/ingest-worker/src/ingest/pipeline/upsert.ts:36-38`,
   `apps/web/lib/kb/documents.service.ts:512-514`).
 - The **read** path never checks it: `hybridSearchOnce` always calls `esSearch`
   (`hybrid-search.ts:86`), and `getEsClient()` silently defaults to `http://localhost:9200`
@@ -104,7 +104,7 @@ full hybrid search at `retrieve.ts:185-201`).
 
 ## 2. Routing tiering: L0/L1/L2 — genuine, with real fallbacks
 
-Not a placeholder; but the *effective* decision is dominated by one embedding probe.
+Not a placeholder; but the _effective_ decision is dominated by one embedding probe.
 
 - **L0** (`routing/l0-rules.ts`): chitchat/empty/pure-math short-circuit (`l0-rules.ts:181-213`),
   graph-relation lexicon + entity resolution (`:63-85`), multi-step specialist ordering by keyword
@@ -128,6 +128,7 @@ The Neo4j probe is genuinely wired before routing (`query-router.ts:57-90`, 30 s
 single-flight).
 
 **Fallbacks and failure modes (all real):**
+
 - hybrid ES error → vector-only (`hybrid-search.ts:92-95`)
 - Corrective rewrite/re-search error → original hits (`corrective.ts:65-79`)
 - rerank HTTP error/timeout/non-OK → LLM fallback or cosine sort (`rerank.ts:47-62`)
@@ -139,14 +140,15 @@ single-flight).
 - vector search timeout → 10 s grace, then adopt the late result if it lands
   (`retrieve.ts:99-133`, `RETRIEVAL_GRACE_MS = 10_000` at `rag-options.ts:33`)
 
-**Failure modes that are *not* handled:**
+**Failure modes that are _not_ handled:**
+
 - Graph intent is terminal for Chat: `graphOnlyRetrieve` skips KB entirely
   (`route.ts:256-263`) and the KB fallback only fires if the graph returned zero paths
   (`route.ts:296-312`). If Neo4j is up but has no data, the user gets a no-context answer.
 - `decideWithSharedRouter` hardcodes `fastPath: true` on every decision
   (`query-router.ts:257`) — the field is meaningless in the default path.
 - If L1 cannot probe (`!kb.probed`), a non-matching query falls to `general` + `ambiguous: true`
-  (`synthesize.ts:117`, `:128-134`), and `mapIntentPlanToChatRoute` takes the *final* fallback
+  (`synthesize.ts:117`, `:128-134`), and `mapIntentPlanToChatRoute` takes the _final_ fallback
   `route: "direct"` (`chat-map.ts:59`) — the plan is marked ambiguous but Chat answers from
   parametric knowledge. Only Agent consumes `ambiguous` (`chat-map.ts:16-19`).
 
@@ -170,7 +172,7 @@ single-flight).
   (`routing/types.ts:4-21`), zod at all LLM/persistence boundaries
   (`rerank.ts:5-7`, `l2-classifier.ts:13-18`, `extract-schema.ts:9-23`, `routing/types.ts:29-42`).
 - The allowlist is defensive beyond the obvious: rejects unlabeled nodes, untyped rels,
-  non-allowlisted labels *and* rel types, multi-statements, and unbounded var-length
+  non-allowlisted labels _and_ rel types, multi-statements, and unbounded var-length
   (`graph-cypher-allowlist.ts:110-175`).
 - Cache design is honest and documented: LRU with recency refresh (`embedding-cache.ts:30-57`),
   explicit YAGNI rationale for no TTL/Redis (`embedding-cache.ts:10-15`).
@@ -181,7 +183,7 @@ single-flight).
   `packages/shared/src/routing/l0-rules.ts:9-48` are the same 20-phrase set + same
   `TRAILING_PUNCTUATION` regex + same `isPureMathExpression` + same `isEmptyQuery`. The web copy
   is only reachable when `ENABLE_INTENT_ROUTER=false` (`query-router.ts:272-276`), and
-  `query-router.ts:25` imports the *local* copy rather than the shared one. Two sources of truth
+  `query-router.ts:25` imports the _local_ copy rather than the shared one. Two sources of truth
   for routing behavior.
 - **The Neo4j availability probe is copy-pasted**: identical cache/TTL/timeout/single-flight code
   at `apps/web/lib/chat/query-router.ts:51-97` and
@@ -201,7 +203,7 @@ single-flight).
   `packages/shared/src/schemas/env.ts:56-58` also models `ENABLE_RERANKER`; thresholds
   `ROUTE_RETRIEVE_SIMILARITY`/`ROUTE_DIRECT_SIMILARITY` are parsed twice
   (`rag-options.ts:27-30`, `routing/config.ts:27-28`) with independently hardcoded defaults.
-  `l1-signals.ts:26-27` *also* hardcodes `0.68`/`0.42`.
+  `l1-signals.ts:26-27` _also_ hardcodes `0.68`/`0.42`.
 - **No caching on the hot path.** `retrieve.ts` → `hybridSearch` → `embedText`
   (`hybrid-search.ts:66`) bypasses `embedQueryText`/`EmbeddingCache` entirely; the LRU is used
   only by the precheck (`embedding-precheck.ts:31`). Each chat turn embeds the same query twice
@@ -227,18 +229,19 @@ single-flight).
 Full-tree grep over the scoped dirs returns **no `TODO`, `FIXME`, `XXX`, `HACK`, `WIP`, or
 "not implemented"** in production retrieval code. The unfinished work is marked differently:
 
-| Marker | Location | Meaning |
-|---|---|---|
-| `@deprecated` | `graph-rag.ts:64`, `query-router.ts:279` | superseded APIs kept for tests |
-| `@deprecated` | `apps/web/lib/chat/corpus-filters.ts:6-9` | "superseded by physical corpus collections… Kept for embedding-precheck until that migrates" |
-| "narrow-domain until workspace entity registry exists" | `routing/graph-entities.ts:3` | graph layer is a demo single-product subgraph |
-| "Production graph layer is narrow-domain" | `routing/graph-entities.ts:3` | see above |
-| "Phase 3 demo graph seed entities" | `routing/graph-entities.ts:2` | seed regex `SEED_GRAPH_ENTITY_RES = [/珍珠奶茶/, /pearl\s*milk\s*tea/i]` (`:6`) |
-| "Test hook for catalog-first routing without live PG" | `routing/entity-resolve.ts:22-25` | the only way catalog routing is reachable |
-| "until plan 03-03" | `vector-store.astra.ts:205`, `schemas/env.ts:56` | acknowledged migration debt |
-| "Demo" fixtures | `graph-rag.ts:146`, `:188` | in-memory fake paths used as Agent test helpers |
+| Marker                                                 | Location                                         | Meaning                                                                                      |
+| ------------------------------------------------------ | ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `@deprecated`                                          | `graph-rag.ts:64`, `query-router.ts:279`         | superseded APIs kept for tests                                                               |
+| `@deprecated`                                          | `apps/web/lib/chat/corpus-filters.ts:6-9`        | "superseded by physical corpus collections… Kept for embedding-precheck until that migrates" |
+| "narrow-domain until workspace entity registry exists" | `routing/graph-entities.ts:3`                    | graph layer is a demo single-product subgraph                                                |
+| "Production graph layer is narrow-domain"              | `routing/graph-entities.ts:3`                    | see above                                                                                    |
+| "Phase 3 demo graph seed entities"                     | `routing/graph-entities.ts:2`                    | seed regex `SEED_GRAPH_ENTITY_RES = [/珍珠奶茶/, /pearl\s*milk\s*tea/i]` (`:6`)              |
+| "Test hook for catalog-first routing without live PG"  | `routing/entity-resolve.ts:22-25`                | the only way catalog routing is reachable                                                    |
+| "until plan 03-03"                                     | `vector-store.astra.ts:205`, `schemas/env.ts:56` | acknowledged migration debt                                                                  |
+| "Demo" fixtures                                        | `graph-rag.ts:146`, `:188`                       | in-memory fake paths used as Agent test helpers                                              |
 
 Hardcoded values that matter:
+
 - `packages/shared/src/ai/embedding-models.ts:12` — `nvidia/nemotron-3-embed-1b`, dim `2048`
   (`:14`), pinned after a 410-Gone incident documented at `:9-10`.
 - `packages/shared/src/rag/graph-rag.ts:52-62` — milk-tea seed graph hardcoded in source.
@@ -253,7 +256,7 @@ Hardcoded values that matter:
 Mock/fixture code living in the production module: `graph-rag.ts:146-228`
 (`createSeededMilkTeaFixtureExecutor`, `createCatalogEntityFixtureExecutor`) is exported from the
 public package barrel (`packages/shared/src/index.ts:131-132`) and used by
-`apps/agent-service/src/tools/graph-search.tool.ts:131-156` as *test helpers* — acceptable, but
+`apps/agent-service/src/tools/graph-search.tool.ts:131-156` as _test helpers_ — acceptable, but
 they sit in the hot RAG module and one of them (`:181-184`) ignores its `params` argument
 entirely, so no test can ever catch a wrong-parameter bug through it.
 
@@ -268,7 +271,7 @@ entirely, so no test can ever catch a wrong-parameter bug through it.
    Chat consumes exactly two fields — `plan.primary` and `plan.reason` (`chat-map.ts:25-59`).
    `fallbackChain`, `channels`, `confidence`, `ambiguous` are Agent-only.
 2. **Corrective RAG as a pseudo-agent.** The file header (`corrective.ts:1-5`) spends five lines
-   explaining that there is deliberately *no* Corrective sub-agent, then implements one LLM call
+   explaining that there is deliberately _no_ Corrective sub-agent, then implements one LLM call
    and one bool. The ceremony outweighs the behavior.
 3. **`graph-cypher-templates.ts:26-29`**, one of three templates, is a single hand-written 3-hop
    query for one hardcoded product; the allowlist (`graph-cypher-allowlist.ts`) is ~176 lines of
@@ -296,7 +299,7 @@ entirely, so no test can ever catch a wrong-parameter bug through it.
    (`graph-cypher-templates.ts:25-29`) is effectively test-only.
 3. **Catalog-first routing is wired but not connected.** `resolveGraphEntity` needs
    `workspaceId && store` (`entity-resolve.ts:34`); the store can only come from the arg or the
-   module-global test hook (`entity-resolve.ts:20-25`). `entities` *are* written to Postgres at
+   module-global test hook (`entity-resolve.ts:20-25`). `entities` _are_ written to Postgres at
    ingest (`entity-catalog-store.ts`, `graph-extract.ts:42-43`), and `createEntityCatalogStore`
    exists — but **no production caller passes it** (`query-router.ts:241-250`, `resolve.ts:33-36`).
    So catalog entity linking never runs in production; `resolveGraphEntity` always falls through
@@ -321,7 +324,7 @@ Mostly yes; the unit layer is genuinely behavioral, the regression layer is larg
 - `graph-cypher-allowlist.test.ts:14-79` — adversarial: 7 destructive statements, unlabeled nodes,
   non-allowlisted labels/rels, untyped rels, `|`-lists with a bad member, `*` unbounded, `*1..5`
   too long. This is the best test file in scope.
-- `corrective.test.ts:45-127` — asserts *negative* behavior (rewrite not called above threshold,
+- `corrective.test.ts:45-127` — asserts _negative_ behavior (rewrite not called above threshold,
   not called on the second pass, original hits returned when re-search rejects or is empty).
 - `embedding-cache.test.ts:25-54` — real LRU semantics: eviction order and the recency-refresh
   case that a naive Map implementation gets wrong.
@@ -334,7 +337,7 @@ Mostly yes; the unit layer is genuinely behavioral, the regression layer is larg
   swallowed into an empty graph. Exactly the right assertion.
 - `query-router.test.ts:90-109` — Neo4j-down degradation asserted end-to-end through
   `decideQueryRoute`, including the `needsGraphContext` removal.
-- `resolve.test.ts:34-42` — asserts L1 is *not* called when L0 is terminal (`probeKb` never
+- `resolve.test.ts:34-42` — asserts L1 is _not_ called when L0 is terminal (`probeKb` never
   invoked), which is the tiering contract from `resolve.ts:42`.
 
 ### Weak / tautological
@@ -343,10 +346,10 @@ Mostly yes; the unit layer is genuinely behavioral, the regression layer is larg
   `>=`/`<` comparisons against constants. `probeKbRelevance`'s 45 lines are covered only
   incidentally by `embedding-failopen.test.ts:47-55`.
 - `rag-options.test.ts:11-18` asserts `ENABLE_RERANKER === true`, then `if (ENABLE_RERANKER ===
-  "false") expect(false)` and returns — the test deletes its own assertion on the escape path.
+"false") expect(false)` and returns — the test deletes its own assertion on the escape path.
 - `query-router.test.ts:78-88` ("灰色地带 probe → retrieve") claims to test "gray" but the
   result is `intentPrimary: "kb_doc"` — `synthesize.ts:188-202` converted the gray band into a
-  hard `kb_doc`, so the gray-band *routing* path (`chat-map.ts:53`) is never actually exercised.
+  hard `kb_doc`, so the gray-band _routing_ path (`chat-map.ts:53`) is never actually exercised.
 - `reranker.test.ts:16-38` covers only the web LLM reranker, which has **no callers** (§3). The
   production `rerankDedicated` (`rerank.ts:17`) — HTTP path, `mapDedicatedResults` bounds
   checking, timeout, LLM fallback — has **zero tests**.
@@ -369,7 +372,7 @@ Mostly yes; the unit layer is genuinely behavioral, the regression layer is larg
   the production code cannot produce. This is the exact case §5.1 flags, and the regression suite
   is green because of it.
 - `tests/regression/phase-4/02-entity-catalog-routing.test.ts:32-38` installs the catalog store
-  via `setEntityCatalogStoreForTests` — the test-only global (§5.3). It proves the *logic* works
+  via `setEntityCatalogStoreForTests` — the test-only global (§5.3). It proves the _logic_ works
   and simultaneously guarantees the production wiring gap can never be caught.
 - `tests/regression/phase-3/07-intent-routing.test.ts` (418 lines) mocks
   `resolveIntentPlanForAgent`, `invokeGraphSearch`, `invokeKbSearch`, the whole `ai` module and
@@ -393,7 +396,7 @@ The subsystem is **substantially real, competently engineered, and materially ov
 relative to what runs in production**. Dense retrieval, RRF, the ES client/BM25 query, the
 dedicated reranker, the corrective pass, the graph executor and the Cypher allowlist are all
 genuine implementations with sensible DI, timeouts and fail-open/fail-closed choices. What is
-missing is not code but *connection*: BM25 is disabled by configuration yet still called on every
+missing is not code but _connection_: BM25 is disabled by configuration yet still called on every
 read, graph retrieval is gated to the demo seed corpus, and catalog entity linking is written but
 never wired. The test suite is above average at the unit level and misleading at the regression
 level — one regression test passes only because its fixture fabricates a value the production

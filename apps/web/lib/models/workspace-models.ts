@@ -117,5 +117,9 @@ export async function lookupWorkspaceModelKey(
   });
   if (!row) return null;
   const baseURL = row.baseUrl.trim() || presetForModel(row.modelId)?.baseURL;
-  return { modelId: row.modelId, apiKey: openModelKey(row.apiKey), ...(baseURL ? { baseURL } : {}) };
+  return {
+    modelId: row.modelId,
+    apiKey: openModelKey(row.apiKey),
+    ...(baseURL ? { baseURL } : {}),
+  };
 }

@@ -52,14 +52,17 @@ async function requestMineruMarkdown(
     model_version: "pipeline",
     enable_table: true,
   });
-  const applied = await fetchImpl(APPLY_URL, withRequestTimeout({
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body,
-  }));
+  const applied = await fetchImpl(
+    APPLY_URL,
+    withRequestTimeout({
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body,
+    }),
+  );
   const appliedJson = (await applied.json()) as {
     code?: number;
     data?: { batch_id?: string; file_urls?: string[] };

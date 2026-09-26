@@ -1702,9 +1702,11 @@ export class AgentService {
                       },
                     }),
                   )
-                  .pipeThrough(dropHandoffNoiseText((text) => {
-                    rawAnswerForCitations += text;
-                  }));
+                  .pipeThrough(
+                    dropHandoffNoiseText((text) => {
+                      rawAnswerForCitations += text;
+                    }),
+                  );
 
                 let lgStreamError: unknown;
                 const producer = (async () => {

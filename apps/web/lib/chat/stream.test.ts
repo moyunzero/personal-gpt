@@ -150,8 +150,7 @@ describe("createChatStream citations", () => {
 
     const parts = await collectStreamParts(stream);
     const dataPart = parts.find((part) => (part as { type: string }).type === "data-citations") as
-      | { data: { citations: Citation[] } }
-      | undefined;
+      { data: { citations: Citation[] } } | undefined;
 
     expect(dataPart?.data.citations).toHaveLength(1);
     expect(dataPart?.data.citations[0]?.documentId).toBe("doc-1");

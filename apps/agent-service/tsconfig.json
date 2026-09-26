@@ -16,9 +16,7 @@
       "@personal-gpt/shared/ai/chat-model-config": [
         "../../packages/shared/src/ai/chat-model-config.ts"
       ],
-      "@personal-gpt/shared/ai/model-presets": [
-        "../../packages/shared/src/ai/model-presets.ts"
-      ]
+      "@personal-gpt/shared/ai/model-presets": ["../../packages/shared/src/ai/model-presets.ts"]
     },
     "incremental": true,
     "skipLibCheck": true,

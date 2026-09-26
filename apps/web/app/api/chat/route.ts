@@ -254,17 +254,18 @@ export async function POST(req: Request) {
             : [];
         const askedPage = pageAsked(lastContent);
 
-        const routeDecision: QueryRouteDecision = namedDocuments.length > 0
-          ? {
-              route: "retrieve",
-              reason: `named_document:${namedDocuments.map((doc) => doc.id).join(",")}`,
-              fastPath: true,
-            }
-          : await decideQueryRoute(lastContent, {
-              workspaceId: retrievalCtx.workspaceId,
-              requestId,
-              corpus,
-            });
+        const routeDecision: QueryRouteDecision =
+          namedDocuments.length > 0
+            ? {
+                route: "retrieve",
+                reason: `named_document:${namedDocuments.map((doc) => doc.id).join(",")}`,
+                fastPath: true,
+              }
+            : await decideQueryRoute(lastContent, {
+                workspaceId: retrievalCtx.workspaceId,
+                requestId,
+                corpus,
+              });
         log.debug("query route", {
           corpus,
           guest: isGuest,

@@ -24,7 +24,12 @@ export function matchNamedDocuments(
     hits.push({ id: doc.id, title: doc.title, label });
   }
   return hits
-    .filter((hit) => !hits.some((other) => other.label.length > hit.label.length && other.label.includes(hit.label)))
+    .filter(
+      (hit) =>
+        !hits.some(
+          (other) => other.label.length > hit.label.length && other.label.includes(hit.label),
+        ),
+    )
     .map(({ id, title }) => ({ id, title }));
 }
 

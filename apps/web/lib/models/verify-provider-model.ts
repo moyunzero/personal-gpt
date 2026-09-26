@@ -22,7 +22,10 @@ function providerHeaders(baseURL: string, apiKey: string): HeadersInit {
 }
 
 /** Lists model ids. Throws when the key is rejected. Returns null when the list cannot be read. */
-export async function listProviderModelIds(baseURL: string, apiKey: string): Promise<string[] | null> {
+export async function listProviderModelIds(
+  baseURL: string,
+  apiKey: string,
+): Promise<string[] | null> {
   let response: Response;
   try {
     response = await fetch(modelsUrl(baseURL), {
@@ -38,9 +41,7 @@ export async function listProviderModelIds(baseURL: string, apiKey: string): Pro
   if (!response.ok) return null;
   const body = (await response.json()) as { data?: { id?: unknown }[] };
   if (!Array.isArray(body.data)) return null;
-  return body.data
-    .map((item) => (typeof item.id === "string" ? item.id : ""))
-    .filter(Boolean);
+  return body.data.map((item) => (typeof item.id === "string" ? item.id : "")).filter(Boolean);
 }
 
 export async function assertProviderModel(params: {

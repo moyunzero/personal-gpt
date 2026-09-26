@@ -1,4 +1,8 @@
-import { filterCitationsBySourceMarkers, SourceMarkerStripper, stripSourceMarkers } from "@personal-gpt/shared";
+import {
+  filterCitationsBySourceMarkers,
+  SourceMarkerStripper,
+  stripSourceMarkers,
+} from "@personal-gpt/shared";
 import { chatModel, resolveChatModels } from "@personal-gpt/shared/ai/chat-provider";
 import type { Citation } from "@personal-gpt/shared/types/kb";
 import { streamText, createUIMessageStream } from "ai";

@@ -133,21 +133,21 @@ Personal Emotion GPT 是知识库工作台，不是营销站。页面气质是**
 
 以 `{colors.*}` 为准，并且与 `apps/web/app/globals.css` 的 `--color-*` 一一对应。禁止新增未写入该文件的色值。
 
-| 令牌 | CSS 变量 | Hex | 用途 |
-| --- | --- | --- | --- |
-| canvas | --color-canvas | #f7f2ec | 主区底 |
-| surface-soft | --color-surface-soft | #fffaf5 | 卡片、输入底 |
-| surface-card | --color-surface-card | #f0e8df | 分段控件、模型胶囊底 |
-| surface-cream-strong | --color-surface-cream-strong | #e8ddd3 | 菜单里的当前项 |
-| surface-dark | --color-surface-dark | #1c1714 | 侧栏 |
-| surface-dark-active | --color-surface-dark-active | #332c27 | 侧栏当前项 |
-| primary | --color-primary | #b36b5c | 主按钮、选中强调 |
-| ink | --color-ink | #2c241f | 标题与正文强色 |
-| body | --color-body | #52463f | 说明 |
-| muted | --color-muted | #8a7d74 | 次要标签、模型 id |
-| hairline | --color-hairline | #ebe4dc | 1px 分隔与次按钮描边 |
-| error | --color-error | #a63d2f | 错误 |
-| accent-teal-text | --color-accent-teal-text | #2f6f64 | 已连接等成功状态文字 |
+| 令牌                 | CSS 变量                     | Hex     | 用途                 |
+| -------------------- | ---------------------------- | ------- | -------------------- |
+| canvas               | --color-canvas               | #f7f2ec | 主区底               |
+| surface-soft         | --color-surface-soft         | #fffaf5 | 卡片、输入底         |
+| surface-card         | --color-surface-card         | #f0e8df | 分段控件、模型胶囊底 |
+| surface-cream-strong | --color-surface-cream-strong | #e8ddd3 | 菜单里的当前项       |
+| surface-dark         | --color-surface-dark         | #1c1714 | 侧栏                 |
+| surface-dark-active  | --color-surface-dark-active  | #332c27 | 侧栏当前项           |
+| primary              | --color-primary              | #b36b5c | 主按钮、选中强调     |
+| ink                  | --color-ink                  | #2c241f | 标题与正文强色       |
+| body                 | --color-body                 | #52463f | 说明                 |
+| muted                | --color-muted                | #8a7d74 | 次要标签、模型 id    |
+| hairline             | --color-hairline             | #ebe4dc | 1px 分隔与次按钮描边 |
+| error                | --color-error                | #a63d2f | 错误                 |
+| accent-teal-text     | --color-accent-teal-text     | #2f6f64 | 已连接等成功状态文字 |
 
 ## Typography
 

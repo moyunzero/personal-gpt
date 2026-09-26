@@ -38,9 +38,10 @@ describe("normalizeEntityName", () => {
 
 describe("parseGraphJsonText", () => {
   it("reads a JSON object inside a markdown fence", () => {
-    expect(
-      parseGraphJsonText('```json\n{"entities":[],"relations":[]}\n```'),
-    ).toEqual({ entities: [], relations: [] });
+    expect(parseGraphJsonText('```json\n{"entities":[],"relations":[]}\n```')).toEqual({
+      entities: [],
+      relations: [],
+    });
   });
 });
 
@@ -59,7 +60,9 @@ describe("workspaceGraphEndpoint", () => {
   });
 
   it("returns undefined when the key is missing", () => {
-    expect(workspaceGraphEndpoint({ model_id: "kimi-k3", api_key: " ", base_url: "https://x" })).toBeUndefined();
+    expect(
+      workspaceGraphEndpoint({ model_id: "kimi-k3", api_key: " ", base_url: "https://x" }),
+    ).toBeUndefined();
   });
 });
 

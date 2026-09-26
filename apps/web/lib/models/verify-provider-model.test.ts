@@ -8,7 +8,10 @@ afterEach(() => {
 
 describe("listProviderModelIds", () => {
   it("asks Anthropic with x-api-key instead of a bearer token", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: [{ id: "claude-opus-5-5" }] }), { status: 200 }));
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ data: [{ id: "claude-opus-5-5" }] }), { status: 200 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const ids = await listProviderModelIds("https://api.anthropic.com/v1/", "sk-ant-test");
@@ -21,7 +24,10 @@ describe("listProviderModelIds", () => {
   });
 
   it("keeps bearer auth for other platforms", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: [{ id: "openai/gpt-oss-120b" }] }), { status: 200 }));
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ data: [{ id: "openai/gpt-oss-120b" }] }), { status: 200 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     await listProviderModelIds("https://api.groq.com/openai/v1", "gsk-test");

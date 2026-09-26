@@ -8,11 +8,36 @@
     "expectTitles": ["不要挑战人性-读书笔记"],
     "forbidTitles": ["天才在左疯子在右-读书笔记", "活下去的理由-读书笔记"],
     "hits": [
-      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.76, "snippet": "用实验说明服从、从众与先理解人性。"},
-      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.74, "snippet": "正确姿态是先理解机制，再设计环境。"},
-      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.65, "snippet": "不要盲目与人性对抗。"},
-      {"documentId": "doc-genius", "title": "天才在左疯子在右-读书笔记", "similarity": 0.61, "snippet": "访谈里讨论精神疾病与天才。"},
-      {"documentId": "doc-live", "title": "活下去的理由-读书笔记", "similarity": 0.6, "snippet": "讨论活着的意义与死亡。"}
+      {
+        "documentId": "doc-challenge",
+        "title": "不要挑战人性-读书笔记",
+        "similarity": 0.76,
+        "snippet": "用实验说明服从、从众与先理解人性。"
+      },
+      {
+        "documentId": "doc-challenge",
+        "title": "不要挑战人性-读书笔记",
+        "similarity": 0.74,
+        "snippet": "正确姿态是先理解机制，再设计环境。"
+      },
+      {
+        "documentId": "doc-challenge",
+        "title": "不要挑战人性-读书笔记",
+        "similarity": 0.65,
+        "snippet": "不要盲目与人性对抗。"
+      },
+      {
+        "documentId": "doc-genius",
+        "title": "天才在左疯子在右-读书笔记",
+        "similarity": 0.61,
+        "snippet": "访谈里讨论精神疾病与天才。"
+      },
+      {
+        "documentId": "doc-live",
+        "title": "活下去的理由-读书笔记",
+        "similarity": 0.6,
+        "snippet": "讨论活着的意义与死亡。"
+      }
     ]
   },
   {
@@ -24,8 +49,18 @@
     "expectTitles": ["哈佛家训-读书笔记"],
     "forbidTitles": ["不要挑战人性-读书笔记"],
     "hits": [
-      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.88, "snippet": "生活的准则由自己决定，而不是别人的蓝本。"},
-      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.58, "snippet": "先理解人性再谈改变。"}
+      {
+        "documentId": "doc-harvard",
+        "title": "哈佛家训-读书笔记",
+        "similarity": 0.88,
+        "snippet": "生活的准则由自己决定，而不是别人的蓝本。"
+      },
+      {
+        "documentId": "doc-challenge",
+        "title": "不要挑战人性-读书笔记",
+        "similarity": 0.58,
+        "snippet": "先理解人性再谈改变。"
+      }
     ]
   },
   {
@@ -37,9 +72,24 @@
     "expectTitles": ["活下去的理由-读书笔记"],
     "forbidTitles": ["天才在左疯子在右-读书笔记", "哈佛家训-读书笔记"],
     "hits": [
-      {"documentId": "doc-live", "title": "活下去的理由-读书笔记", "similarity": 0.91, "snippet": "讨论活着的理由与死亡。"},
-      {"documentId": "doc-genius", "title": "天才在左疯子在右-读书笔记", "similarity": 0.62, "snippet": "精神病院访谈。"},
-      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.56, "snippet": "格言与家训。"}
+      {
+        "documentId": "doc-live",
+        "title": "活下去的理由-读书笔记",
+        "similarity": 0.91,
+        "snippet": "讨论活着的理由与死亡。"
+      },
+      {
+        "documentId": "doc-genius",
+        "title": "天才在左疯子在右-读书笔记",
+        "similarity": 0.62,
+        "snippet": "精神病院访谈。"
+      },
+      {
+        "documentId": "doc-harvard",
+        "title": "哈佛家训-读书笔记",
+        "similarity": 0.56,
+        "snippet": "格言与家训。"
+      }
     ]
   },
   {
@@ -51,8 +101,18 @@
     "expectTitles": ["天才在左疯子在右-读书笔记"],
     "forbidTitles": ["活下去的理由-读书笔记"],
     "hits": [
-      {"documentId": "doc-genius", "title": "天才在左疯子在右-读书笔记", "similarity": 0.84, "snippet": "访谈讨论天才与精神疾病。"},
-      {"documentId": "doc-live", "title": "活下去的理由-读书笔记", "similarity": 0.57, "snippet": "活着的理由。"}
+      {
+        "documentId": "doc-genius",
+        "title": "天才在左疯子在右-读书笔记",
+        "similarity": 0.84,
+        "snippet": "访谈讨论天才与精神疾病。"
+      },
+      {
+        "documentId": "doc-live",
+        "title": "活下去的理由-读书笔记",
+        "similarity": 0.57,
+        "snippet": "活着的理由。"
+      }
     ]
   },
   {
@@ -64,8 +124,18 @@
     "expectTitles": ["奥德赛计划书"],
     "forbidTitles": ["project-roadmap.md"],
     "hits": [
-      {"documentId": "doc-odyssey", "title": "奥德赛计划书", "similarity": 0.93, "snippet": "准备三条并行路径。"},
-      {"documentId": "doc-roadmap", "title": "project-roadmap.md", "similarity": 0.71, "snippet": "里程碑按季度排列。"}
+      {
+        "documentId": "doc-odyssey",
+        "title": "奥德赛计划书",
+        "similarity": 0.93,
+        "snippet": "准备三条并行路径。"
+      },
+      {
+        "documentId": "doc-roadmap",
+        "title": "project-roadmap.md",
+        "similarity": 0.71,
+        "snippet": "里程碑按季度排列。"
+      }
     ]
   },
   {
@@ -77,8 +147,18 @@
     "expectTitles": ["api-auth-guide.md"],
     "forbidTitles": ["deploy-checklist.md"],
     "hits": [
-      {"documentId": "doc-auth", "title": "api-auth-guide.md", "similarity": 0.9, "snippet": "Bearer token 与成员校验。"},
-      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.66, "snippet": "上线前检查环境变量。"}
+      {
+        "documentId": "doc-auth",
+        "title": "api-auth-guide.md",
+        "similarity": 0.9,
+        "snippet": "Bearer token 与成员校验。"
+      },
+      {
+        "documentId": "doc-deploy",
+        "title": "deploy-checklist.md",
+        "similarity": 0.66,
+        "snippet": "上线前检查环境变量。"
+      }
     ]
   },
   {
@@ -90,8 +170,18 @@
     "expectTitles": ["hybrid-rrf-notes.md"],
     "forbidTitles": ["es-fail-open.md"],
     "hits": [
-      {"documentId": "doc-rrf", "title": "hybrid-rrf-notes.md", "similarity": 0.81, "snippet": "倒数排名融合。"},
-      {"documentId": "doc-es", "title": "es-fail-open.md", "similarity": 0.54, "snippet": "ES 挂了就只走向量。"}
+      {
+        "documentId": "doc-rrf",
+        "title": "hybrid-rrf-notes.md",
+        "similarity": 0.81,
+        "snippet": "倒数排名融合。"
+      },
+      {
+        "documentId": "doc-es",
+        "title": "es-fail-open.md",
+        "similarity": 0.54,
+        "snippet": "ES 挂了就只走向量。"
+      }
     ]
   },
   {
@@ -103,8 +193,18 @@
     "expectTitles": ["workspace-isolation.md"],
     "forbidTitles": ["psychology-qa"],
     "hits": [
-      {"documentId": "doc-ws", "title": "workspace-isolation.md", "similarity": 0.87, "snippet": "检索必须带 workspaceId。"},
-      {"documentId": "doc-psy", "title": "psychology-qa", "similarity": 0.4, "snippet": "情绪咨询问答。"}
+      {
+        "documentId": "doc-ws",
+        "title": "workspace-isolation.md",
+        "similarity": 0.87,
+        "snippet": "检索必须带 workspaceId。"
+      },
+      {
+        "documentId": "doc-psy",
+        "title": "psychology-qa",
+        "similarity": 0.4,
+        "snippet": "情绪咨询问答。"
+      }
     ]
   },
   {
@@ -116,8 +216,18 @@
     "expectTitles": [],
     "forbidTitles": ["奥德赛计划书", "哈佛家训-读书笔记"],
     "hits": [
-      {"documentId": "doc-odyssey", "title": "奥德赛计划书", "similarity": 0.58, "snippet": "计划与路径。"},
-      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.56, "snippet": "格言。"}
+      {
+        "documentId": "doc-odyssey",
+        "title": "奥德赛计划书",
+        "similarity": 0.58,
+        "snippet": "计划与路径。"
+      },
+      {
+        "documentId": "doc-harvard",
+        "title": "哈佛家训-读书笔记",
+        "similarity": 0.56,
+        "snippet": "格言。"
+      }
     ]
   },
   {
@@ -129,7 +239,12 @@
     "expectTitles": [],
     "forbidTitles": ["deploy-checklist.md"],
     "hits": [
-      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.7, "snippet": "检查清单。"}
+      {
+        "documentId": "doc-deploy",
+        "title": "deploy-checklist.md",
+        "similarity": 0.7,
+        "snippet": "检查清单。"
+      }
     ]
   },
   {
@@ -141,7 +256,12 @@
     "expectTitles": [],
     "forbidTitles": ["不要挑战人性-读书笔记"],
     "hits": [
-      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.59, "snippet": "人性与实验。"}
+      {
+        "documentId": "doc-challenge",
+        "title": "不要挑战人性-读书笔记",
+        "similarity": 0.59,
+        "snippet": "人性与实验。"
+      }
     ]
   },
   {
@@ -153,7 +273,12 @@
     "expectTitles": ["corrective-limits.md"],
     "forbidTitles": [],
     "hits": [
-      {"documentId": "doc-corrective", "title": "corrective-limits.md", "similarity": 0.92, "snippet": "最多改写三次。"}
+      {
+        "documentId": "doc-corrective",
+        "title": "corrective-limits.md",
+        "similarity": 0.92,
+        "snippet": "最多改写三次。"
+      }
     ]
   },
   {
@@ -166,8 +291,20 @@
     "expectCardCount": 1,
     "forbidTitles": [],
     "hits": [
-      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.86, "snippet": "核对 DATABASE_URL 与密钥。", "chunkIndex": 0},
-      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.83, "snippet": "回滚先停写入再切上一版本。", "chunkIndex": 2}
+      {
+        "documentId": "doc-deploy",
+        "title": "deploy-checklist.md",
+        "similarity": 0.86,
+        "snippet": "核对 DATABASE_URL 与密钥。",
+        "chunkIndex": 0
+      },
+      {
+        "documentId": "doc-deploy",
+        "title": "deploy-checklist.md",
+        "similarity": 0.83,
+        "snippet": "回滚先停写入再切上一版本。",
+        "chunkIndex": 2
+      }
     ]
   },
   {
@@ -180,8 +317,18 @@
     "expectCardCount": 2,
     "forbidTitles": [],
     "hits": [
-      {"documentId": "doc-ingest", "title": "ingest-retry.md", "similarity": 0.89, "snippet": "失败后按次数重试。"},
-      {"documentId": "doc-es-open", "title": "es-fail-open.md", "similarity": 0.85, "snippet": "ES 失败则退回向量检索。"}
+      {
+        "documentId": "doc-ingest",
+        "title": "ingest-retry.md",
+        "similarity": 0.89,
+        "snippet": "失败后按次数重试。"
+      },
+      {
+        "documentId": "doc-es-open",
+        "title": "es-fail-open.md",
+        "similarity": 0.85,
+        "snippet": "ES 失败则退回向量检索。"
+      }
     ]
   },
   {
@@ -193,7 +340,12 @@
     "expectTitles": ["corpus-defaults.md"],
     "forbidTitles": [],
     "hits": [
-      {"documentId": "doc-corpus", "title": "corpus-defaults.md", "similarity": 0.94, "snippet": "默认检索 user corpus。"}
+      {
+        "documentId": "doc-corpus",
+        "title": "corpus-defaults.md",
+        "similarity": 0.94,
+        "snippet": "默认检索 user corpus。"
+      }
     ]
   },
   {
@@ -206,8 +358,18 @@
     "expectCardCount": 2,
     "forbidTitles": [],
     "hits": [
-      {"documentId": "doc-redis", "title": "redis-short-term.md", "similarity": 0.8, "snippet": "只存近期轮次。"},
-      {"documentId": "doc-mem0", "title": "mem0-write-policy.md", "similarity": 0.79, "snippet": "写入稳定事实。"}
+      {
+        "documentId": "doc-redis",
+        "title": "redis-short-term.md",
+        "similarity": 0.8,
+        "snippet": "只存近期轮次。"
+      },
+      {
+        "documentId": "doc-mem0",
+        "title": "mem0-write-policy.md",
+        "similarity": 0.79,
+        "snippet": "写入稳定事实。"
+      }
     ]
   },
   {
@@ -219,8 +381,18 @@
     "expectTitles": ["奥德赛计划书"],
     "forbidTitles": ["psychology-qa"],
     "hits": [
-      {"documentId": "doc-odyssey", "title": "奥德赛计划书", "similarity": 0.9, "snippet": "三条路径。"},
-      {"documentId": "doc-psy", "title": "psychology-qa", "similarity": 0.7, "snippet": "咨询话术。"}
+      {
+        "documentId": "doc-odyssey",
+        "title": "奥德赛计划书",
+        "similarity": 0.9,
+        "snippet": "三条路径。"
+      },
+      {
+        "documentId": "doc-psy",
+        "title": "psychology-qa",
+        "similarity": 0.7,
+        "snippet": "咨询话术。"
+      }
     ]
   },
   {
@@ -232,7 +404,12 @@
     "expectTitles": [],
     "forbidTitles": ["deploy-checklist.md"],
     "hits": [
-      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.42, "snippet": "部署检查。"}
+      {
+        "documentId": "doc-deploy",
+        "title": "deploy-checklist.md",
+        "similarity": 0.42,
+        "snippet": "部署检查。"
+      }
     ]
   },
   {
@@ -244,8 +421,18 @@
     "expectTitles": ["哈佛家训-读书笔记"],
     "forbidTitles": ["不要挑战人性-读书笔记"],
     "hits": [
-      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.77, "snippet": "不要盲目追随他人的成功模板。"},
-      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.63, "snippet": "不要与人性硬碰硬。"}
+      {
+        "documentId": "doc-harvard",
+        "title": "哈佛家训-读书笔记",
+        "similarity": 0.77,
+        "snippet": "不要盲目追随他人的成功模板。"
+      },
+      {
+        "documentId": "doc-challenge",
+        "title": "不要挑战人性-读书笔记",
+        "similarity": 0.63,
+        "snippet": "不要与人性硬碰硬。"
+      }
     ]
   },
   {
@@ -268,7 +455,12 @@
     "expectCardCount": 1,
     "forbidTitles": [],
     "hits": [
-      {"documentId": "doc-auth", "title": "api-auth-guide.md", "similarity": 0.9, "snippet": "Bearer 与成员校验。"}
+      {
+        "documentId": "doc-auth",
+        "title": "api-auth-guide.md",
+        "similarity": 0.9,
+        "snippet": "Bearer 与成员校验。"
+      }
     ]
   },
   {
@@ -280,16 +472,16 @@
     "expectTitles": ["note-10"],
     "forbidTitles": ["note-1"],
     "hits": [
-      {"documentId": "d1", "title": "note-1", "similarity": 0.99, "snippet": "1"},
-      {"documentId": "d2", "title": "note-2", "similarity": 0.98, "snippet": "2"},
-      {"documentId": "d3", "title": "note-3", "similarity": 0.97, "snippet": "3"},
-      {"documentId": "d4", "title": "note-4", "similarity": 0.96, "snippet": "4"},
-      {"documentId": "d5", "title": "note-5", "similarity": 0.95, "snippet": "5"},
-      {"documentId": "d6", "title": "note-6", "similarity": 0.94, "snippet": "6"},
-      {"documentId": "d7", "title": "note-7", "similarity": 0.93, "snippet": "7"},
-      {"documentId": "d8", "title": "note-8", "similarity": 0.92, "snippet": "8"},
-      {"documentId": "d9", "title": "note-9", "similarity": 0.91, "snippet": "9"},
-      {"documentId": "d10", "title": "note-10", "similarity": 0.9, "snippet": "10"}
+      { "documentId": "d1", "title": "note-1", "similarity": 0.99, "snippet": "1" },
+      { "documentId": "d2", "title": "note-2", "similarity": 0.98, "snippet": "2" },
+      { "documentId": "d3", "title": "note-3", "similarity": 0.97, "snippet": "3" },
+      { "documentId": "d4", "title": "note-4", "similarity": 0.96, "snippet": "4" },
+      { "documentId": "d5", "title": "note-5", "similarity": 0.95, "snippet": "5" },
+      { "documentId": "d6", "title": "note-6", "similarity": 0.94, "snippet": "6" },
+      { "documentId": "d7", "title": "note-7", "similarity": 0.93, "snippet": "7" },
+      { "documentId": "d8", "title": "note-8", "similarity": 0.92, "snippet": "8" },
+      { "documentId": "d9", "title": "note-9", "similarity": 0.91, "snippet": "9" },
+      { "documentId": "d10", "title": "note-10", "similarity": 0.9, "snippet": "10" }
     ]
   },
   {
@@ -301,8 +493,18 @@
     "expectTitles": ["checkpointer-postgres.md"],
     "forbidTitles": ["redis-short-term.md"],
     "hits": [
-      {"documentId": "doc-cp", "title": "checkpointer-postgres.md", "similarity": 0.88, "snippet": "默认使用 PostgresSaver。"},
-      {"documentId": "doc-redis", "title": "redis-short-term.md", "similarity": 0.6, "snippet": "Redis 只放短期轮次。"}
+      {
+        "documentId": "doc-cp",
+        "title": "checkpointer-postgres.md",
+        "similarity": 0.88,
+        "snippet": "默认使用 PostgresSaver。"
+      },
+      {
+        "documentId": "doc-redis",
+        "title": "redis-short-term.md",
+        "similarity": 0.6,
+        "snippet": "Redis 只放短期轮次。"
+      }
     ]
   },
   {
@@ -314,7 +516,12 @@
     "expectTitles": ["哈佛家训-读书笔记"],
     "forbidTitles": [],
     "hits": [
-      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.95, "snippet": "准则由自己决定。"}
+      {
+        "documentId": "doc-harvard",
+        "title": "哈佛家训-读书笔记",
+        "similarity": 0.95,
+        "snippet": "准则由自己决定。"
+      }
     ]
   }
 ]

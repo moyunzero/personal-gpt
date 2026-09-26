@@ -80,24 +80,22 @@ export default function PaperMenu({
       <button
         ref={triggerRef}
         type="button"
-        className={
-          chip
-            ? "model-chip"
-            : selected
-              ? "paper-menu-btn"
-              : "paper-menu-btn is-empty"
-        }
+        className={chip ? "model-chip" : selected ? "paper-menu-btn" : "paper-menu-btn is-empty"}
         disabled={disabled}
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={() => broadcast(open ? null : id)}
       >
         <span>{selected ? selected.title : placeholder}</span>
-        {chip ? null : <i className={open ? "paper-menu-caret open" : "paper-menu-caret"} aria-hidden="true" />}
+        {chip ? null : (
+          <i className={open ? "paper-menu-caret open" : "paper-menu-caret"} aria-hidden="true" />
+        )}
       </button>
       {open ? (
         <div
-          className={chip ? "model-menu" : placement === "up" ? "paper-menu-list up" : "paper-menu-list"}
+          className={
+            chip ? "model-menu" : placement === "up" ? "paper-menu-list up" : "paper-menu-list"
+          }
           role="listbox"
           aria-label={ariaLabel}
         >

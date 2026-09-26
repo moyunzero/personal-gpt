@@ -46,10 +46,15 @@ describe("toChunkRecords", () => {
   });
 
   it("writes metadata.page only when the page number is finite", () => {
-    const withPage = toChunkRecords(["alpha"], [[0.1]], {
-      workspaceId: "ws-1",
-      documentId: "doc-1",
-    }, [3]);
+    const withPage = toChunkRecords(
+      ["alpha"],
+      [[0.1]],
+      {
+        workspaceId: "ws-1",
+        documentId: "doc-1",
+      },
+      [3],
+    );
     expect(withPage[0]?.metadata).toEqual({ page: 3 });
 
     const without = toChunkRecords(["alpha"], [[0.1]], {
@@ -58,10 +63,15 @@ describe("toChunkRecords", () => {
     });
     expect(without[0]).not.toHaveProperty("metadata");
 
-    const missingPage = toChunkRecords(["alpha"], [[0.1]], {
-      workspaceId: "ws-1",
-      documentId: "doc-1",
-    }, [Number.NaN]);
+    const missingPage = toChunkRecords(
+      ["alpha"],
+      [[0.1]],
+      {
+        workspaceId: "ws-1",
+        documentId: "doc-1",
+      },
+      [Number.NaN],
+    );
     expect(missingPage[0]).not.toHaveProperty("metadata");
   });
 
@@ -97,15 +107,10 @@ describe("splitPdfPages", () => {
 
   it("splits on an outline title and keeps a short table together", async () => {
     const { splitPdfPages } = await import("./split");
-    const headed = await splitPdfPages(
-      [{ num: 4, text: "引言\n正文\n第二章\n后文" }],
-      ["第二章"],
-    );
+    const headed = await splitPdfPages([{ num: 4, text: "引言\n正文\n第二章\n后文" }], ["第二章"]);
     expect(headed[1]?.text.startsWith("第二章")).toBe(true);
 
-    const table = await splitPdfPages([
-      { num: 1, text: "A\t1\t2\nB\t3\t4" },
-    ]);
+    const table = await splitPdfPages([{ num: 1, text: "A\t1\t2\nB\t3\t4" }]);
     expect(table).toHaveLength(1);
     expect(table[0]?.text).toContain("\t");
   });

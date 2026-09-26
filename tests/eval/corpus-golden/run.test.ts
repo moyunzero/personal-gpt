@@ -144,7 +144,9 @@ describe("corpus golden set", () => {
         expect(body, piece.title).toBeTruthy();
         if (LOCAL_PDF[piece.title] && existsSync(join(uploadsDir, LOCAL_PDF[piece.title]))) {
           const { PDFParse } = await import("pdf-parse");
-          const parser = new PDFParse({ data: readFileSync(join(uploadsDir, LOCAL_PDF[piece.title])) });
+          const parser = new PDFParse({
+            data: readFileSync(join(uploadsDir, LOCAL_PDF[piece.title])),
+          });
           const parsed = await parser.getText();
           await parser.destroy();
           expect(parsed.text).toContain(piece.phrase);

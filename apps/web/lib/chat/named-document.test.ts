@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { focusTableRow, matchNamedDocument, matchNamedDocuments, normalizeDocLabel, pageAsked } from "./named-document";
+import {
+  focusTableRow,
+  matchNamedDocument,
+  matchNamedDocuments,
+  normalizeDocLabel,
+  pageAsked,
+} from "./named-document";
 
 const docs = [
   { id: "pdf-1mb", title: "sample-pdf-1mb" },
