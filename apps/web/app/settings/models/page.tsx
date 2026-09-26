@@ -40,21 +40,31 @@ export default function ModelsSettingsPage() {
     detail: tierText(model.modelId),
   }));
 
-  async function reload() {
+  async function loadModels() {
     const res = await fetch("/api/models");
-    if (!res.ok) return;
-    const data = (await res.json()) as {
+    if (!res.ok) return null;
+    return (await res.json()) as {
       models: ModelRow[];
       chatModelId: string;
       agentModelId: string;
     };
+  }
+
+  function applyModels(data: { models: ModelRow[]; chatModelId: string; agentModelId: string }) {
     setModels(data.models);
     setChatModelId(data.chatModelId);
     setAgentModelId(data.agentModelId);
   }
 
   useEffect(() => {
-    void reload();
+    let cancelled = false;
+    void loadModels().then((data) => {
+      if (!data || cancelled) return;
+      applyModels(data);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function chooseVendor(next: string) {
@@ -84,7 +94,8 @@ export default function ModelsSettingsPage() {
     }
     setApiKey("");
     setCustomId("");
-    await reload();
+    const loaded = await loadModels();
+    if (loaded) applyModels(loaded);
   }
 
   async function select(kind: "chat" | "agent", next: string) {
