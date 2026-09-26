@@ -33,6 +33,8 @@
     "test:regression:phase-4": "vitest run tests/regression/phase-4",
     "eval:phase-3": "vitest run tests/eval/phase-3/smoke.test.ts",
     "eval:phase-3:nightly": "vitest run tests/eval/phase-3",
+    "eval:citations": "vitest run tests/eval/citation-alignment/run.test.ts",
+    "eval:corpus": "vitest run tests/eval/corpus-golden/run.test.ts",
     "acceptance:phase-1": "node tests/acceptance/phase-1/run.mjs && prettier --write tests/acceptance/phase-1/RESULT.json",
     "acceptance:phase-2-smoke": "node tests/acceptance/phase-2-agent/smoke-sse.mjs && prettier --write tests/acceptance/phase-2-agent/SMOKE-RESULT.json tests/acceptance/phase-2-agent/checks-kb-hit.json",
     "vercel-build": "yarn workspace @personal-gpt/shared build && yarn workspace web build"

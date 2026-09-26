@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 
 import { resolveRetrievalContext } from "@/lib/auth/acl-resolver";
 import { requireSession } from "@/lib/auth/session";
+import { getMemberRole } from "@/lib/auth/workspace.service";
+import { isKnownProviderBaseURL, vendorById } from "@personal-gpt/shared/ai/model-presets";
+
 import {
   addWorkspaceModel,
   listWorkspaceModels,
   setWorkspaceModelSelection,
 } from "@/lib/models/workspace-models";
+import { assertProviderModel } from "@/lib/models/verify-provider-model";
 
 export const runtime = "nodejs";
 
@@ -22,15 +26,37 @@ export async function POST(req: Request) {
   const authResult = await requireSession();
   if (authResult.error) return authResult.error;
   const ctx = await resolveRetrievalContext(authResult.session);
-  const body = (await req.json()) as { modelId?: unknown; apiKey?: unknown };
-  if (typeof body.modelId !== "string" || typeof body.apiKey !== "string") {
-    return NextResponse.json({ error: "需要模型名称和 API key" }, { status: 400 });
+  const role = await getMemberRole(authResult.session.user.id, ctx.workspaceId);
+  if (role !== "owner" && role !== "editor") {
+    return NextResponse.json({ error: "无权管理模型" }, { status: 403 });
+  }
+  const body = (await req.json()) as {
+    vendorId?: unknown;
+    modelId?: unknown;
+    apiKey?: unknown;
+  };
+  if (
+    typeof body.vendorId !== "string" ||
+    typeof body.modelId !== "string" ||
+    typeof body.apiKey !== "string"
+  ) {
+    return NextResponse.json({ error: "需要平台、模型名称和 API key" }, { status: 400 });
+  }
+  const vendor = vendorById(body.vendorId);
+  if (!vendor || !isKnownProviderBaseURL(vendor.baseURL)) {
+    return NextResponse.json({ error: "未知平台" }, { status: 400 });
   }
   try {
+    await assertProviderModel({
+      baseURL: vendor.baseURL,
+      apiKey: body.apiKey.trim(),
+      modelId: body.modelId.trim(),
+    });
     const model = await addWorkspaceModel({
       workspaceId: ctx.workspaceId,
       modelId: body.modelId,
       apiKey: body.apiKey,
+      baseURL: vendor.baseURL,
     });
     return NextResponse.json({ model });
   } catch (error) {
@@ -43,6 +69,10 @@ export async function PATCH(req: Request) {
   const authResult = await requireSession();
   if (authResult.error) return authResult.error;
   const ctx = await resolveRetrievalContext(authResult.session);
+  const role = await getMemberRole(authResult.session.user.id, ctx.workspaceId);
+  if (role !== "owner" && role !== "editor") {
+    return NextResponse.json({ error: "无权管理模型" }, { status: 403 });
+  }
   const body = (await req.json()) as { chatModelId?: unknown; agentModelId?: unknown };
   try {
     await setWorkspaceModelSelection({

@@ -18,7 +18,8 @@ import { parseCorpus } from "@/lib/chat/corpus-filters";
 import { loadMemoryContextBlock, parseUserKey, persistTurnMemory } from "@/lib/chat/memory-context";
 import { formatMessages, type InputMessage } from "@/lib/chat/messages";
 import { buildSystemPrompt } from "@/lib/chat/prompt";
-import { decideQueryRoute } from "@/lib/chat/query-router";
+import { decideQueryRoute, type QueryRouteDecision } from "@/lib/chat/query-router";
+import { findNamedReadyDocuments, pageAsked } from "@/lib/chat/named-document";
 import { getRelevantContext } from "@/lib/chat/retrieve";
 import { createChatStream } from "@/lib/chat/stream";
 import "@/lib/env";
@@ -243,11 +244,27 @@ export async function POST(req: Request) {
           });
         }
 
-        const routeDecision = await decideQueryRoute(lastContent, {
-          workspaceId: retrievalCtx.workspaceId,
-          requestId,
-          corpus,
-        });
+        const namedDocuments =
+          !isGuest && retrievalCtx.allowedDocumentIds.length > 0
+            ? await findNamedReadyDocuments(
+                retrievalCtx.workspaceId,
+                retrievalCtx.allowedDocumentIds,
+                lastContent,
+              )
+            : [];
+        const askedPage = pageAsked(lastContent);
+
+        const routeDecision: QueryRouteDecision = namedDocuments.length > 0
+          ? {
+              route: "retrieve",
+              reason: `named_document:${namedDocuments.map((doc) => doc.id).join(",")}`,
+              fastPath: true,
+            }
+          : await decideQueryRoute(lastContent, {
+              workspaceId: retrievalCtx.workspaceId,
+              requestId,
+              corpus,
+            });
         log.debug("query route", {
           corpus,
           guest: isGuest,
@@ -267,7 +284,11 @@ export async function POST(req: Request) {
             retrievalCtx.workspaceId,
             {
               corpus,
-              documentIds: retrievalCtx.allowedDocumentIds,
+              documentIds: namedDocuments.length
+                ? namedDocuments.map((doc) => doc.id)
+                : retrievalCtx.allowedDocumentIds,
+              namedDocument: namedDocuments.length > 0,
+              ...(askedPage != null ? { page: askedPage } : {}),
             },
           );
         }
@@ -347,19 +368,13 @@ export async function POST(req: Request) {
           ? `${systemPromptBase}${graphBlock}${guestHint}\n\n${memoryBlock}`
           : `${systemPromptBase}${graphBlock}${guestHint}`;
 
-        if (chatSession) {
-          try {
-            await persistUserMessage({ session: chatSession, userContent: lastContent });
-          } catch (err) {
-            log.warn("persistUserMessage failed (ignored)", { err });
-          }
-        }
-
         const requestedModel = typeof body.model === "string" ? body.model.trim() : "";
         let modelIds: string[] | undefined;
         let credentialSource: NodeJS.ProcessEnv | undefined;
-        if (requestedModel && !isGuest) {
-          const saved = await lookupWorkspaceModelKey(retrievalCtx.workspaceId, requestedModel);
+        if (requestedModel) {
+          const saved = isGuest
+            ? null
+            : await lookupWorkspaceModelKey(retrievalCtx.workspaceId, requestedModel);
           if (!saved) {
             return new Response(JSON.stringify({ error: "模型未添加" }), {
               status: 400,
@@ -367,11 +382,20 @@ export async function POST(req: Request) {
             });
           }
           modelIds = [saved.modelId];
-          if (saved.apiKey) {
+          if (saved.apiKey && saved.baseURL) {
             credentialSource = {
               ...process.env,
               GATEWAY_API_KEY: saved.apiKey,
+              GATEWAY_BASE_URL: saved.baseURL,
             };
+          }
+        }
+
+        if (chatSession) {
+          try {
+            await persistUserMessage({ session: chatSession, userContent: lastContent });
+          } catch (err) {
+            log.warn("persistUserMessage failed (ignored)", { err });
           }
         }
 

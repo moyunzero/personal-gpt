@@ -179,7 +179,7 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
     expect(readyUpdate?.[1]?.chunkCount).toBe(chunks.length);
   });
 
-  it("marks document failed when graph-extract throws (D-09)", async () => {
+  it("keeps the document ready when graph-extract throws", async () => {
     graphExtractMock.mockRejectedValue(new Error("neo4j unavailable"));
 
     const job = {
@@ -194,15 +194,12 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
       updateProgress: jobProgressMock,
     };
 
-    await expect(processor.process(job as never)).rejects.toThrow("neo4j unavailable");
+    await processor.process(job as never);
 
-    expect(deleteDocumentMock).toHaveBeenCalledWith(workspaceId, documentId, "user", {
-      dataSource: expect.anything(),
-    });
-    const failedDocUpdate = documentUpdateMock.mock.calls.find(
-      (call) => call[1]?.status === "failed",
-    );
-    expect(failedDocUpdate).toBeDefined();
-    expect(documentUpdateMock.mock.calls.some((call) => call[1]?.status === "ready")).toBe(false);
+    expect(deleteDocumentMock).not.toHaveBeenCalled();
+    const readyUpdate = documentUpdateMock.mock.calls.find((call) => call[1]?.status === "ready");
+    expect(readyUpdate?.[1]?.chunkCount).toBe(chunks.length);
+    expect(documentUpdateMock.mock.calls.some((call) => call[1]?.status === "failed")).toBe(false);
+    expect(jobProgressMock.mock.calls.map((call) => call[0])).toEqual([0, 25, 50, 75, 90, 100]);
   });
 });

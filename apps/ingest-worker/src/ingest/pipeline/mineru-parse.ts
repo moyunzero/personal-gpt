@@ -9,6 +9,11 @@ export const PDF_PARSE_FAILED = "这份 PDF 没有解析出正文。请确认文
 const APPLY_URL = "https://mineru.net/api/v4/file-urls/batch";
 const POLL_LIMIT_MS = 5 * 60 * 1000;
 const POLL_INTERVAL_MS = 2000;
+const REQUEST_TIMEOUT_MS = 60_000;
+
+function withRequestTimeout(init: RequestInit = {}): RequestInit {
+  return { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) };
+}
 
 type FetchLike = typeof fetch;
 
@@ -47,14 +52,14 @@ async function requestMineruMarkdown(
     model_version: "pipeline",
     enable_table: true,
   });
-  const applied = await fetchImpl(APPLY_URL, {
+  const applied = await fetchImpl(APPLY_URL, withRequestTimeout({
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body,
-  });
+  }));
   const appliedJson = (await applied.json()) as {
     code?: number;
     data?: { batch_id?: string; file_urls?: string[] };
@@ -64,7 +69,10 @@ async function requestMineruMarkdown(
   if (!applied.ok || appliedJson.code !== 0 || !uploadUrl || !batchId) {
     throw new Error(PDF_PARSE_FAILED);
   }
-  const uploaded = await fetchImpl(uploadUrl, { method: "PUT", body: new Uint8Array(bytes) });
+  const uploaded = await fetchImpl(
+    uploadUrl,
+    withRequestTimeout({ method: "PUT", body: new Uint8Array(bytes) }),
+  );
   if (!uploaded.ok) {
     throw new Error(PDF_PARSE_FAILED);
   }
@@ -124,9 +132,10 @@ function mineruPdfName(filePath: string): string {
 async function pollMarkdown(batchId: string, token: string, fetchImpl: FetchLike): Promise<string> {
   const started = Date.now();
   while (Date.now() - started < POLL_LIMIT_MS) {
-    const response = await fetchImpl(`https://mineru.net/api/v4/extract-results/batch/${batchId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetchImpl(
+      `https://mineru.net/api/v4/extract-results/batch/${batchId}`,
+      withRequestTimeout({ headers: { Authorization: `Bearer ${token}` } }),
+    );
     const json = (await response.json()) as {
       code?: number;
       data?: { extract_result?: MineruResult | MineruResult[] };
@@ -140,7 +149,7 @@ async function pollMarkdown(batchId: string, token: string, fetchImpl: FetchLike
     }
     if (result?.state === "done") {
       if (!result.full_zip_url) throw new Error(PDF_PARSE_FAILED);
-      const zip = await fetchImpl(result.full_zip_url);
+      const zip = await fetchImpl(result.full_zip_url, withRequestTimeout());
       if (!zip.ok) throw new Error(PDF_PARSE_FAILED);
       const markdown = readZipEntry(Buffer.from(await zip.arrayBuffer()), "full.md");
       if (markdown == null) throw new Error(PDF_PARSE_FAILED);

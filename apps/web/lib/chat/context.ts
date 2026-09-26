@@ -45,6 +45,7 @@ export function mapDocsToCitations(docs: RetrievedDoc[]): Citation[] {
     source: doc.source,
     category: doc.category,
     chunkIndex: doc.chunkIndex,
+    sourceNumber: index + 1,
     ...(typeof doc.page === "number" && Number.isFinite(doc.page) ? { page: doc.page } : {}),
   }));
 }

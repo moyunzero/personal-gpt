@@ -34,7 +34,7 @@ export function formatKbAnswerFromCitations(citations: Citation[], _userText: st
 
   const indexed = citations.map((citation, index) => ({
     citation,
-    sourceNumber: index + 1,
+    sourceNumber: citation.sourceNumber ?? index + 1,
   }));
   const sorted = [...indexed].sort((a, b) => b.citation.similarity - a.citation.similarity);
   const lines = ["根据知识库检索结果：", ""];

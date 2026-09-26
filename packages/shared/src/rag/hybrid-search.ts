@@ -18,6 +18,8 @@ export type HybridSearchParams = {
   /** Default "user" (D-27) — seed must be explicit */
   corpus?: Corpus;
   limit?: number;
+  /** When set, only chunks whose metadata.page equals this number. */
+  page?: number;
 };
 
 export type HybridSearchDeps = {
@@ -81,6 +83,7 @@ async function hybridSearchOnce(
     vector,
     limit: candidateLimit,
     documentIds: params.documentIds,
+    ...(params.page != null ? { filter: { page: { $eq: params.page } } } : {}),
   });
 
   const esPromise = esSearch({
@@ -89,6 +92,7 @@ async function hybridSearchOnce(
     corpus,
     limit: candidateLimit,
     documentIds: params.documentIds,
+    ...(params.page != null ? { page: params.page } : {}),
   }).catch((err: unknown) => {
     logWarn("es unavailable; vector-only", { err });
     return [] as RetrievedChunk[];
@@ -98,6 +102,9 @@ async function hybridSearchOnce(
 
   let fused = reciprocalRankFusion([esHits, vectorHits]);
   fused = filterByDocumentIds(fused, params.documentIds);
+  if (params.page != null) {
+    fused = fused.filter((hit) => hit.page === params.page);
+  }
 
   if (isRerankerEnabled() && fused.length > 0) {
     fused = await rerank(params.query, fused, limit);

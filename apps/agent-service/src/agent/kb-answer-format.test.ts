@@ -80,4 +80,22 @@ describe("formatKbAnswerFromCitations", () => {
   it("returns empty for no citations", () => {
     expect(formatKbAnswerFromCitations([], "q")).toBe("");
   });
+
+  it("prints the citation sourceNumber instead of the sorted position", () => {
+    const out = formatKbAnswerFromCitations(
+      [
+        {
+          documentId: "doc-c",
+          title: "第三条",
+          source: "c.md",
+          similarity: 0.9,
+          snippet: "已分配的序号保持不变。",
+          chunkIndex: 0,
+          sourceNumber: 3,
+        },
+      ],
+      "q",
+    );
+    expect(out).toMatch(/\[S3\] 第三条/);
+  });
 });

@@ -139,6 +139,7 @@ export async function POST(req: Request) {
 
       parsedBody.thread_id = rawThread;
       delete parsedBody.llmApiKey;
+      delete parsedBody.llmBaseUrl;
       if (typeof parsedBody.model === "string" && parsedBody.model.trim()) {
         const saved = await lookupWorkspaceModelKey(retrievalCtx.workspaceId, parsedBody.model);
         if (!saved) {
@@ -147,6 +148,7 @@ export async function POST(req: Request) {
         }
         parsedBody.model = saved.modelId;
         if (saved.apiKey) parsedBody.llmApiKey = saved.apiKey;
+        if (saved.baseURL) parsedBody.llmBaseUrl = saved.baseURL;
       } else {
         delete parsedBody.model;
       }

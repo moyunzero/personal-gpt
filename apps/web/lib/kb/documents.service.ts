@@ -54,7 +54,8 @@ export class UploadValidationError extends Error {
       | "file_too_large"
       | "empty_file"
       | "storage_unavailable"
-      | "untrusted_url",
+      | "untrusted_url"
+      | "queue_unavailable",
     message: string,
   ) {
     super(message);
@@ -220,7 +221,36 @@ async function enqueueIngestJob(
   });
 
   const queue = getIngestQueue();
-  const bullJob = await queue.add(`ingest-${document.id}`, payload);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let gaveUp = false;
+  let bullJob;
+  try {
+    bullJob = await Promise.race([
+      queue.add(`ingest-${document.id}`, payload).then((job) => {
+        if (gaveUp) {
+          void job.remove().catch(() => undefined);
+        }
+        return job;
+      }),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          gaveUp = true;
+          reject(new Error("导入队列没有响应，请确认 Redis 已启动"));
+        }, 8000);
+      }),
+    ]);
+  } catch (error) {
+    gaveUp = true;
+    const message = error instanceof Error ? error.message : "导入队列不可用";
+    await jobRepo.update({ id }, { status: "failed", error: message });
+    await ds.getRepository(DocumentEntity).update(
+      { id: document.id, workspaceId },
+      { status: "failed" },
+    );
+    throw new UploadValidationError("queue_unavailable", message);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
   await jobRepo.update({ id }, { bullJobId: String(bullJob.id) });
 
   return {

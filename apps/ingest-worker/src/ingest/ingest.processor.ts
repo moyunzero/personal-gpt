@@ -119,12 +119,19 @@ export class IngestProcessor extends WorkerHost {
       await this.updateIngestJob(ingestJob?.id, { progress: 90 });
 
       if (isGraphIngestEnabled()) {
-        await traceIngestStep("graph-extract", traceCtx, () =>
-          extractAndUpsertGraph(
-            { workspaceId, documentId, chunks },
-            { dataSource: this.dataSource },
-          ),
-        );
+        try {
+          await traceIngestStep("graph-extract", traceCtx, () =>
+            extractAndUpsertGraph(
+              { workspaceId, documentId, chunks },
+              { dataSource: this.dataSource },
+            ),
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          this.logger.warn(
+            `Skip graph-extract for ${documentId} after failure; vector ingest stays ready: ${message}`,
+          );
+        }
       } else {
         this.logger.log(
           `Skip graph-extract for ${documentId} (ENABLE_GRAPH_RAG!=true; vector ingest only)`,

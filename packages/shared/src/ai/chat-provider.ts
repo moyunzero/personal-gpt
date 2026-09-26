@@ -116,6 +116,29 @@ export function chatModel(modelId: string, source: NodeJS.ProcessEnv = process.e
   return getCompatibleProvider(source).chatModel(modelId);
 }
 
+export type GraphModelEndpoint = {
+  modelId: string;
+  baseURL: string;
+  apiKey: string;
+  name?: string;
+};
+
+/**
+ * 图谱抽取用的兼容端点。structuredOutputs 为 true 时才把 JSON schema 发给模型。
+ * 不走聊天单例，避免把用户密钥写进环境模型缓存。
+ */
+export function graphLanguageModel(
+  endpoint: GraphModelEndpoint,
+  supportsStructuredOutputs: boolean,
+): LanguageModel {
+  return createOpenAICompatible({
+    name: endpoint.name?.trim() || "graph",
+    baseURL: endpoint.baseURL,
+    apiKey: endpoint.apiKey,
+    supportsStructuredOutputs,
+  }).chatModel(endpoint.modelId);
+}
+
 /** @deprecated 使用 chatModel；保留别名避免现有 import 断裂 */
 export function groqChatModel(
   modelId: string,

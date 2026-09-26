@@ -47,7 +47,6 @@ function CitationCard({ group }: { group: CitationDocumentGroup }) {
       >
         <span className="citation-card-title">{group.title}</span>
         <span className="citation-card-meta">
-          {page != null ? <span>第 {page} 页</span> : null}
           <span className="citation-card-similarity">{formatSimilarity(group.similarity)}</span>
           <svg
             className={`citation-card-chevron${expanded ? " citation-card-chevron-open" : ""}`}
@@ -65,6 +64,14 @@ function CitationCard({ group }: { group: CitationDocumentGroup }) {
           </svg>
         </span>
       </button>
+      <a
+        className="citation-card-meta"
+        href={`/api/kb/documents/${group.documentId}/file${page != null ? `#page=${page}` : ""}`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        {page != null ? `第 ${page} 页 · 打开原文` : "打开原文"}
+      </a>
       {expanded ? (
         <div id={panelId}>
           {group.snippets.map((item) => (

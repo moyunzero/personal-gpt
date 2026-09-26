@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import CitationCards from "./CitationCards";
 
-function metaMarkup(pages: Array<number | undefined>): string {
-  const html = renderToStaticMarkup(
+function markup(pages: Array<number | undefined>): string {
+  return renderToStaticMarkup(
     createElement(CitationCards, {
       citations: pages.map((page, index) => ({
         documentId: "doc-a",
@@ -16,17 +16,16 @@ function metaMarkup(pages: Array<number | undefined>): string {
       })),
     }),
   );
-  const start = html.indexOf("citation-card-meta");
-  const end = html.indexOf("citation-card-similarity");
-  return html.slice(start, end);
 }
 
 describe("CitationCards page", () => {
-  it("同一文档两段 page 都是 4 时 citation-card-meta 含第 4 页", () => {
-    expect(metaMarkup([4, 4])).toContain("第 4 页");
+  it("同一文档两段 page 都是 4 时打开原文链接含第 4 页", () => {
+    const html = markup([4, 4]);
+    expect(html).toContain("第 4 页");
+    expect(html).toContain("#page=4");
   });
 
-  it("同一文档有一段没有 page 时 citation-card-meta 不含第 4 页", () => {
-    expect(metaMarkup([4, undefined])).not.toContain("第 4 页");
+  it("同一文档有一段没有 page 时不显示第 4 页", () => {
+    expect(markup([4, undefined])).not.toContain("第 4 页");
   });
 });

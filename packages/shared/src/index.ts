@@ -7,7 +7,11 @@ export * from "./ai/rag-helper";
 export * from "./constants/workspace";
 export * from "./constants/queue";
 export * from "./types/kb";
-export { filterCitationsBySourceMarkers } from "./kb/used-citations";
+export {
+  filterCitationsBySourceMarkers,
+  SourceMarkerStripper,
+  stripSourceMarkers,
+} from "./kb/used-citations";
 export * from "./types/agent";
 export * from "./schemas/env";
 export * from "./utils/ingest";
@@ -97,8 +101,10 @@ export { normalizeEntityName } from "./graph/normalize-entity";
 export {
   extractGraphFromChunk,
   extractGraphFromChunks,
+  workspaceGraphEndpoint,
   type ExtractedEntity,
   type ExtractedRelation,
+  type GraphModelEndpoint,
 } from "./graph/extract-entities";
 export {
   upsertDocumentGraph,

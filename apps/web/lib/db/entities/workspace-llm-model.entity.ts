@@ -16,6 +16,10 @@ export class WorkspaceLlmModelEntity {
   @Column({ name: "api_key", type: "varchar", default: "" })
   apiKey!: string;
 
+  /** OpenAI-compatible base URL for this saved model. Not a secret. */
+  @Column({ name: "base_url", type: "varchar", default: "" })
+  baseUrl!: string;
+
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date;
 }

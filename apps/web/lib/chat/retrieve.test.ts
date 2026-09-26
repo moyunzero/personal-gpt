@@ -117,4 +117,39 @@ describe("getRelevantContext", () => {
     expect(result.blocks).not.toContain("[S2]");
     expect(result.blocks).not.toContain("低相关段落");
   });
+
+  it("keeps a named document's opening chunks below the similarity gate", async () => {
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "later page lorem",
+        similarity: 0.2,
+        source: "sample-pdf-1mb",
+        title: "sample-pdf-1mb",
+        documentId: "pdf-1mb",
+        chunkIndex: 4,
+      },
+      {
+        text: "opening Lorem ipsum",
+        similarity: 0.11,
+        source: "sample-pdf-1mb",
+        title: "sample-pdf-1mb",
+        documentId: "pdf-1mb",
+        chunkIndex: 0,
+      },
+    ]);
+
+    const result = await getRelevantContext("sample-pdf-1mb文件讲的什么", "req-6", undefined, {
+      namedDocument: true,
+      documentIds: ["pdf-1mb"],
+    });
+
+    expect(hybridSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ documentIds: ["pdf-1mb"] }),
+      expect.any(Object),
+    );
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.blocks).toContain("Lorem");
+    expect(result.blocks.indexOf("opening")).toBeLessThan(result.blocks.indexOf("later"));
+  });
 });

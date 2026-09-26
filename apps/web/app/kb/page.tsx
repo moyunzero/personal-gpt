@@ -7,6 +7,7 @@ import AppShell from "../components/AppShell";
 import KbCategoryCombobox from "../components/KbCategoryCombobox";
 import KbDocumentList, { type KbDocumentItem } from "../components/KbDocumentList";
 import KbUploadZone from "../components/KbUploadZone";
+import PaperMenu from "../components/PaperMenu";
 
 type ListResponse = {
   items: KbDocumentItem[];
@@ -107,18 +108,20 @@ export default function KbPage() {
                 onChange={(e) => setTags(e.target.value)}
                 aria-label="按标签筛选"
               />
-              <select
-                className="kb-field-input kb-toolbar-select"
-                aria-label="按状态筛选"
+              <PaperMenu
+                className="kb-toolbar-filter"
+                ariaLabel="按状态筛选"
+                placeholder="全部状态"
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="">全部状态</option>
-                <option value="pending">等待中</option>
-                <option value="processing">处理中</option>
-                <option value="ready">就绪</option>
-                <option value="failed">失败</option>
-              </select>
+                onChange={setStatus}
+                options={[
+                  { value: "", title: "全部状态" },
+                  { value: "pending", title: "等待中" },
+                  { value: "processing", title: "处理中" },
+                  { value: "ready", title: "就绪" },
+                  { value: "failed", title: "失败" },
+                ]}
+              />
             </div>
           </section>
 

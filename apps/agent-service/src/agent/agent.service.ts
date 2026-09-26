@@ -11,7 +11,12 @@ import type { Response } from "express";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import type { Citation } from "@personal-gpt/shared";
-import { filterCitationsBySourceMarkers, loadMemoryContextBlock, persistTurnMemory } from "@personal-gpt/shared";
+import {
+  filterCitationsBySourceMarkers,
+  loadMemoryContextBlock,
+  persistTurnMemory,
+  stripSourceMarkers,
+} from "@personal-gpt/shared";
 import { z } from "zod";
 
 import { raceExternalCall } from "./race-external-call";
@@ -58,6 +63,7 @@ import { readIntentRouterConfig } from "@personal-gpt/shared/routing";
 import type { IntentPlan, RouterLayer } from "@personal-gpt/shared/routing";
 import type { AgentExecutionRoute } from "@personal-gpt/shared";
 import { resolveAgentModelSide } from "@personal-gpt/shared/ai/chat-model-config";
+import { isKnownProviderBaseURL, presetForModel } from "@personal-gpt/shared/ai/model-presets";
 import { createChatModel } from "../providers/chat-model.provider";
 import {
   clearWebSearchCallCount,
@@ -81,9 +87,15 @@ import {
 export function parseKbCitationsFromToolText(text: string): Citation[] {
   if (!/\[(?:citation\s+\d+|S\d+)\]/i.test(text) || !text.includes("documentId:")) return [];
   const minSim = resolveKbMinSimilarity();
-  const blocks = text.split(/\[(?:citation\s+\d+|S\d+)\]/i).slice(1);
+  const headerRe = /\[(?:citation\s+(\d+)|S(\d+))\]/gi;
+  const headers = [...text.matchAll(headerRe)];
   const out: Citation[] = [];
-  for (const block of blocks) {
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i]!;
+    const start = (header.index ?? 0) + header[0].length;
+    const end = i + 1 < headers.length ? (headers[i + 1]!.index ?? text.length) : text.length;
+    const block = text.slice(start, end);
+    const ordinal = Number(header[1] ?? header[2]);
     const title = block.match(/title:\s*(.+)/i)?.[1]?.trim();
     const source = block.match(/source:\s*(.+)/i)?.[1]?.trim();
     const documentId = block.match(/documentId:\s*(.+)/i)?.[1]?.trim();
@@ -102,6 +114,7 @@ export function parseKbCitationsFromToolText(text: string): Citation[] {
       snippet: snippet ?? "",
       similarity,
       chunkIndex: chunkRaw ? Number(chunkRaw) : undefined,
+      ...(Number.isInteger(ordinal) && ordinal >= 1 ? { sourceNumber: ordinal } : {}),
       ...(typeof page === "number" && Number.isFinite(page) ? { page } : {}),
     });
   }
@@ -191,7 +204,7 @@ function collectCitationsFromUpdate(
       }
       for (const c of parseKbCitationsFromToolText(content)) {
         const key = `${c.documentId}:${c.chunkIndex ?? 0}`;
-        bag.set(key, c);
+        if (!bag.has(key)) bag.set(key, c);
         if (tracker) tracker.kbNoRelevantHit = false;
       }
     }
@@ -359,6 +372,7 @@ export type ParsedAgentChat = {
   userKey: string;
   model?: string;
   llmApiKey?: string;
+  llmBaseUrl?: string;
 };
 
 const AgentUiMessageSchema = z
@@ -374,6 +388,7 @@ const AgentChatBodySchema = z.object({
   userKey: z.string().optional().nullable(),
   model: z.string().max(128).optional(),
   llmApiKey: z.string().max(512).optional(),
+  llmBaseUrl: z.string().max(256).optional(),
 });
 
 const SAFE_THREAD_ID = /^[A-Za-z0-9_.:-]{1,128}$/;
@@ -385,7 +400,7 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
     throw new InvalidAgentBodyError("Invalid body: messages must be an array of message objects");
   }
 
-  const { messages, thread_id, workspaceId, userKey, model, llmApiKey } = result.data;
+  const { messages, thread_id, workspaceId, userKey, model, llmApiKey, llmBaseUrl } = result.data;
   const trimmedThread = typeof thread_id === "string" ? thread_id.trim() : "";
   if (trimmedThread && !SAFE_THREAD_ID.test(trimmedThread)) {
     throw new InvalidAgentBodyError(
@@ -405,6 +420,7 @@ export function parseAgentChatBody(body: unknown): ParsedAgentChat {
     userKey: userKeyRaw,
     ...(model?.trim() ? { model: model.trim() } : {}),
     ...(llmApiKey ? { llmApiKey } : {}),
+    ...(llmBaseUrl && isKnownProviderBaseURL(llmBaseUrl) ? { llmBaseUrl } : {}),
   };
 }
 
@@ -1089,7 +1105,7 @@ function buildInitialProgress(
 /** Supervisor 交接话术，不是终稿 — 见 isHandoffNoiseText */
 
 /** 按完整 text 段丢弃交接噪音，并消毒 KB 技术标记（验收：无 KB_SEARCH_STATUS 外泄） */
-function dropHandoffNoiseText(): TransformStream<any, any> {
+function dropHandoffNoiseText(onKeptRaw?: (text: string) => void): TransformStream<any, any> {
   let collecting = false;
   let buf: any[] = [];
   let text = "";
@@ -1112,6 +1128,7 @@ function dropHandoffNoiseText(): TransformStream<any, any> {
         buf.push(chunk);
         collecting = false;
         if (!isHandoffNoiseText(text) && !isToolCallLeakText(text)) {
+          onKeptRaw?.(text);
           const cleaned = sanitizeUserFacingAgentText(text);
           if (cleaned.trim()) {
             const start = buf[0] as { type?: string; id?: string };
@@ -1136,6 +1153,7 @@ function dropHandoffNoiseText(): TransformStream<any, any> {
       if (collecting) {
         collecting = false;
         if (!isHandoffNoiseText(text) && !isToolCallLeakText(text)) {
+          onKeptRaw?.(text);
           const cleaned = sanitizeUserFacingAgentText(text);
           if (cleaned.trim()) {
             const start = buf[0] as { type?: string; id?: string };
@@ -1387,12 +1405,20 @@ export class AgentService {
               const required = requiredEarly as SpecialistName[];
               const hideUntilEditor =
                 executionMode !== "single_specialist" && required.includes("editor");
+              const presetBase =
+                (parsed.llmBaseUrl && isKnownProviderBaseURL(parsed.llmBaseUrl)
+                  ? parsed.llmBaseUrl
+                  : undefined) ?? presetForModel(parsed.model ?? "")?.baseURL;
               const llm =
                 parsed.model && parsed.model.length > 0
                   ? createChatModel(
                       { model: parsed.model },
-                      parsed.llmApiKey
-                        ? { ...process.env, GATEWAY_API_KEY: parsed.llmApiKey }
+                      parsed.llmApiKey && presetBase
+                        ? {
+                            ...process.env,
+                            GATEWAY_API_KEY: parsed.llmApiKey,
+                            GATEWAY_BASE_URL: presetBase,
+                          }
                         : process.env,
                     )
                   : undefined;
@@ -1432,6 +1458,7 @@ export class AgentService {
               const textGate = { open: !hideUntilEditor };
               let visibleReportChars = 0;
               let finalBuf = "";
+              let rawAnswerForCitations = "";
               const sequential =
                 executionMode === "sequential" || shouldUseSequentialPipeline(required);
               if (sequential) {
@@ -1529,7 +1556,8 @@ export class AgentService {
                     detail: kbPrefetch,
                   });
                   for (const c of parseKbCitationsFromToolText(kbPrefetch)) {
-                    citationBag.set(`${c.documentId}:${c.chunkIndex ?? 0}`, c);
+                    const key = `${c.documentId}:${c.chunkIndex ?? 0}`;
+                    if (!citationBag.has(key)) citationBag.set(key, c);
                   }
                   if (citationBag.size > 0) {
                     tracker.kbNoRelevantHit = false;
@@ -1674,7 +1702,9 @@ export class AgentService {
                       },
                     }),
                   )
-                  .pipeThrough(dropHandoffNoiseText());
+                  .pipeThrough(dropHandoffNoiseText((text) => {
+                    rawAnswerForCitations += text;
+                  }));
 
                 let lgStreamError: unknown;
                 const producer = (async () => {
@@ -1780,13 +1810,17 @@ export class AgentService {
               ) {
                 const kbFallback = formatKbAnswerFromCitations(kbCitations, userText);
                 if (kbFallback.trim()) {
-                  const fbId = `kb-fallback-${parsed.threadId}`;
-                  writer.write({ type: "text-start", id: fbId });
-                  writer.write({ type: "text-delta", id: fbId, delta: kbFallback });
-                  writer.write({ type: "text-end", id: fbId });
-                  visibleReportChars += kbFallback.length;
-                  finalBuf += kbFallback;
-                  trace.appendFinalText(kbFallback);
+                  rawAnswerForCitations += kbFallback;
+                  const visibleFallback = stripSourceMarkers(kbFallback);
+                  if (visibleFallback.trim()) {
+                    const fbId = `kb-fallback-${parsed.threadId}`;
+                    writer.write({ type: "text-start", id: fbId });
+                    writer.write({ type: "text-delta", id: fbId, delta: visibleFallback });
+                    writer.write({ type: "text-end", id: fbId });
+                    visibleReportChars += visibleFallback.length;
+                    finalBuf += visibleFallback;
+                    trace.appendFinalText(visibleFallback);
+                  }
                 }
               }
 
@@ -1881,9 +1915,10 @@ export class AgentService {
                     status: t.status,
                   })),
                 );
-                const citations = filterCitationsBySourceMarkers(finalBuf, [
-                  ...citationBag.values(),
-                ]);
+                const citations = filterCitationsBySourceMarkers(
+                  rawAnswerForCitations || finalBuf,
+                  [...citationBag.values()],
+                );
                 // D-22：checkpoint 为真相源；SSE data-* 仅投影
                 try {
                   await executionGraph.updateState(

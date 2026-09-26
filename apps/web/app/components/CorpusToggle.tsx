@@ -15,7 +15,7 @@ export default function CorpusToggle({ value, onChange, disabled = false }: Corp
   const seedOn = value === "seed";
 
   return (
-    <label className="corpus-toggle" title="默认只查用户库；打开后检索种子语料库">
+    <label className="corpus-toggle" title="只查种子资料，不和用户上传的文档混在一起">
       <input
         type="checkbox"
         className="corpus-toggle-input"
@@ -24,7 +24,7 @@ export default function CorpusToggle({ value, onChange, disabled = false }: Corp
         aria-label="检索种子知识库"
         onChange={(e) => onChange(e.target.checked ? "seed" : "user")}
       />
-      <span className="corpus-toggle-label">同时检索种子库</span>
+      <span className="corpus-toggle-label">只查种子库</span>
     </label>
   );
 }

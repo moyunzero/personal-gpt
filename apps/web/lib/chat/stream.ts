@@ -1,4 +1,4 @@
-import { filterCitationsBySourceMarkers } from "@personal-gpt/shared";
+import { filterCitationsBySourceMarkers, SourceMarkerStripper, stripSourceMarkers } from "@personal-gpt/shared";
 import { chatModel, resolveChatModels } from "@personal-gpt/shared/ai/chat-provider";
 import type { Citation } from "@personal-gpt/shared/types/kb";
 import { streamText, createUIMessageStream } from "ai";
@@ -70,23 +70,26 @@ export function createChatStream({
           });
 
           const thinkFilter = new ThinkStripFilter();
+          const markerStrip = new SourceMarkerStripper();
 
           for await (const part of result.fullStream) {
             if (part.type === "text-delta") {
               const visible = thinkFilter.feed(part.text);
               if (!visible) continue;
               assistantText += visible;
+              const shown = markerStrip.feed(visible);
+              if (!shown) continue;
               if (!hasStarted) {
                 writer.write({ type: "text-start", id: messageId });
                 hasStarted = true;
               }
               writer.write({
                 type: "text-delta",
-                delta: visible,
+                delta: shown,
                 id: messageId,
               });
             } else if (part.type === "finish") {
-              const trailing = thinkFilter.flush();
+              const trailing = markerStrip.feed(thinkFilter.flush()) + markerStrip.flush();
               if (trailing) {
                 assistantText += trailing;
                 if (!hasStarted) {
@@ -120,7 +123,7 @@ export function createChatStream({
             try {
               const ON_COMPLETE_TIMEOUT_MS = 5_000;
               await Promise.race([
-                onComplete(assistantText),
+                onComplete(stripSourceMarkers(assistantText)),
                 new Promise<void>((resolve) => {
                   const timer = setTimeout(resolve, ON_COMPLETE_TIMEOUT_MS);
                   timer.unref?.();
@@ -135,6 +138,11 @@ export function createChatStream({
         } catch (error) {
           log.warn("model failed, falling back", { modelName, err: error });
           lastError = error instanceof Error ? error : new Error(String(error));
+          if (hasStarted) {
+            writer.write({ type: "text-end", id: messageId });
+            return;
+          }
+          assistantText = "";
           if (i < models.length - 1) {
             continue;
           }

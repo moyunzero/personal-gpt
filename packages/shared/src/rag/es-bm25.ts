@@ -12,6 +12,7 @@ export interface EsChunkDoc {
   source?: string;
   category?: string;
   keywords?: string[];
+  page?: number;
 }
 
 export interface EsBm25SearchParams {
@@ -21,6 +22,7 @@ export interface EsBm25SearchParams {
   corpus?: Corpus;
   limit?: number;
   index?: string;
+  page?: number;
 }
 
 const INDEX_SETTINGS = {
@@ -44,6 +46,7 @@ const INDEX_MAPPINGS = {
     source: { type: "keyword" },
     category: { type: "keyword" },
     keywords: { type: "keyword" },
+    page: { type: "integer" },
   },
 } as const;
 
@@ -82,6 +85,7 @@ export async function indexChunks(index: string, chunks: EsChunkDoc[]): Promise<
       source: chunk.source,
       category: chunk.category,
       keywords: chunk.keywords,
+      ...(typeof chunk.page === "number" && Number.isFinite(chunk.page) ? { page: chunk.page } : {}),
     },
   ]);
   const result = await client.bulk({ refresh: true, operations });
@@ -126,6 +130,7 @@ function mapHit(hit: {
     documentId: source.documentId as string | undefined,
     chunkIndex: source.chunkIndex as number | undefined,
     keywords: source.keywords as string[] | undefined,
+    ...(typeof source.page === "number" && Number.isFinite(source.page) ? { page: source.page } : {}),
   };
 }
 
@@ -142,6 +147,9 @@ export async function esBm25Search(params: EsBm25SearchParams): Promise<Retrieve
   const filters: Record<string, unknown>[] = [{ term: { workspaceId: params.workspaceId } }];
   if (params.documentIds?.length) {
     filters.push({ terms: { documentId: params.documentIds } });
+  }
+  if (params.page != null) {
+    filters.push({ term: { page: params.page } });
   }
 
   const result = await client.search({

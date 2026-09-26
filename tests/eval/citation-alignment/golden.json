@@ -1,0 +1,320 @@
+[
+  {
+    "id": "c01",
+    "stratum": "title_specific",
+    "user_input": "不要挑战人性讲的是什么？",
+    "reference": "只应引用《不要挑战人性-读书笔记》，说明实验与先理解人性再设计环境。",
+    "response": "《不要挑战人性》用心理学实验说明人的自然倾向【S1】。同一本书后段强调先理解机制再设计环境【S2】。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记", "活下去的理由-读书笔记"],
+    "hits": [
+      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.76, "snippet": "用实验说明服从、从众与先理解人性。"},
+      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.74, "snippet": "正确姿态是先理解机制，再设计环境。"},
+      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.65, "snippet": "不要盲目与人性对抗。"},
+      {"documentId": "doc-genius", "title": "天才在左疯子在右-读书笔记", "similarity": 0.61, "snippet": "访谈里讨论精神疾病与天才。"},
+      {"documentId": "doc-live", "title": "活下去的理由-读书笔记", "similarity": 0.6, "snippet": "讨论活着的意义与死亡。"}
+    ]
+  },
+  {
+    "id": "c02",
+    "stratum": "title_specific",
+    "user_input": "哈佛家训讲的是什么？",
+    "reference": "只引用哈佛家训读书笔记：准则由自己决定，不是别人的蓝本。",
+    "response": "生活的准则由自己决定，而不是别人的蓝本 [S1]。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "hits": [
+      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.88, "snippet": "生活的准则由自己决定，而不是别人的蓝本。"},
+      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.58, "snippet": "先理解人性再谈改变。"}
+    ]
+  },
+  {
+    "id": "c03",
+    "stratum": "title_specific",
+    "user_input": "活下去的理由这本书在谈什么？",
+    "reference": "只引用活下去的理由读书笔记。",
+    "response": "这本书围绕为何活下去展开 [S1]。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记", "哈佛家训-读书笔记"],
+    "hits": [
+      {"documentId": "doc-live", "title": "活下去的理由-读书笔记", "similarity": 0.91, "snippet": "讨论活着的理由与死亡。"},
+      {"documentId": "doc-genius", "title": "天才在左疯子在右-读书笔记", "similarity": 0.62, "snippet": "精神病院访谈。"},
+      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.56, "snippet": "格言与家训。"}
+    ]
+  },
+  {
+    "id": "c04",
+    "stratum": "title_specific",
+    "user_input": "天才在左疯子在右的笔记记了什么？",
+    "reference": "只引用该访谈笔记。",
+    "response": "笔记记录了对精神疾病与天才关系的访谈［S1］。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "hits": [
+      {"documentId": "doc-genius", "title": "天才在左疯子在右-读书笔记", "similarity": 0.84, "snippet": "访谈讨论天才与精神疾病。"},
+      {"documentId": "doc-live", "title": "活下去的理由-读书笔记", "similarity": 0.57, "snippet": "活着的理由。"}
+    ]
+  },
+  {
+    "id": "c05",
+    "stratum": "unused_neighbor",
+    "user_input": "奥德赛计划书的建议是什么？",
+    "reference": "只采用计划书，不展示相邻的路线图。",
+    "response": "计划书建议同时准备三条路径 [S1]。",
+    "expectTitles": ["奥德赛计划书"],
+    "forbidTitles": ["project-roadmap.md"],
+    "hits": [
+      {"documentId": "doc-odyssey", "title": "奥德赛计划书", "similarity": 0.93, "snippet": "准备三条并行路径。"},
+      {"documentId": "doc-roadmap", "title": "project-roadmap.md", "similarity": 0.71, "snippet": "里程碑按季度排列。"}
+    ]
+  },
+  {
+    "id": "c06",
+    "stratum": "unused_neighbor",
+    "user_input": "API 鉴权怎么做？",
+    "reference": "只引用鉴权指南。部署清单虽被召回但不被采用。",
+    "response": "对外接口用 Bearer token，并校验工作区成员身份 [S1]。",
+    "expectTitles": ["api-auth-guide.md"],
+    "forbidTitles": ["deploy-checklist.md"],
+    "hits": [
+      {"documentId": "doc-auth", "title": "api-auth-guide.md", "similarity": 0.9, "snippet": "Bearer token 与成员校验。"},
+      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.66, "snippet": "上线前检查环境变量。"}
+    ]
+  },
+  {
+    "id": "c07",
+    "stratum": "below_threshold",
+    "user_input": "混合检索 RRF 是什么？",
+    "reference": "0.54 的邻居不进入编号，回答只引用 RRF 笔记。",
+    "response": "RRF 把多路排名融合成一个名次 [S1]。",
+    "expectTitles": ["hybrid-rrf-notes.md"],
+    "forbidTitles": ["es-fail-open.md"],
+    "hits": [
+      {"documentId": "doc-rrf", "title": "hybrid-rrf-notes.md", "similarity": 0.81, "snippet": "倒数排名融合。"},
+      {"documentId": "doc-es", "title": "es-fail-open.md", "similarity": 0.54, "snippet": "ES 挂了就只走向量。"}
+    ]
+  },
+  {
+    "id": "c08",
+    "stratum": "below_threshold",
+    "user_input": "向量库如何按 workspace 隔离？",
+    "reference": "低于 0.55 的心理学语料不得进入编号，即使正文误写第二个编号。",
+    "response": "每个 workspace 有独立过滤条件 [S1]。另一个库【S2】不能用。",
+    "expectTitles": ["workspace-isolation.md"],
+    "forbidTitles": ["psychology-qa"],
+    "hits": [
+      {"documentId": "doc-ws", "title": "workspace-isolation.md", "similarity": 0.87, "snippet": "检索必须带 workspaceId。"},
+      {"documentId": "doc-psy", "title": "psychology-qa", "similarity": 0.4, "snippet": "情绪咨询问答。"}
+    ]
+  },
+  {
+    "id": "c09",
+    "stratum": "general_knowledge",
+    "user_input": "什么是质数？",
+    "reference": "通识题不写编号，不展示被误召回的笔记。",
+    "response": "质数是大于 1 且只能被 1 和自身整除的自然数。",
+    "expectTitles": [],
+    "forbidTitles": ["奥德赛计划书", "哈佛家训-读书笔记"],
+    "hits": [
+      {"documentId": "doc-odyssey", "title": "奥德赛计划书", "similarity": 0.58, "snippet": "计划与路径。"},
+      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.56, "snippet": "格言。"}
+    ]
+  },
+  {
+    "id": "c10",
+    "stratum": "general_knowledge",
+    "user_input": "1 公里等于多少米？",
+    "reference": "无编号则引用来源为空。",
+    "response": "1 公里等于 1000 米。",
+    "expectTitles": [],
+    "forbidTitles": ["deploy-checklist.md"],
+    "hits": [
+      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.7, "snippet": "检查清单。"}
+    ]
+  },
+  {
+    "id": "c11",
+    "stratum": "irrelevant_context",
+    "user_input": "今天星期几跟知识库无关",
+    "reference": "检索最高分过线但模型判断不相关，按通识作答且不引用。",
+    "response": "这取决于你提问当天的日期，知识库里没有日历。",
+    "expectTitles": [],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "hits": [
+      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.59, "snippet": "人性与实验。"}
+    ]
+  },
+  {
+    "id": "c12",
+    "stratum": "fullwidth_marker",
+    "user_input": "Corrective 改写最多几次？",
+    "reference": "中文括号【S1】与英文 [S1] 同样算引用。",
+    "response": "改写最多三次【S1】。",
+    "expectTitles": ["corrective-limits.md"],
+    "forbidTitles": [],
+    "hits": [
+      {"documentId": "doc-corrective", "title": "corrective-limits.md", "similarity": 0.92, "snippet": "最多改写三次。"}
+    ]
+  },
+  {
+    "id": "c13",
+    "stratum": "same_document_grouped",
+    "user_input": "部署清单里环境和回滚分别怎么查？",
+    "reference": "同一文档两个片段被采用，界面只出一张卡。",
+    "response": "环境变量在清单第一节 [S1]。回滚步骤在第三节 [S2]。",
+    "expectTitles": ["deploy-checklist.md"],
+    "expectCardCount": 1,
+    "forbidTitles": [],
+    "hits": [
+      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.86, "snippet": "核对 DATABASE_URL 与密钥。", "chunkIndex": 0},
+      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.83, "snippet": "回滚先停写入再切上一版本。", "chunkIndex": 2}
+    ]
+  },
+  {
+    "id": "c14",
+    "stratum": "multi_source_used",
+    "user_input": "入库失败和检索失败的策略有何不同？",
+    "reference": "两篇文档都被回答采用，两张卡片都应在。",
+    "response": "入库失败要重试写入 [S1]。检索侧 ES 不可用时可以只走向量 [S2]。",
+    "expectTitles": ["ingest-retry.md", "es-fail-open.md"],
+    "expectCardCount": 2,
+    "forbidTitles": [],
+    "hits": [
+      {"documentId": "doc-ingest", "title": "ingest-retry.md", "similarity": 0.89, "snippet": "失败后按次数重试。"},
+      {"documentId": "doc-es-open", "title": "es-fail-open.md", "similarity": 0.85, "snippet": "ES 失败则退回向量检索。"}
+    ]
+  },
+  {
+    "id": "c15",
+    "stratum": "out_of_range",
+    "user_input": "默认 corpus 是什么？",
+    "reference": "编造的 [S9] 不得造出新来源；有效的 [S1] 保留。",
+    "response": "默认是用户库 [S1]，不存在的 [S9] 忽略。",
+    "expectTitles": ["corpus-defaults.md"],
+    "forbidTitles": [],
+    "hits": [
+      {"documentId": "doc-corpus", "title": "corpus-defaults.md", "similarity": 0.94, "snippet": "默认检索 user corpus。"}
+    ]
+  },
+  {
+    "id": "c16",
+    "stratum": "marker_order",
+    "user_input": "先说 Redis 再说明 Mem0",
+    "reference": "正文先写 S2 再写 S1，卡片顺序仍按编号数组，两篇都在。",
+    "response": "长期事实进 Mem0 [S2]。近期对话进 Redis [S1]。",
+    "expectTitles": ["redis-short-term.md", "mem0-write-policy.md"],
+    "expectCardCount": 2,
+    "forbidTitles": [],
+    "hits": [
+      {"documentId": "doc-redis", "title": "redis-short-term.md", "similarity": 0.8, "snippet": "只存近期轮次。"},
+      {"documentId": "doc-mem0", "title": "mem0-write-policy.md", "similarity": 0.79, "snippet": "写入稳定事实。"}
+    ]
+  },
+  {
+    "id": "c17",
+    "stratum": "seed_forbidden",
+    "user_input": "我的奥德赛三条路径",
+    "reference": "用户库问题不得展示 seed 心理学语料。",
+    "response": "三条路径写在计划书里 [S1]。",
+    "expectTitles": ["奥德赛计划书"],
+    "forbidTitles": ["psychology-qa"],
+    "hits": [
+      {"documentId": "doc-odyssey", "title": "奥德赛计划书", "similarity": 0.9, "snippet": "三条路径。"},
+      {"documentId": "doc-psy", "title": "psychology-qa", "similarity": 0.7, "snippet": "咨询话术。"}
+    ]
+  },
+  {
+    "id": "c18",
+    "stratum": "no_hit_gate",
+    "user_input": "完全无关的职场八卦",
+    "reference": "最高分低于 0.55 时编号列表为空，回答即使写 [S1] 也不能造引用。",
+    "response": "这件事不在知识库里 [S1]。",
+    "expectTitles": [],
+    "forbidTitles": ["deploy-checklist.md"],
+    "hits": [
+      {"documentId": "doc-deploy", "title": "deploy-checklist.md", "similarity": 0.42, "snippet": "部署检查。"}
+    ]
+  },
+  {
+    "id": "c19",
+    "stratum": "paraphrase",
+    "user_input": "书里关于不要盲目跟别人的成功模板，是哪本？",
+    "reference": "改写问法仍只引用真正采用的哈佛家训。",
+    "response": "这是哈佛家训里的自我准则 [S1]。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "hits": [
+      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.77, "snippet": "不要盲目追随他人的成功模板。"},
+      {"documentId": "doc-challenge", "title": "不要挑战人性-读书笔记", "similarity": 0.63, "snippet": "不要与人性硬碰硬。"}
+    ]
+  },
+  {
+    "id": "c20",
+    "stratum": "empty_retrieval",
+    "user_input": "库里没有的私人密码是多少？",
+    "reference": "没有合格片段时不得展示引用，也不得编造文档。",
+    "response": "知识库里没有这类内容，我不能编造编号。",
+    "expectTitles": [],
+    "forbidTitles": [],
+    "hits": []
+  },
+  {
+    "id": "c21",
+    "stratum": "duplicate_marker",
+    "user_input": "鉴权要点重复强调",
+    "reference": "同一编号写两次只保留一张该文档卡片。",
+    "response": "使用 Bearer token [S1]。再次强调：校验成员 [S1]。",
+    "expectTitles": ["api-auth-guide.md"],
+    "expectCardCount": 1,
+    "forbidTitles": [],
+    "hits": [
+      {"documentId": "doc-auth", "title": "api-auth-guide.md", "similarity": 0.9, "snippet": "Bearer 与成员校验。"}
+    ]
+  },
+  {
+    "id": "c22",
+    "stratum": "tenth_marker",
+    "user_input": "第十条才是对的",
+    "reference": "[S10] 是第 10 条，不能被截成 [S1]。",
+    "response": "只看第 10 条 [S10]。",
+    "expectTitles": ["note-10"],
+    "forbidTitles": ["note-1"],
+    "hits": [
+      {"documentId": "d1", "title": "note-1", "similarity": 0.99, "snippet": "1"},
+      {"documentId": "d2", "title": "note-2", "similarity": 0.98, "snippet": "2"},
+      {"documentId": "d3", "title": "note-3", "similarity": 0.97, "snippet": "3"},
+      {"documentId": "d4", "title": "note-4", "similarity": 0.96, "snippet": "4"},
+      {"documentId": "d5", "title": "note-5", "similarity": 0.95, "snippet": "5"},
+      {"documentId": "d6", "title": "note-6", "similarity": 0.94, "snippet": "6"},
+      {"documentId": "d7", "title": "note-7", "similarity": 0.93, "snippet": "7"},
+      {"documentId": "d8", "title": "note-8", "similarity": 0.92, "snippet": "8"},
+      {"documentId": "d9", "title": "note-9", "similarity": 0.91, "snippet": "9"},
+      {"documentId": "d10", "title": "note-10", "similarity": 0.9, "snippet": "10"}
+    ]
+  },
+  {
+    "id": "c23",
+    "stratum": "checkpointer",
+    "user_input": "Postgres checkpointer 是默认吗？",
+    "reference": "只引用 checkpointer 说明。",
+    "response": "会话检查点默认落在 Postgres [S1]。",
+    "expectTitles": ["checkpointer-postgres.md"],
+    "forbidTitles": ["redis-short-term.md"],
+    "hits": [
+      {"documentId": "doc-cp", "title": "checkpointer-postgres.md", "similarity": 0.88, "snippet": "默认使用 PostgresSaver。"},
+      {"documentId": "doc-redis", "title": "redis-short-term.md", "similarity": 0.6, "snippet": "Redis 只放短期轮次。"}
+    ]
+  },
+  {
+    "id": "c24",
+    "stratum": "visible_text",
+    "user_input": "哈佛家训的核心一句",
+    "reference": "用户可见正文不得留下 S 编号。",
+    "response": "核心是准则由自己决定【S1】。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "hits": [
+      {"documentId": "doc-harvard", "title": "哈佛家训-读书笔记", "similarity": 0.95, "snippet": "准则由自己决定。"}
+    ]
+  }
+]

@@ -28,6 +28,26 @@ describe("groupCitationsByDocument", () => {
     expect(groups[0]?.snippets.map((item) => item.sourceNumber)).toEqual([1, 2]);
   });
 
+  it("keeps the source number stored before filtering", () => {
+    const groups = groupCitationsByDocument([
+      {
+        documentId: "doc-a",
+        title: "手册",
+        similarity: 0.8,
+        snippet: "第一段",
+        sourceNumber: 1,
+      },
+      {
+        documentId: "doc-a",
+        title: "手册",
+        similarity: 0.4,
+        snippet: "第三段",
+        sourceNumber: 3,
+      },
+    ]);
+    expect(groups[0]?.snippets.map((item) => item.sourceNumber)).toEqual([1, 3]);
+  });
+
   it("keeps different documentIds as separate cards in first-seen order", () => {
     const groups = groupCitationsByDocument([
       {

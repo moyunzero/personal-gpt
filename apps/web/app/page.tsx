@@ -60,6 +60,7 @@ export default function Home() {
   const chatKey = sessionCacheKey(mode, threadId);
   const streamRef = useRef<HTMLElement>(null);
   const messagesCacheRef = useRef<Record<string, UiChatMessage[]>>({});
+  const skipHistoryLoadRef = useRef(false);
   const [savedModels, setSavedModels] = useState<{ id: string; modelId: string }[]>([]);
   const [chatModelId, setChatModelId] = useState("");
   const [agentModelId, setAgentModelId] = useState("");
@@ -411,6 +412,11 @@ export default function Home() {
                   models={savedModels}
                   disabled={isLoading}
                   onSelect={(modelId) => {
+                    const previous = mode === "agent" ? agentModelId : chatModelId;
+                    const restore = () => {
+                      if (mode === "agent") setAgentModelId(previous);
+                      else setChatModelId(previous);
+                    };
                     if (mode === "agent") setAgentModelId(modelId);
                     else setChatModelId(modelId);
                     void fetch("/api/models", {
@@ -419,7 +425,11 @@ export default function Home() {
                       body: JSON.stringify(
                         mode === "agent" ? { agentModelId: modelId } : { chatModelId: modelId },
                       ),
-                    });
+                    })
+                      .then((res) => {
+                        if (!res.ok) restore();
+                      })
+                      .catch(restore);
                   }}
                 />
               ) : (

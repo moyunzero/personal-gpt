@@ -155,6 +155,12 @@ describe("createChatStream citations", () => {
 
     expect(dataPart?.data.citations).toHaveLength(1);
     expect(dataPart?.data.citations[0]?.documentId).toBe("doc-1");
+    const visible = parts
+      .filter((part) => (part as { type: string }).type === "text-delta")
+      .map((part) => (part as { delta: string }).delta)
+      .join("");
+    expect(visible).toBe("只采用第一条。");
+    expect(visible).not.toContain("S1");
   });
 
   it("does not write data-citations when the answer has no source markers", async () => {
@@ -215,6 +221,42 @@ describe("createChatStream citations", () => {
     expect(streamTextMock).toHaveBeenCalled();
     const arg = streamTextMock.mock.calls[0]?.[0] as { model: { id: string; __mock: true } };
     expect(arg.model).toEqual({ id: "mock-model", __mock: true });
+  });
+
+  it("closes the message and does not continue after visible tokens", async () => {
+    streamTextMock
+      .mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "部分回答" };
+          yield { type: "error", error: new Error("boom") };
+        })(),
+      })
+      .mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "后续模型" };
+          yield { type: "finish" };
+        })(),
+      });
+
+    const stream = createChatStream({
+      systemPrompt: "system",
+      messages: [{ role: "user", content: "hi" }],
+      requestId: "req-mid-error",
+      citations: [],
+      modelIds: ["first", "second"],
+    });
+
+    const parts = await collectStreamParts(stream);
+    const visible = parts
+      .filter((part) => (part as { type: string }).type === "text-delta")
+      .map((part) => (part as { delta: string }).delta)
+      .join("");
+
+    expect(visible).toBe("部分回答");
+    expect(streamTextMock).toHaveBeenCalledTimes(1);
+    const types = parts.map((part) => (part as { type: string }).type);
+    expect(types).toContain("text-end");
+    expect(types).not.toContain("error");
   });
 });
 

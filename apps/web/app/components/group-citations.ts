@@ -38,7 +38,7 @@ export function groupCitationsByDocument(citations: Citation[]): CitationDocumen
     group.snippets.push({
       snippet: citation.snippet,
       chunkIndex: citation.chunkIndex,
-      sourceNumber: index + 1,
+      sourceNumber: citation.sourceNumber ?? index + 1,
       ...(typeof citation.page === "number" && Number.isFinite(citation.page)
         ? { page: citation.page }
         : {}),

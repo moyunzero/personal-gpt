@@ -98,6 +98,18 @@ body {
   min-height: 100dvh;
 }
 
+a,
+a:hover,
+a:focus {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* ============================================================
  * App shell：侧栏 + 主区
  * ============================================================ */
@@ -842,37 +854,265 @@ main {
   font-size: 13px;
 }
 
-.settings-row select,
 .settings-add input {
   width: 100%;
   border: 1px solid var(--color-hairline);
   background: var(--color-canvas);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
+  padding: 10px 12px;
+  min-height: 40px;
   font-family: var(--font-body);
+  font-size: 14px;
   color: var(--color-ink);
 }
 
-.settings-list {
-  margin: 0 0 var(--space-md);
-  padding-left: 18px;
+.paper-menu {
+  position: relative;
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.paper-menu-btn {
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-canvas);
+  border-radius: var(--radius-md);
+  padding: 0 12px;
+  font-family: var(--font-body);
+  font-size: 14px;
   color: var(--color-ink);
-  font-family: var(--font-mono);
-  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.paper-menu-btn.is-empty {
+  color: var(--color-muted);
+}
+
+.paper-menu-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.paper-menu-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.paper-menu-caret {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--color-muted);
+  border-bottom: 1.5px solid var(--color-muted);
+  transform: rotate(45deg) translateY(-2px);
+  flex: none;
+}
+
+.paper-menu-caret.open {
+  transform: rotate(225deg) translateY(-1px);
+}
+
+.paper-menu-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: 6px;
+}
+
+.paper-menu-list.up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.paper-menu-list button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-ink);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.paper-menu-list button small {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.paper-menu-list button.on {
+  background: var(--color-surface-cream-strong);
+}
+
+.settings-empty {
+  margin: 0 0 var(--space-md);
+  color: var(--color-body);
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.settings-label {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.settings-vendors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.settings-vendors button,
+.settings-choices button {
+  border: 1px solid var(--color-hairline);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.settings-vendors button {
+  border-radius: var(--radius-pill);
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.settings-vendors button.on,
+.settings-choices button.on {
+  background: var(--color-surface-cream-strong);
+  border-color: var(--color-primary);
+}
+
+.settings-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-choices button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-sm);
+  width: 100%;
+  text-align: left;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  min-height: 40px;
+}
+
+.settings-choices strong {
+  font-weight: 500;
+}
+
+.settings-choices small {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.settings-form input {
+  width: 100%;
+  border: 1px solid var(--color-hairline);
+  background: var(--color-canvas);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  min-height: 40px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-ink);
+}
+
+.settings-form > button {
+  align-self: flex-start;
+  border: 0;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-radius: var(--radius-md);
+  padding: 0 14px;
+  min-height: 40px;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.settings-saved {
+  list-style: none;
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.settings-saved li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: 10px 12px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+}
+
+.settings-saved strong {
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.settings-saved span {
+  color: var(--color-muted);
+  font-size: 12px;
 }
 
 .settings-add {
   display: grid;
   grid-template-columns: 1.2fr 1fr auto;
   gap: var(--space-xs);
+  align-items: start;
 }
 
-.settings-add button {
+@media (max-width: 768px) {
+  .settings-add {
+    grid-template-columns: 1fr;
+  }
+}
+
+.settings-add > button {
   border: 0;
   background: var(--color-primary);
   color: var(--color-on-primary);
   border-radius: var(--radius-md);
   padding: 0 14px;
+  min-height: 40px;
   font-family: var(--font-body);
   cursor: pointer;
 }
@@ -1306,7 +1546,7 @@ main {
 .message-body a {
   color: var(--color-primary);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 0.15em;
 }
 .message-body a:hover {
   color: var(--color-primary-active);
@@ -2377,6 +2617,11 @@ button.app-header-link {
   flex: 1 1 100px;
   min-width: 88px;
   background: var(--color-canvas);
+}
+
+.kb-toolbar-filters > .paper-menu {
+  width: auto;
+  flex: 1 1 100px;
 }
 
 .kb-toolbar-select {

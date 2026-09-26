@@ -30,4 +30,25 @@ describe("parseKbCitationsFromToolText page", () => {
     expect(citations[0]).toBeDefined();
     expect(Object.prototype.hasOwnProperty.call(citations[0], "page")).toBe(false);
   });
+
+  it("keeps the printed ordinal when an earlier block is dropped", () => {
+    const text = `[S1]
+title: missing
+source: x
+documentId: unknown
+similarity: 0.9
+snippet: no
+
+[S2]
+title: kept
+source: y.pdf
+documentId: doc-2
+chunkIndex: 1
+similarity: 0.8
+snippet: yes`;
+    const citations = parseKbCitationsFromToolText(text);
+    expect(citations).toHaveLength(1);
+    expect(citations[0]?.sourceNumber).toBe(2);
+    expect(citations[0]?.documentId).toBe("doc-2");
+  });
 });

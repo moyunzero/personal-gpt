@@ -21,6 +21,8 @@ export interface Citation {
   category?: string;
   chunkIndex?: number;
   page?: number;
+  /** 1-based [S n] in the list before citation filtering. */
+  sourceNumber?: number;
 }
 
 /** PostgreSQL documents 表元数据子集 */

@@ -263,6 +263,23 @@ Chat 检索落在 `apps/web/lib/chat/`（`query-router.ts` · `retrieve.ts`）�
 | 聊天限流       | 10 req / 60s                            | Upstash；未配置则放行                             |
 | KB 限流        | 30 req / 60s                            | 同上                                              |
 
+**文件名、页码和对比。** 问题里出现已就绪文档的标题时，只检索这些文件的开头切块。「第 N 页」只留该页。两份标题同时出现时一起交给模型。问到表格里的一行时，只把那一行放进上下文。引用卡片可以打开原文件，PDF 在浏览器里按页定位。勾选「只查种子库」时只查种子资料。
+
+### 入库与图谱分开
+
+向量入库是主路径，图谱是写完向量之后的附加步骤。进度到 90% 表示正文已经写入向量库，后面才抽实体和关系。
+
+2026-09-26 在本地实测过一次失败：`sample-pdf-1mb` 停在 90% 超过二十分钟，然后 Neo4j Aura 报 `No routing servers available`（路由表为空）。当时图谱异常会删掉已写入的向量，并把整次任务抛回队列。队列默认重试 3 次，所以进度从 0 再跑一遍解析和向量。Aura 免费实例会暂停，本机当时也没有 Neo4j 容器。
+
+企业内部的做法是把这两步拆开：向量写成功就把文档标成就绪，可以检索和引用；图谱失败只记日志，不删向量，也不重试解析和嵌入。Neo4j 恢复后再补抽。本地完整流程用 Compose 里的 Neo4j，不要把入库成败绑在会暂停的云实例上：
+
+```bash
+docker compose up -d neo4j
+# .env：NEO4J_URI=bolt://127.0.0.1:7687
+```
+
+浏览器地址是 `http://127.0.0.1:7474`。`ENABLE_GRAPH_RAG` 不是 `true` 时跳过图谱，只做向量入库。
+
 ## 可用脚本
 
 根目录（`yarn <script>`）：
@@ -342,6 +359,8 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 | `INGEST_WORKER_PORT` | 默认 `3001`                                            |
 | `AGENT_SERVICE_URL`  | BFF → agent-service 基址，默认 `http://localhost:3002` |
 | `AGENT_SERVICE_PORT` | agent-service 监听端口，默认 `3002`                    |
+| `NEO4J_URI`          | 本地 `bolt://127.0.0.1:7687`；图谱失败不影响文档就绪   |
+| `ENABLE_GRAPH_RAG`   | 设为 `true` 时在向量写完后抽图谱                       |
 
 ### 可选
 
