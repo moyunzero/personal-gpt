@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const parseMock = vi.fn();
+const parsePdfMock = vi.fn();
 const splitMock = vi.fn();
+const splitPdfMock = vi.fn();
 const embedMock = vi.fn();
 const upsertMock = vi.fn();
 const graphExtractMock = vi.fn();
@@ -15,10 +17,12 @@ vi.mock("node:fs/promises", () => ({
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/parse", () => ({
   parseDocument: (...args: unknown[]) => parseMock(...args),
+  parsePdfPages: (...args: unknown[]) => parsePdfMock(...args),
 }));
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/split", () => ({
   splitText: (...args: unknown[]) => splitMock(...args),
+  splitPdfPages: (...args: unknown[]) => splitPdfMock(...args),
   toChunkRecords: (
     chunks: string[],
     vectors: number[][],
@@ -77,7 +81,12 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
 
     statMock.mockResolvedValue({ size: 1024 });
     parseMock.mockResolvedValue("fixture text");
+    parsePdfMock.mockResolvedValue({
+      pages: [{ num: 1, text: "fixture text" }],
+      headings: [],
+    });
     splitMock.mockResolvedValue(chunks);
+    splitPdfMock.mockResolvedValue(chunks.map((text, index) => ({ text, page: index + 1 })));
     embedMock.mockResolvedValue([
       [0.1, 0.2],
       [0.3, 0.4],
