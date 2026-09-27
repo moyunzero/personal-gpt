@@ -11,7 +11,7 @@ import type { HybridSearchDeps } from "@personal-gpt/shared";
 
 import { resolveKbMinSimilarity, retrieveKb, type RetrieveKbParams } from "../rag/retrieve";
 import { extractKbSearchQuery } from "./extract-kb-query";
-import { getKbSearchContextForThread } from "./kb-search-context";
+import { allocateKbSourceOrdinals, getKbSearchContextForThread } from "./kb-search-context";
 
 export type KbSearchInput = {
   query: string;
@@ -27,6 +27,8 @@ export type KbSearchInput = {
   hybridDeps?: HybridSearchDeps;
   /** Security trim: only these documentIds (D-07). */
   documentIds?: string[];
+  /** 与本轮 citationBag 共用的序号键；缺省走当前 turn 或 default。 */
+  sourceTurnId?: string;
 };
 
 const SNIPPET_MAX = 400;
@@ -57,20 +59,27 @@ function formatKbHitMessage(
   workspaceId: string,
   minSimilarity: number,
   chunks: Awaited<ReturnType<typeof retrieveKb>>["chunks"],
+  sourceStart: number,
   via: HitVia,
 ): string {
   const lines = chunks.map((c, i) => {
     const snippet = c.text.length > SNIPPET_MAX ? `${c.text.slice(0, SNIPPET_MAX)}…` : c.text;
-    return [
-      `[citation ${i + 1}]`,
+    const hitLines = [
+      `[S${sourceStart + i}]`,
       `title: ${c.title ?? "未命名"}`,
       `source: ${c.source ?? "知识库"}`,
       `documentId: ${c.documentId ?? "unknown"}`,
       `chunkIndex: ${c.chunkIndex ?? 0}`,
+    ];
+    if (typeof c.page === "number" && Number.isFinite(c.page)) {
+      hitLines.push(`page: ${c.page}`);
+    }
+    hitLines.push(
       `similarity: ${c.similarity.toFixed(3)}`,
       `workspaceId: ${workspaceId}`,
       `snippet: ${snippet}`,
-    ].join("\n");
+    );
+    return hitLines.join("\n");
   });
 
   const fallbackNote =
@@ -114,7 +123,14 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
         topSimilarity = Math.max(topSimilarity ?? 0, result.topSimilarity);
       }
       if (result.chunks.length > 0) {
-        return formatKbHitMessage(result.workspaceId, minSimilarity, result.chunks, via);
+        const sourceStart = allocateKbSourceOrdinals(result.chunks.length, input.sourceTurnId);
+        return formatKbHitMessage(
+          result.workspaceId,
+          minSimilarity,
+          result.chunks,
+          sourceStart,
+          via,
+        );
       }
       return undefined;
     };
@@ -178,6 +194,7 @@ export const kbSearchTool = tool(
       workspaceId: workspaceFromConfig(config),
       userText: userTextFromConfig(config),
       documentIds: allowedDocumentIdsFromConfig(config),
+      sourceTurnId: threadIdFromConfig(config),
     }),
   {
     name: "kb_search",

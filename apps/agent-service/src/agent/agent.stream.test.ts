@@ -300,6 +300,39 @@ describe("Agent SSE stream (AGENT-04)", () => {
     ).rejects.toBeInstanceOf(ModelConfigError);
   });
 
+  it("surfaces 503 when AGENT_PROVIDER=openai without OPENAI_API_KEY", async () => {
+    process.env.AGENT_PROVIDER = "openai";
+    process.env.GROQ_API_KEY = "test-groq-key";
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.CEREBRAS_API_KEY;
+    const { AgentService, ModelConfigError } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200 } as unknown as import("express").Response;
+    try {
+      await service.streamChat(
+        {
+          messages: [
+            {
+              id: "4",
+              role: "user",
+              parts: [{ type: "text", text: "你好" }],
+            },
+          ],
+        },
+        res,
+      );
+      throw new Error("expected ModelConfigError");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ModelConfigError);
+      const message = err instanceof Error ? err.message : "";
+      expect(message).toContain("OPENAI_API_KEY");
+      expect(message).toContain("可重试或改回 Chat");
+      expect(message).not.toContain("test-groq-key");
+    } finally {
+      delete process.env.AGENT_PROVIDER;
+    }
+  });
+
   it("awaits pipeUIMessageStreamToResponse before streamChat resolves", async () => {
     let pipeFinished = false;
     pipeUIMessageStreamToResponseMock.mockImplementation(async ({ stream }) => {
@@ -855,5 +888,140 @@ describe("Agent SSE stream (AGENT-04)", () => {
       (w) => (w as { type?: string }).type === "data-citations",
     ) as { data?: { citations?: Array<{ documentId?: string }> } } | undefined;
     expect(citePart?.data?.citations?.[0]?.documentId).toBe("doc-braise");
+  });
+
+  it("writes only the first citation when the answer contains [S1]", async () => {
+    const toolText = [
+      "KB_SEARCH_STATUS: HIT",
+      "[S1]",
+      "title: 第一条",
+      "source: a.md",
+      "documentId: doc-1",
+      "chunkIndex: 0",
+      "similarity: 0.910",
+      "snippet: 第一条片段。",
+      "[S2]",
+      "title: 第二条",
+      "source: b.md",
+      "documentId: doc-2",
+      "chunkIndex: 1",
+      "similarity: 0.880",
+      "snippet: 第二条片段。",
+    ].join("\n");
+
+    resolveIntentPlanForAgentMock.mockResolvedValue({
+      plan: KB_PLAN_NO_GRAPH,
+      layers: ["L1"],
+    });
+    toBaseMessagesMock.mockResolvedValue([{ content: "对比两条资料" }]);
+    streamMock.mockImplementation(() =>
+      (async function* () {
+        yield ["updates", { prefetch: { messages: [{ content: toolText }] } }];
+      })(),
+    );
+    toUIMessageStreamMock.mockReturnValue(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "text-start", id: "r1" });
+          controller.enqueue({
+            type: "text-delta",
+            id: "r1",
+            delta: "根据知识库资料[S1]，五花肉先焯水再炒糖色，慢火炖至软烂即可。",
+          });
+          controller.enqueue({ type: "text-end", id: "r1" });
+          controller.close();
+        },
+      }).pipeThrough(new TransformStream()),
+    );
+
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "kb-s1",
+            role: "user",
+            parts: [{ type: "text", text: "对比两条资料" }],
+          },
+        ],
+        thread_id: "t-kb-only-s1",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __writes?: unknown[];
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    const citePart = streamArg?.__writes?.find(
+      (w) => (w as { type?: string }).type === "data-citations",
+    ) as { data?: { citations?: Array<{ documentId?: string }> } } | undefined;
+    expect(citePart?.data?.citations).toHaveLength(1);
+    expect(citePart?.data?.citations?.[0]?.documentId).toBe("doc-1");
+  });
+
+  it("does not write data-citations when the answer has no source markers", async () => {
+    const toolText = [
+      "KB_SEARCH_STATUS: HIT",
+      "[S1]",
+      "title: 第一条",
+      "source: a.md",
+      "documentId: doc-1",
+      "chunkIndex: 0",
+      "similarity: 0.910",
+      "snippet: 第一条片段。",
+    ].join("\n");
+
+    resolveIntentPlanForAgentMock.mockResolvedValue({
+      plan: KB_PLAN_NO_GRAPH,
+      layers: ["L1"],
+    });
+    toBaseMessagesMock.mockResolvedValue([{ content: "请介绍做法" }]);
+    streamMock.mockImplementation(() =>
+      (async function* () {
+        yield ["updates", { prefetch: { messages: [{ content: toolText }] } }];
+      })(),
+    );
+    toUIMessageStreamMock.mockReturnValue(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "text-start", id: "r1" });
+          controller.enqueue({
+            type: "text-delta",
+            id: "r1",
+            delta: "这是一段不带编号的实质回答，五花肉先焯水再炒糖色然后慢火炖至软烂。",
+          });
+          controller.enqueue({ type: "text-end", id: "r1" });
+          controller.close();
+        },
+      }).pipeThrough(new TransformStream()),
+    );
+
+    const { AgentService } = await import("./agent.service");
+    const service = new AgentService();
+    const res = { statusCode: 200, once: vi.fn() } as unknown as import("express").Response;
+    await service.streamChat(
+      {
+        messages: [
+          {
+            id: "kb-none",
+            role: "user",
+            parts: [{ type: "text", text: "请介绍做法" }],
+          },
+        ],
+        thread_id: "t-kb-no-marker",
+      },
+      res,
+    );
+    const streamArg = createUIMessageStreamMock.mock.results.at(-1)?.value as {
+      __writes?: unknown[];
+      __ready?: Promise<void>;
+    };
+    await streamArg?.__ready;
+    expect(
+      streamArg?.__writes?.some((w) => (w as { type?: string }).type === "data-citations"),
+    ).toBe(false);
   });
 });

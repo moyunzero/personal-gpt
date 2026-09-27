@@ -1,0 +1,1438 @@
+[
+  {
+    "id": "k01",
+    "category": "basic",
+    "user_input": "哈佛家训这本笔记的编者是谁？",
+    "reference": "斗南。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记", "天才在左疯子在右-读书笔记", "不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "斗南" }]
+  },
+  {
+    "id": "k02",
+    "category": "basic",
+    "user_input": "哈佛家训笔记里写的出版社是哪家？",
+    "reference": "中国华侨出版社。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "中国华侨出版社" }]
+  },
+  {
+    "id": "k03",
+    "category": "basic",
+    "user_input": "哈佛家训读书笔记的读完时间是哪一天？",
+    "reference": "2024-02-21。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "2024-02-21" }]
+  },
+  {
+    "id": "k04",
+    "category": "basic",
+    "user_input": "哈佛家训笔记里，生活的准则被写成什么？",
+    "reference": "准则是你自己，对自己的生活全力以赴。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "生活的准则就是你自己" }]
+  },
+  {
+    "id": "k05",
+    "category": "basic",
+    "user_input": "哈佛家训笔记说，一个人失败的最大原因之一是什么？",
+    "reference": "对自己的能力永远不敢充分信任。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "对自己的能力永远不敢充分信任" }]
+  },
+  {
+    "id": "k06",
+    "category": "basic",
+    "user_input": "哈佛家训笔记里关于耐心的那句提醒是什么？",
+    "reference": "路上没有耐心等待，就只好用一生的耐心面对失败。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "在成功路上没有耐心等待" }]
+  },
+  {
+    "id": "k07",
+    "category": "basic",
+    "user_input": "哈佛家训笔记把幸福放在哪里？",
+    "reference": "没有固定标准，在于如何看待，在心里。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "幸福与否在于如何看待" }]
+  },
+  {
+    "id": "k08",
+    "category": "basic",
+    "user_input": "哈佛家训笔记说父母留给孩子的财富是什么？",
+    "reference": "正确的学习与生活习惯。家庭是第一课堂。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "家庭是第一课堂" }]
+  },
+  {
+    "id": "k09",
+    "category": "basic",
+    "user_input": "笔记是否把哈佛家训当成学术意义上的哈佛研究？",
+    "reference": "不是。它被写成面向成长的格言集。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "不是学术意义上的哈佛研究" }]
+  },
+  {
+    "id": "k10",
+    "category": "basic",
+    "user_input": "哈佛家训笔记里，自食其力被写成什么的入口？",
+    "reference": "尊严的入口。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "自食其力被写成尊严的入口" }]
+  },
+
+  {
+    "id": "k11",
+    "category": "basic",
+    "user_input": "活下去的理由笔记开篇引了谁的话？",
+    "reference": "加缪。活着比自杀需要更大的勇气。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["哈佛家训-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "加缪" }]
+  },
+  {
+    "id": "k12",
+    "category": "basic",
+    "user_input": "活下去的理由原书作者是谁？",
+    "reference": "马特·海格。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "马特·海格" }]
+  },
+  {
+    "id": "k13",
+    "category": "basic",
+    "user_input": "笔记里马特·海格多少岁陷入严重抑郁？",
+    "reference": "24 岁。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "24 岁时" }]
+  },
+  {
+    "id": "k14",
+    "category": "basic",
+    "user_input": "活下去的理由里「我不想死」后面还说了什么？",
+    "reference": "我只是不想活着。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "我不想死，我只是不想活着" }]
+  },
+  {
+    "id": "k15",
+    "category": "basic",
+    "user_input": "笔记为什么说这个世界在蓄意催人抑郁？",
+    "reference": "因为快乐对经济不利。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "快乐对经济不利" }]
+  },
+  {
+    "id": "k16",
+    "category": "basic",
+    "user_input": "活下去的理由笔记里「正常」有多少种？",
+    "reference": "70 亿种正常。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "70亿种正常" }]
+  },
+  {
+    "id": "k17",
+    "category": "basic",
+    "user_input": "活下去的理由是否主张只靠自己就能走出困境？",
+    "reference": "不。笔记写从来没办法只靠自己走出困境。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "我们从来没办法只靠自己走出困境" }]
+  },
+  {
+    "id": "k18",
+    "category": "basic",
+    "user_input": "笔记里是谁的爱一次次把马特拉回来？",
+    "reference": "安德莉亚。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "安德莉亚" }]
+  },
+  {
+    "id": "k19",
+    "category": "basic",
+    "user_input": "活下去的理由书名篇章里「如果可以」后面说了什么？",
+    "reference": "坚持下去。活着总是值得的。生活在等待着你。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "生活在等待着你" }]
+  },
+  {
+    "id": "k20",
+    "category": "basic",
+    "user_input": "活下去的理由读书笔记的读完时间？",
+    "reference": "2021-10-25。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "2021-10-25" }]
+  },
+
+  {
+    "id": "k21",
+    "category": "basic",
+    "user_input": "天才在左疯子在右笔记开篇那句关于「疯了」怎么说？",
+    "reference": "如果有天你看到我疯了，其实就是你疯了。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "如果有天你看到我疯了，其实就是你疯了" }
+    ]
+  },
+  {
+    "id": "k22",
+    "category": "basic",
+    "user_input": "天才在左疯子在右的作者是谁？",
+    "reference": "高铭。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "高铭" }]
+  },
+  {
+    "id": "k23",
+    "category": "basic",
+    "user_input": "天才在左疯子在右笔记写的出版社？",
+    "reference": "北京联合出版公司。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["哈佛家训-读书笔记"],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "北京联合出版公司" }]
+  },
+  {
+    "id": "k24",
+    "category": "basic",
+    "user_input": "天才在左笔记把语言和文字比成什么？",
+    "reference": "思维病毒，因为它能改写大脑回路。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "思维病毒" }]
+  },
+  {
+    "id": "k25",
+    "category": "basic",
+    "user_input": "天才在左笔记对眼睛看到的东西怎么说？",
+    "reference": "眼睛看到的，还真不一定就是真实的。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "眼睛看到的，还真不一定就是真实的" }
+    ]
+  },
+  {
+    "id": "k26",
+    "category": "basic",
+    "user_input": "天才在左笔记说时间流逝的到底是什么？",
+    "reference": "时间不是流逝的，流逝的是我们。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "时间不是流逝的，流逝的是我们" }
+    ]
+  },
+  {
+    "id": "k27",
+    "category": "basic",
+    "user_input": "人间一世五十年那句，笔记里的人愿为什么而活？",
+    "reference": "不愿为了完成活着而活，愿为了梦想而活。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "人间一世五十年" }]
+  },
+  {
+    "id": "k28",
+    "category": "basic",
+    "user_input": "天才在左笔记里，知识和欲望哪一个被写成负担？",
+    "reference": "欲望才是负担。知识永远不会是负担。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "知识永远不会是负担，欲望才是负担" }
+    ]
+  },
+  {
+    "id": "k29",
+    "category": "basic",
+    "user_input": "天才在左《角色问题》第一次见面留下的那句话是什么？",
+    "reference": "半年后离开。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "半年后离开" }]
+  },
+  {
+    "id": "k30",
+    "category": "basic",
+    "user_input": "天才在左疯子在右读书笔记的读完时间？",
+    "reference": "2021-11-10。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "2021-11-10" }]
+  },
+
+  {
+    "id": "k31",
+    "category": "basic",
+    "user_input": "不要挑战人性的作者是谁？",
+    "reference": "潘楷文。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "潘楷文" }]
+  },
+  {
+    "id": "k32",
+    "category": "basic",
+    "user_input": "不要挑战人性笔记写的出版社？",
+    "reference": "湖南文艺出版社。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["哈佛家训-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "湖南文艺出版社" }]
+  },
+  {
+    "id": "k33",
+    "category": "basic",
+    "user_input": "不要挑战人性笔记怎么定义人性？",
+    "reference": "人之所以为人的特性，既不是神性，也不是兽性。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["哈佛家训-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "既不是神性，也不是兽性" }]
+  },
+  {
+    "id": "k34",
+    "category": "basic",
+    "user_input": "哈洛实验在这本笔记里得出爱源于什么？",
+    "reference": "爱源于接触，而非食物。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "爱源于接触，而非食物" }]
+  },
+  {
+    "id": "k35",
+    "category": "basic",
+    "user_input": "不要挑战人性笔记里的皮格马利翁效应是什么意思？",
+    "reference": "对某人赋予强烈期待并以真诚对待，期待会变成现实。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "皮格马利翁效应" }]
+  },
+  {
+    "id": "k36",
+    "category": "basic",
+    "user_input": "笔记说唯一能对抗平凡之恶的力量是什么？",
+    "reference": "对自身的思考与反省。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "平凡之恶" }]
+  },
+  {
+    "id": "k37",
+    "category": "basic",
+    "user_input": "不要挑战人性笔记把拖延主要归结成懒吗？",
+    "reference": "不是。背后常是恐惧、焦虑、愤怒、自责与逃避。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "拖延背后常不是懒" }]
+  },
+  {
+    "id": "k38",
+    "category": "basic",
+    "user_input": "笔记里爱的三角理论是谁的，三角是什么？",
+    "reference": "斯腾伯格。激情、亲密、承诺。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "斯腾伯格" }]
+  },
+  {
+    "id": "k39",
+    "category": "basic",
+    "user_input": "不要挑战人性笔记点名了哪些心理学实验？",
+    "reference": "哈洛、米尔格拉姆、津巴多、皮格马利翁、习得性无助、旁观者效应。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "米尔格拉姆" }]
+  },
+  {
+    "id": "k40",
+    "category": "basic",
+    "user_input": "不要挑战人性读书笔记的读完时间？",
+    "reference": "2025-05-27。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "2025-05-27" }]
+  },
+
+  {
+    "id": "k41",
+    "category": "semantic",
+    "user_input": "哪本笔记反复说别拿别人的人生当模板？",
+    "reference": "哈佛家训读书笔记。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "别把别人的生活当作你生活的蓝本" }]
+  },
+  {
+    "id": "k42",
+    "category": "semantic",
+    "user_input": "比较焦虑时，笔记说哪本更像提醒器而不是系统理论？",
+    "reference": "哈佛家训。短、直，当提醒器比系统理论更快见效。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "适合当作「提醒器」" }]
+  },
+  {
+    "id": "k43",
+    "category": "semantic",
+    "user_input": "有本笔记用看不见的火焰写抑郁，原作者是谁？",
+    "reference": "马特·海格，《活下去的理由》。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "你头脑里着了火" }]
+  },
+  {
+    "id": "k44",
+    "category": "semantic",
+    "user_input": "「手机另一端连接的人才重要，没有人为一部手机活着」出自哪本笔记？",
+    "reference": "活下去的理由。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "没有人为一部手机活着" }]
+  },
+  {
+    "id": "k45",
+    "category": "semantic",
+    "user_input": "哪本笔记用访谈追问：正常到底是健康，还是多数人的公约？",
+    "reference": "天才在左疯子在右。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "多数人的公约" }]
+  },
+  {
+    "id": "k46",
+    "category": "semantic",
+    "user_input": "五官不停变换的「影子先生」出现在哪本笔记？",
+    "reference": "天才在左疯子在右，写在《梦的真实性》。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "影子先生" }]
+  },
+  {
+    "id": "k47",
+    "category": "semantic",
+    "user_input": "用猴子、监狱和电击来讲日常心理的科普笔记是哪本？",
+    "reference": "不要挑战人性。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "哈洛的绒布妈妈" }]
+  },
+  {
+    "id": "k48",
+    "category": "semantic",
+    "user_input": "故意无视被说成把人放进情感死亡区，出自哪本？",
+    "reference": "不要挑战人性。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "无回应之地，即是绝境" }]
+  },
+  {
+    "id": "k49",
+    "category": "semantic",
+    "user_input": "哪本笔记把人生比成旅途，并说一开始就等在起点会让旅途苍白？",
+    "reference": "哈佛家训。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "人生被比喻为旅途" }]
+  },
+  {
+    "id": "k50",
+    "category": "semantic",
+    "user_input": "哪本笔记把焦虑从过去和未来拽回当下？",
+    "reference": "哈佛家训。现在是生命确实占有的唯一形态。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "现在是生命确实占有的唯一形态" }]
+  },
+  {
+    "id": "k51",
+    "category": "semantic",
+    "user_input": "哪本笔记说人可以一边抑郁、一边看起来快乐，像清醒的酗酒者？",
+    "reference": "活下去的理由。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "清醒的酗酒者" }]
+  },
+  {
+    "id": "k52",
+    "category": "semantic",
+    "user_input": "哪本笔记强调康复会好了又糟，不是一条直线？",
+    "reference": "活下去的理由。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["哈佛家训-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "向下不是唯一方向" }]
+  },
+  {
+    "id": "k53",
+    "category": "semantic",
+    "user_input": "「真理属于人类，谬误属于时代」在哪本笔记？",
+    "reference": "天才在左疯子在右。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "真理属于人类，谬误属于时代" }]
+  },
+  {
+    "id": "k54",
+    "category": "semantic",
+    "user_input": "哪本笔记用石头漫长的生命来拉开时间尺度？",
+    "reference": "天才在左疯子在右。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "石头那漫长的生命" }]
+  },
+  {
+    "id": "k55",
+    "category": "semantic",
+    "user_input": "哪本笔记说超前培训常常是在缓解大人自己的慌？",
+    "reference": "不要挑战人性。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["哈佛家训-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "超前培训" }]
+  },
+  {
+    "id": "k56",
+    "category": "semantic",
+    "user_input": "同一条朋友圈有人看见炫耀、有人看见祝福，这套说法在哪本笔记？",
+    "reference": "不要挑战人性，讲信念系统。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "信念系统" }]
+  },
+  {
+    "id": "k57",
+    "category": "semantic",
+    "user_input": "个人划线写着 0 条、又点名编者斗南的是哪本？",
+    "reference": "哈佛家训。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "个人划线 0 条" }]
+  },
+  {
+    "id": "k58",
+    "category": "semantic",
+    "user_input": "哪本笔记写个人划线 50 条？",
+    "reference": "活下去的理由。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "个人划线 50 条" }]
+  },
+  {
+    "id": "k59",
+    "category": "semantic",
+    "user_input": "哪本笔记声明自己不可当作教育科学或心理治疗依据？",
+    "reference": "哈佛家训。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "不可当作教育科学或心理治疗依据" }]
+  },
+  {
+    "id": "k60",
+    "category": "semantic",
+    "user_input": "哪本笔记文末写「不构成医疗建议」并提示严重情绪危机应寻求专业帮助？",
+    "reference": "活下去的理由。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "不构成医疗建议" }]
+  },
+
+  {
+    "id": "k61",
+    "category": "intra_doc",
+    "user_input": "哈佛家训笔记里，「准则向内」和「不敢信任自己的能力」是怎么接在一起的？",
+    "reference": "全力以赴的前提是准则向内；自我怀疑会提前完成失败。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "准则向内" },
+      { "title": "哈佛家训-读书笔记", "phrase": "对自己的能力永远不敢充分信任" }
+    ]
+  },
+  {
+    "id": "k62",
+    "category": "intra_doc",
+    "user_input": "哈佛家训笔记里，耐心的提醒和「现在是唯一占有的时间」各在劝什么？",
+    "reference": "耐心劝人别放弃等待成功；另一句把焦虑从过去和未来拉回当下。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "在成功路上没有耐心等待" },
+      { "title": "哈佛家训-读书笔记", "phrase": "现在是生命确实占有的唯一形态" }
+    ]
+  },
+  {
+    "id": "k63",
+    "category": "intra_doc",
+    "user_input": "活下去的理由从加缪那句到「生活在等待着你」，主张有没有变？",
+    "reference": "没有改口。开篇说活着需要更大勇气，后面仍说坚持下去、活着值得。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "活下去的理由-读书笔记", "phrase": "活着比自杀需要更大的勇气" },
+      { "title": "活下去的理由-读书笔记", "phrase": "生活在等待着你" }
+    ]
+  },
+  {
+    "id": "k64",
+    "category": "intra_doc",
+    "user_input": "活下去的理由把抑郁的原因放在个人还是世界？笔记两边都写了什么？",
+    "reference": "两边都写。世界在催生焦虑；同时人没法只靠自己走出来，爱和陪伴是基础设施。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "活下去的理由-读书笔记", "phrase": "快乐对经济不利" },
+      { "title": "活下去的理由-读书笔记", "phrase": "我们从来没办法只靠自己走出困境" }
+    ]
+  },
+  {
+    "id": "k65",
+    "category": "intra_doc",
+    "user_input": "天才在左笔记里，「思维病毒」和「别太在意精神病人说的话」是不是同一层风险？",
+    "reference": "是。叙事会改写大脑；深想对方的世界观，自己也可能跟着进去。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "思维病毒" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "别太在意精神病人说的话" }
+    ]
+  },
+  {
+    "id": "k66",
+    "category": "intra_doc",
+    "user_input": "天才在左笔记怎样从「时间不流逝」写到欲望停不下来？",
+    "reference": "流逝的是有限的生命，时间焦虑其实是意义焦虑；欲望像滚石，一旦开始就停不下来。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "时间不是流逝的，流逝的是我们" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "人的欲望就像高山的滚石" }
+    ]
+  },
+  {
+    "id": "k67",
+    "category": "intra_doc",
+    "user_input": "不要挑战人性里，哈洛的结论和「无回应之地即是绝境」怎么接上？",
+    "reference": "爱源于接触。看不见、不回应，等于把人放进情感死亡区。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "不要挑战人性-读书笔记", "phrase": "爱源于接触，而非食物" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "无回应之地，即是绝境" }
+    ]
+  },
+  {
+    "id": "k68",
+    "category": "intra_doc",
+    "user_input": "不要挑战人性笔记里，期待和标签分别起什么作用？",
+    "reference": "真诚期待可以塑形；虚假标签会锁死。改变要靠体验，并且慢慢来。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "不要挑战人性-读书笔记", "phrase": "皮格马利翁效应" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "虚假标签" }
+    ]
+  },
+  {
+    "id": "k69",
+    "category": "intra_doc",
+    "user_input": "不要挑战人性笔记怎样把信念系统、谣言和服从串成一条链？",
+    "reference": "事实冲击信念时人常找借口辩护，这把谣言、服从和平凡之恶串在一起。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "不要挑战人性-读书笔记", "phrase": "信念系统" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "平凡之恶" }
+    ]
+  },
+  {
+    "id": "k70",
+    "category": "intra_doc",
+    "user_input": "活下去的理由「好在哪里」里的非线性，对应正文哪一层意思？",
+    "reference": "高峰和低谷会来回：变好，然后又变糟，然后又变好。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "活下去的理由-读书笔记", "phrase": "承认非线性" },
+      { "title": "活下去的理由-读书笔记", "phrase": "然后又变糟，然后又变好" }
+    ]
+  },
+  {
+    "id": "k71",
+    "category": "intra_doc",
+    "user_input": "天才在左笔记收束时追问了哪四件事？",
+    "reference": "墙这边凭什么叫正常，眼睛凭什么叫真实，欲望滚动凭什么叫满足，无法被容纳的内心是否只能叫疾病。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "墙这边凭什么叫正常" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "欲望滚动的一生" }
+    ]
+  },
+  {
+    "id": "k72",
+    "category": "intra_doc",
+    "user_input": "不要挑战人性笔记对书名的正确读法和误读各是什么？",
+    "reference": "先理解机制再设计环境。若理解成放弃改变，就滑向犬儒。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "不要挑战人性-读书笔记", "phrase": "先理解机制，再设计环境" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "滑向犬儒" }
+    ]
+  },
+
+  {
+    "id": "k73",
+    "category": "cross_doc",
+    "user_input": "哈佛家训的编者和活下去的理由的作者分别是谁？",
+    "reference": "哈佛家训编者斗南。活下去的理由作者马特·海格。",
+    "expectTitles": ["哈佛家训-读书笔记", "活下去的理由-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "斗南" },
+      { "title": "活下去的理由-读书笔记", "phrase": "马特·海格" }
+    ]
+  },
+  {
+    "id": "k74",
+    "category": "cross_doc",
+    "user_input": "哪几本笔记明确写了不能拿来替代专业诊疗或心理治疗？",
+    "reference": "哈佛家训写不可当作心理治疗依据。活下去的理由写不构成医疗建议。天才在左写不构成医学建议。",
+    "expectTitles": ["哈佛家训-读书笔记", "活下去的理由-读书笔记", "天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "心理治疗依据" },
+      { "title": "活下去的理由-读书笔记", "phrase": "不构成医疗建议" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "不构成医学建议" }
+    ]
+  },
+  {
+    "id": "k75",
+    "category": "cross_doc",
+    "user_input": "天才在左和不要挑战人性都怀疑「看见的就是真的」，各自怎么说？",
+    "reference": "天才在左说眼睛看到的不一定真实。不要挑战人性说世界先经过信念系统解释。",
+    "expectTitles": ["天才在左疯子在右-读书笔记", "不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "眼睛看到的，还真不一定就是真实的" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "信念系统" }
+    ]
+  },
+  {
+    "id": "k76",
+    "category": "cross_doc",
+    "user_input": "四本读书笔记的出版信息分别写到了什么程度？",
+    "reference": "哈佛家训是中国华侨出版社，天才在左是北京联合出版公司，不要挑战人性是湖南文艺出版社。活下去的理由只标明中译，没有出版社名。",
+    "expectTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "中国华侨出版社" },
+      { "title": "活下去的理由-读书笔记", "phrase": "（中译）" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "北京联合出版公司" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "湖南文艺出版社" }
+    ]
+  },
+  {
+    "id": "k77",
+    "category": "cross_doc",
+    "user_input": "四本笔记的读完日期分别是哪一天？",
+    "reference": "哈佛 2024-02-21，活下去的理由 2021-10-25，天才在左 2021-11-10，不要挑战人性 2025-05-27。",
+    "expectTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "2024-02-21" },
+      { "title": "活下去的理由-读书笔记", "phrase": "2021-10-25" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "2021-11-10" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "2025-05-27" }
+    ]
+  },
+  {
+    "id": "k78",
+    "category": "cross_doc",
+    "user_input": "这四本笔记各自更接近哪种写法：格言、抑郁回忆、访谈，还是实验科普？",
+    "reference": "哈佛家训是格言集，活下去的理由是抑郁经历，天才在左是访谈，不要挑战人性是实验科普。",
+    "expectTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "格言集" },
+      { "title": "活下去的理由-读书笔记", "phrase": "严重抑郁" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "访谈体" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "心理学实验" }
+    ]
+  },
+  {
+    "id": "k79",
+    "category": "cross_doc",
+    "user_input": "「自食其力是尊严的入口」和「爱源于接触」分别在哪本？",
+    "reference": "前者在哈佛家训，后者在不要挑战人性。",
+    "expectTitles": ["哈佛家训-读书笔记", "不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "自食其力被写成尊严的入口" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "爱源于接触，而非食物" }
+    ]
+  },
+  {
+    "id": "k80",
+    "category": "cross_doc",
+    "user_input": "活下去的理由怎么写交谈，不要挑战人性怎么写冷漠的无视？",
+    "reference": "活下去的理由说交谈本身就是治疗。不要挑战人性说无回应之地即是绝境。",
+    "expectTitles": ["活下去的理由-读书笔记", "不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "活下去的理由-读书笔记", "phrase": "交谈本身就是一种治疗" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "无回应之地，即是绝境" }
+    ]
+  },
+  {
+    "id": "k81",
+    "category": "cross_doc",
+    "user_input": "哪两本笔记是在 2021 年读完的？",
+    "reference": "活下去的理由是 2021-10-25，天才在左是 2021-11-10。",
+    "expectTitles": ["活下去的理由-读书笔记", "天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["哈佛家训-读书笔记", "不要挑战人性-读书笔记"],
+    "grounding": [
+      { "title": "活下去的理由-读书笔记", "phrase": "2021-10-25" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "2021-11-10" }
+    ]
+  },
+  {
+    "id": "k82",
+    "category": "cross_doc",
+    "user_input": "四本笔记文末写的个人划线条数分别是多少？",
+    "reference": "哈佛 0，活下去的理由 50，天才在左 0，不要挑战人性 30。",
+    "expectTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "个人划线 0 条" },
+      { "title": "活下去的理由-读书笔记", "phrase": "个人划线 50 条" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "个人划线 0 条" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "个人划线 30 条" }
+    ]
+  },
+  {
+    "id": "k83",
+    "category": "cross_doc",
+    "user_input": "哈佛家训和天才在左都反对追别人的标准，措辞有什么差别？",
+    "reference": "哈佛家训说别把别人的生活当蓝本。天才在左说欲望像滚石，得到了也不会停。",
+    "expectTitles": ["哈佛家训-读书笔记", "天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "哈佛家训-读书笔记", "phrase": "别把别人的生活当作你生活的蓝本" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "人的欲望就像高山的滚石" }
+    ]
+  },
+  {
+    "id": "k84",
+    "category": "cross_doc",
+    "user_input": "活下去的理由和天才在左，哪本在写自己的抑郁，哪本在写别人的访谈？",
+    "reference": "活下去的理由写马特·海格自己的抑郁。天才在左是高铭的访谈体。",
+    "expectTitles": ["活下去的理由-读书笔记", "天才在左疯子在右-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "活下去的理由-读书笔记", "phrase": "马特·海格" },
+      { "title": "天才在左疯子在右-读书笔记", "phrase": "访谈体" }
+    ]
+  },
+
+  {
+    "id": "k85",
+    "category": "constrained",
+    "user_input": "两本都谈「正常」。写「70亿种正常」的是哪一本？",
+    "reference": "活下去的理由。另一本是天才在左在问墙这边凭什么叫正常。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "70亿种正常" }]
+  },
+  {
+    "id": "k86",
+    "category": "constrained",
+    "user_input": "两本都怀疑肉眼所见。出现「影子先生」的是哪一本？",
+    "reference": "天才在左疯子在右。不要挑战人性讲的是信念系统，没有影子先生。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "影子先生" }]
+  },
+  {
+    "id": "k87",
+    "category": "constrained",
+    "user_input": "同样劝人别跟别人比。把失败原因写成「不敢充分信任自己的能力」的是哪本？",
+    "reference": "哈佛家训。",
+    "expectTitles": ["哈佛家训-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "哈佛家训-读书笔记", "phrase": "对自己的能力永远不敢充分信任" }]
+  },
+  {
+    "id": "k88",
+    "category": "constrained",
+    "user_input": "同样写陪伴。点名「安德莉亚」的是哪本？",
+    "reference": "活下去的理由。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "安德莉亚" }]
+  },
+  {
+    "id": "k89",
+    "category": "constrained",
+    "user_input": "同样写欲望停不下来。用「高山的滚石」这个比喻的是哪本？",
+    "reference": "天才在左疯子在右。",
+    "expectTitles": ["天才在左疯子在右-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "天才在左疯子在右-读书笔记", "phrase": "人的欲望就像高山的滚石" }]
+  },
+  {
+    "id": "k90",
+    "category": "constrained",
+    "user_input": "同样写爱。用绒布妈妈实验的是哪本？",
+    "reference": "不要挑战人性。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "绒布妈妈" }]
+  },
+  {
+    "id": "k91",
+    "category": "constrained",
+    "user_input": "两本都是 2021 年读完。读完日期落在 10 月的是哪本？",
+    "reference": "活下去的理由，2021-10-25。天才在左是 11 月。",
+    "expectTitles": ["活下去的理由-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "活下去的理由-读书笔记", "phrase": "2021-10-25" }]
+  },
+  {
+    "id": "k92",
+    "category": "constrained",
+    "user_input": "四本里出版社是湖南文艺出版社的是哪一本？",
+    "reference": "不要挑战人性。",
+    "expectTitles": ["不要挑战人性-读书笔记"],
+    "forbidTitles": ["哈佛家训-读书笔记", "天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "不要挑战人性-读书笔记", "phrase": "湖南文艺出版社" }]
+  },
+
+  {
+    "id": "k93",
+    "category": "not_found",
+    "user_input": "奥德赛计划书的三条路径是什么？",
+    "reference": "这四篇读书笔记里没有奥德赛计划书。",
+    "expectTitles": [],
+    "forbidTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "absent": "奥德赛"
+  },
+  {
+    "id": "k94",
+    "category": "not_found",
+    "user_input": "这四本书的 ISBN 分别是多少？",
+    "reference": "笔记没有写 ISBN。",
+    "expectTitles": [],
+    "forbidTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "absent": "ISBN"
+  },
+  {
+    "id": "k95",
+    "category": "not_found",
+    "user_input": "米尔格拉姆实验里最高电压是多少伏？",
+    "reference": "不要挑战人性笔记只点了实验名字，没有写电压数字。",
+    "expectTitles": [],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "absent": "450伏"
+  },
+  {
+    "id": "k96",
+    "category": "not_found",
+    "user_input": "高铭的出生年份是哪一年？",
+    "reference": "天才在左笔记没有写作者出生年份。",
+    "expectTitles": [],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "absent": "出生年份"
+  },
+  {
+    "id": "k97",
+    "category": "not_found",
+    "user_input": "今天是星期几？",
+    "reference": "读书笔记里没有日历。",
+    "expectTitles": [],
+    "forbidTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "absent": "星期"
+  },
+  {
+    "id": "k98",
+    "category": "not_found",
+    "user_input": "Redis 里短期记忆怎么配置？",
+    "reference": "这四篇笔记没有 Redis。",
+    "expectTitles": [],
+    "forbidTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "absent": "Redis"
+  },
+  {
+    "id": "k99",
+    "category": "not_found",
+    "user_input": "心理学咨询话术的标准开场白是什么？",
+    "reference": "这四篇笔记不是咨询话术库。",
+    "expectTitles": [],
+    "forbidTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "absent": "咨询话术"
+  },
+  {
+    "id": "k100",
+    "category": "not_found",
+    "user_input": "部署清单里的 DATABASE_URL 应该怎么填？",
+    "reference": "这四篇笔记没有部署清单。",
+    "expectTitles": [],
+    "forbidTitles": [
+      "哈佛家训-读书笔记",
+      "活下去的理由-读书笔记",
+      "天才在左疯子在右-读书笔记",
+      "不要挑战人性-读书笔记"
+    ],
+    "absent": "DATABASE_URL"
+  },
+
+  {
+    "id": "k101",
+    "category": "basic",
+    "user_input": "带壳的牡蛎是大人的心脏，作者是谁？",
+    "reference": "拟泥 nini。",
+    "expectTitles": ["带壳的牡蛎是大人的心脏-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [{ "title": "带壳的牡蛎是大人的心脏-读书笔记", "phrase": "拟泥 nini" }]
+  },
+  {
+    "id": "k102",
+    "category": "basic",
+    "user_input": "牡蛎这本笔记的读完时间？",
+    "reference": "2025-01-08。",
+    "expectTitles": ["带壳的牡蛎是大人的心脏-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "带壳的牡蛎是大人的心脏-读书笔记", "phrase": "2025-01-08" }]
+  },
+  {
+    "id": "k103",
+    "category": "basic",
+    "user_input": "笔记里，坚硬的牡蛎用什么才能打开？",
+    "reference": "一把小刀，砸不碎，小刀可以打开。",
+    "expectTitles": ["带壳的牡蛎是大人的心脏-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "带壳的牡蛎是大人的心脏-读书笔记", "phrase": "用一把小刀就可以轻松地打开" }
+    ]
+  },
+  {
+    "id": "k104",
+    "category": "basic",
+    "user_input": "黑匣子思维的作者是谁？",
+    "reference": "马修·萨伊德。",
+    "expectTitles": ["黑匣子思维-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "黑匣子思维-读书笔记", "phrase": "马修·萨伊德" }]
+  },
+  {
+    "id": "k105",
+    "category": "basic",
+    "user_input": "黑匣子思维笔记写的出版社？",
+    "reference": "民主与建设出版社。",
+    "expectTitles": ["黑匣子思维-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "黑匣子思维-读书笔记", "phrase": "民主与建设出版社" }]
+  },
+  {
+    "id": "k106",
+    "category": "basic",
+    "user_input": "黑匣子思维怎么解释「模糊的目标」？",
+    "reference": "担心失败时给自己定模糊目标，是为了没成功时没人能指责。",
+    "expectTitles": ["黑匣子思维-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "黑匣子思维-读书笔记", "phrase": "定下一个模糊的目标" }]
+  },
+  {
+    "id": "k107",
+    "category": "basic",
+    "user_input": "脱胎换骨的人生整理术的作者是谁？",
+    "reference": "袁春楠。",
+    "expectTitles": ["脱胎换骨的人生整理术-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "脱胎换骨的人生整理术-读书笔记", "phrase": "袁春楠" }]
+  },
+  {
+    "id": "k108",
+    "category": "basic",
+    "user_input": "整理术笔记是否认为收纳等于整理？",
+    "reference": "不等于。收纳绝不等于整理。",
+    "expectTitles": ["脱胎换骨的人生整理术-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "脱胎换骨的人生整理术-读书笔记", "phrase": "收纳绝不等于整理" }]
+  },
+  {
+    "id": "k109",
+    "category": "basic",
+    "user_input": "人生整理术笔记的读完时间？",
+    "reference": "2023-12-04。",
+    "expectTitles": ["脱胎换骨的人生整理术-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "脱胎换骨的人生整理术-读书笔记", "phrase": "2023-12-04" }]
+  },
+  {
+    "id": "k110",
+    "category": "basic",
+    "user_input": "正午之魔的作者是谁？",
+    "reference": "安德鲁·所罗门。屠彬、张哲译。",
+    "expectTitles": ["正午之魔-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "正午之魔-读书笔记", "phrase": "安德鲁·所罗门" }]
+  },
+  {
+    "id": "k111",
+    "category": "basic",
+    "user_input": "正午之魔笔记给抑郁下的定义是什么？",
+    "reference": "抑郁是爱的瑕疵。",
+    "expectTitles": ["正午之魔-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "正午之魔-读书笔记", "phrase": "抑郁是爱的瑕疵" }]
+  },
+  {
+    "id": "k112",
+    "category": "basic",
+    "user_input": "正午之魔笔记写的出版社和读完日期？",
+    "reference": "上海三联书店，2024-09-28。",
+    "expectTitles": ["正午之魔-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "正午之魔-读书笔记", "phrase": "上海三联书店" },
+      { "title": "正午之魔-读书笔记", "phrase": "2024-09-28" }
+    ]
+  },
+
+  {
+    "id": "k113",
+    "category": "semantic",
+    "user_input": "哪本笔记写大人不可以在公园、电梯或街上哭？",
+    "reference": "带壳的牡蛎是大人的心脏。",
+    "expectTitles": ["带壳的牡蛎是大人的心脏-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "带壳的牡蛎是大人的心脏-读书笔记", "phrase": "大人不可以哭" }]
+  },
+  {
+    "id": "k114",
+    "category": "semantic",
+    "user_input": "哪本笔记用航空事故调查对照医疗失误，讲如何打开失败？",
+    "reference": "黑匣子思维。",
+    "expectTitles": ["黑匣子思维-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "黑匣子思维-读书笔记", "phrase": "航空事故调查" }]
+  },
+  {
+    "id": "k115",
+    "category": "semantic",
+    "user_input": "哪本笔记用每餐八分饱来讲日程也要留两分余地？",
+    "reference": "脱胎换骨的人生整理术。",
+    "expectTitles": ["脱胎换骨的人生整理术-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "脱胎换骨的人生整理术-读书笔记", "phrase": "每餐饭吃8分饱" }]
+  },
+  {
+    "id": "k116",
+    "category": "semantic",
+    "user_input": "哪本笔记把眼泪流干之后的痛叫做干涸之痛？",
+    "reference": "正午之魔。",
+    "expectTitles": ["正午之魔-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "正午之魔-读书笔记", "phrase": "干涸之痛" }]
+  },
+  {
+    "id": "k117",
+    "category": "semantic",
+    "user_input": "长颈鹿那则「能活下来就很好」出现在哪本笔记？",
+    "reference": "带壳的牡蛎是大人的心脏。",
+    "expectTitles": ["带壳的牡蛎是大人的心脏-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "带壳的牡蛎是大人的心脏-读书笔记", "phrase": "能活下来就很好" }]
+  },
+  {
+    "id": "k118",
+    "category": "semantic",
+    "user_input": "屠彬、张哲译本对应哪本笔记？",
+    "reference": "正午之魔。",
+    "expectTitles": ["正午之魔-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "正午之魔-读书笔记", "phrase": "屠彬、张哲" }]
+  },
+
+  {
+    "id": "k119",
+    "category": "intra_doc",
+    "user_input": "牡蛎笔记怎样把「小刀打开外壳」和「大人没有地方哭」接在一起？",
+    "reference": "外壳像牡蛎，小刀才能打开缝隙；大人被收回了哭泣的空间。",
+    "expectTitles": ["带壳的牡蛎是大人的心脏-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "带壳的牡蛎是大人的心脏-读书笔记", "phrase": "用一把小刀就可以轻松地打开" },
+      { "title": "带壳的牡蛎是大人的心脏-读书笔记", "phrase": "世界上没有留给大人可以哭泣的地方" }
+    ]
+  },
+  {
+    "id": "k120",
+    "category": "intra_doc",
+    "user_input": "黑匣子思维里，模糊目标和「容许失败」各在说什么？",
+    "reference": "模糊目标是失败前的面子借口。容许失败是为了把惩罚从丢脸转向系统缺口。",
+    "expectTitles": ["黑匣子思维-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "黑匣子思维-读书笔记", "phrase": "定下一个模糊的目标" },
+      { "title": "黑匣子思维-读书笔记", "phrase": "容许失败发生" }
+    ]
+  },
+  {
+    "id": "k121",
+    "category": "intra_doc",
+    "user_input": "整理术如何从「收纳不是整理」写到八分满？",
+    "reference": "收纳只把乱藏起来。整理是取舍。满格日程和满柜衣物一样，要留两分余地。",
+    "expectTitles": ["脱胎换骨的人生整理术-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "脱胎换骨的人生整理术-读书笔记", "phrase": "收纳绝不等于整理" },
+      { "title": "脱胎换骨的人生整理术-读书笔记", "phrase": "每天日程安排8分满" }
+    ]
+  },
+  {
+    "id": "k122",
+    "category": "intra_doc",
+    "user_input": "正午之魔怎样从「抑郁是爱的瑕疵」写到干涸之痛？",
+    "reference": "爱使丧失成为可能。最痛不是流泪，而是眼泪流干后的干涸。",
+    "expectTitles": ["正午之魔-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "正午之魔-读书笔记", "phrase": "抑郁是爱的瑕疵" },
+      { "title": "正午之魔-读书笔记", "phrase": "干涸之痛" }
+    ]
+  },
+
+  {
+    "id": "k123",
+    "category": "cross_doc",
+    "user_input": "活下去的理由和正午之魔的作者分别是谁？",
+    "reference": "马特·海格，安德鲁·所罗门。",
+    "expectTitles": ["活下去的理由-读书笔记", "正午之魔-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "活下去的理由-读书笔记", "phrase": "马特·海格" },
+      { "title": "正午之魔-读书笔记", "phrase": "安德鲁·所罗门" }
+    ]
+  },
+  {
+    "id": "k124",
+    "category": "cross_doc",
+    "user_input": "黑匣子思维和不要挑战人性都写到「尽善尽美」，各自的场景是什么？",
+    "reference": "黑匣子写医疗里称职被等同于尽善尽美。不要挑战人性写把称职神化成尽善尽美。",
+    "expectTitles": ["黑匣子思维-读书笔记", "不要挑战人性-读书笔记"],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "黑匣子思维-读书笔记", "phrase": "尽善尽美" },
+      { "title": "不要挑战人性-读书笔记", "phrase": "尽善尽美" }
+    ]
+  },
+  {
+    "id": "k125",
+    "category": "cross_doc",
+    "user_input": "牡蛎、黑匣子、整理术、正午之魔四本笔记的出版社分别是哪家？",
+    "reference": "北京联合出版公司、民主与建设出版社、湖南文艺出版社、上海三联书店。",
+    "expectTitles": [
+      "带壳的牡蛎是大人的心脏-读书笔记",
+      "黑匣子思维-读书笔记",
+      "脱胎换骨的人生整理术-读书笔记",
+      "正午之魔-读书笔记"
+    ],
+    "forbidTitles": [],
+    "grounding": [
+      { "title": "带壳的牡蛎是大人的心脏-读书笔记", "phrase": "北京联合出版公司" },
+      { "title": "黑匣子思维-读书笔记", "phrase": "民主与建设出版社" },
+      { "title": "脱胎换骨的人生整理术-读书笔记", "phrase": "湖南文艺出版社" },
+      { "title": "正午之魔-读书笔记", "phrase": "上海三联书店" }
+    ]
+  },
+  {
+    "id": "k126",
+    "category": "cross_doc",
+    "user_input": "哪两本笔记分别写马特自己的抑郁，以及「抑郁是爱的瑕疵」？",
+    "reference": "活下去的理由写马特·海格。正午之魔写抑郁是爱的瑕疵。",
+    "expectTitles": ["活下去的理由-读书笔记", "正午之魔-读书笔记"],
+    "forbidTitles": ["天才在左疯子在右-读书笔记"],
+    "grounding": [
+      { "title": "活下去的理由-读书笔记", "phrase": "严重抑郁" },
+      { "title": "正午之魔-读书笔记", "phrase": "抑郁是爱的瑕疵" }
+    ]
+  },
+
+  {
+    "id": "k127",
+    "category": "constrained",
+    "user_input": "两本都写哭或痛。明确说「大人不可以哭」的是哪一本？",
+    "reference": "带壳的牡蛎是大人的心脏。",
+    "expectTitles": ["带壳的牡蛎是大人的心脏-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "带壳的牡蛎是大人的心脏-读书笔记", "phrase": "大人不可以哭" }]
+  },
+  {
+    "id": "k128",
+    "category": "constrained",
+    "user_input": "两本都提到尽善尽美。用航空黑匣子对照医疗的是哪一本？",
+    "reference": "黑匣子思维。",
+    "expectTitles": ["黑匣子思维-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "黑匣子思维-读书笔记", "phrase": "航空事故调查" }]
+  },
+  {
+    "id": "k129",
+    "category": "constrained",
+    "user_input": "两本都由湖南文艺出版社出版。写「收纳绝不等于整理」的是哪一本？",
+    "reference": "脱胎换骨的人生整理术。不要挑战人性是另一本湖南文艺的笔记。",
+    "expectTitles": ["脱胎换骨的人生整理术-读书笔记"],
+    "forbidTitles": ["不要挑战人性-读书笔记"],
+    "grounding": [{ "title": "脱胎换骨的人生整理术-读书笔记", "phrase": "收纳绝不等于整理" }]
+  },
+  {
+    "id": "k130",
+    "category": "constrained",
+    "user_input": "两本都写抑郁。把定义写成「爱的瑕疵」的是哪一本？",
+    "reference": "正午之魔。",
+    "expectTitles": ["正午之魔-读书笔记"],
+    "forbidTitles": ["活下去的理由-读书笔记"],
+    "grounding": [{ "title": "正午之魔-读书笔记", "phrase": "抑郁是爱的瑕疵" }]
+  },
+
+  {
+    "id": "k131",
+    "category": "pdf_extract",
+    "user_input": "Frostbite Creamery 的 FY 2024 批发收入是多少？",
+    "reference": "表里 Wholesale revenue 对应 FY 2024 的数是 15210526。",
+    "expectTitles": ["frostbite_creamery_annual_financial_statement (full grid)"],
+    "forbidTitles": [],
+    "grounding": [
+      {
+        "title": "frostbite_creamery_annual_financial_statement (full grid)",
+        "phrase": "Wholesale revenue \t15210526"
+      }
+    ]
+  },
+  {
+    "id": "k132",
+    "category": "pdf_extract",
+    "user_input": "sample-pdf-100kb 抽出来的文字，第 1 页标记怎么写？",
+    "reference": "Page 1 of 8，由 Flipper File 生成，正文是 Lorem ipsum。",
+    "expectTitles": ["sample-pdf-100kb"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "sample-pdf-100kb", "phrase": "Page 1 of 8" }]
+  },
+  {
+    "id": "k133",
+    "category": "pdf_extract",
+    "user_input": "sample-pdf-2mb 抽出的文字里，页面标记是什么？",
+    "reference": "只有 “-- 1 of 10 --” 这类页码，没有正文。",
+    "expectTitles": ["sample-pdf-2mb"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "sample-pdf-2mb", "phrase": "-- 1 of 10 --" }]
+  },
+  {
+    "id": "k134",
+    "category": "pdf_extract",
+    "user_input": "sample-pdf-5mb 抽出的文字里，总页数标记是多少？",
+    "reference": "只有 “-- 1 of 25 --” 到 “-- 25 of 25 --”，没有正文。",
+    "expectTitles": ["sample-pdf-5mb"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "sample-pdf-5mb", "phrase": "-- 1 of 25 --" }]
+  },
+  {
+    "id": "k135",
+    "category": "pdf_extract",
+    "user_input": "sample-pdf-10mb 抽出的文字里，总页数标记是多少？",
+    "reference": "只有 “-- 1 of 50 --” 这类页码。",
+    "expectTitles": ["sample-pdf-10mb"],
+    "forbidTitles": [],
+    "grounding": [{ "title": "sample-pdf-10mb", "phrase": "-- 1 of 50 --" }]
+  },
+  {
+    "id": "k136",
+    "category": "pdf_extract",
+    "user_input": "sample-pdf-500kb 的章标题怎么写？",
+    "reference": "Sample Mixed Content，Chapter 1 of 20，正文是 Lorem ipsum。",
+    "expectTitles": ["sample-pdf-500kb"],
+    "forbidTitles": ["sample-pdf-100kb"],
+    "grounding": [{ "title": "sample-pdf-500kb", "phrase": "Chapter 1 of 20" }]
+  },
+  {
+    "id": "k137",
+    "category": "pdf_extract",
+    "user_input": "sample-pdf-small 抽出的文字标明共多少页？",
+    "reference": "Page 1 of 3，Flipper File 的 Lorem ipsum。",
+    "expectTitles": ["sample-pdf-small"],
+    "forbidTitles": ["sample-pdf-tiny"],
+    "grounding": [{ "title": "sample-pdf-small", "phrase": "Page 1 of 3" }]
+  },
+  {
+    "id": "k138",
+    "category": "pdf_extract",
+    "user_input": "sample-pdf-tiny 抽出的文字标明共多少页？",
+    "reference": "Page 1 of 1。",
+    "expectTitles": ["sample-pdf-tiny"],
+    "forbidTitles": ["sample-pdf-small"],
+    "grounding": [{ "title": "sample-pdf-tiny", "phrase": "Page 1 of 1" }]
+  }
+]

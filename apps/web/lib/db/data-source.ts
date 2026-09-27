@@ -15,6 +15,8 @@ import { IngestJobEntity } from "./entities/ingest-job.entity";
 import { UserEntity } from "./entities/user.entity";
 import { WorkspaceEntity } from "./entities/workspace.entity";
 import { WorkspaceInviteEntity } from "./entities/workspace-invite.entity";
+import { WorkspaceLlmModelEntity } from "./entities/workspace-llm-model.entity";
+import { WorkspaceLlmPrefEntity } from "./entities/workspace-llm-pref.entity";
 import { WorkspaceMemberEntity } from "./entities/workspace-member.entity";
 
 const ENTITIES = [
@@ -32,6 +34,8 @@ const ENTITIES = [
   ChatSessionEntity,
   ChatMessageEntity,
   AuditLogEntity,
+  WorkspaceLlmModelEntity,
+  WorkspaceLlmPrefEntity,
 ];
 const MIGRATIONS = [`${__dirname}/migrations/[0-9]*-*.{ts,js}`];
 

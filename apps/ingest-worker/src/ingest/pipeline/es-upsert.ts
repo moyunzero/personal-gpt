@@ -47,6 +47,9 @@ export async function upsertChunksToEs(
       source: chunk.source,
       category: chunk.category,
       keywords: chunk.tags,
+      ...(typeof chunk.metadata?.page === "number" && Number.isFinite(chunk.metadata.page)
+        ? { page: chunk.metadata.page }
+        : {}),
     })),
   );
 }

@@ -15,6 +15,7 @@ import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity"
 import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
 import { extractAndUpsertGraph } from "./pipeline/graph-extract";
+import { resolvePdfChunks } from "./pipeline/mineru-parse";
 import { parseDocument } from "./pipeline/parse";
 import { splitText, toChunkRecords } from "./pipeline/split";
 import { traceIngestStep } from "./pipeline/tracing";
@@ -72,13 +73,24 @@ export class IngestProcessor extends WorkerHost {
     };
 
     try {
-      const text = await traceIngestStep("parse", traceCtx, () =>
-        parseDocument(filePath, mimeType),
-      );
-      await job.updateProgress(25);
-      await this.updateIngestJob(ingestJob?.id, { progress: 25 });
-
-      const chunks = await traceIngestStep("split", traceCtx, () => splitText(text));
+      let chunks: string[];
+      let pages: number[] | undefined;
+      if (mimeType === "application/pdf") {
+        const loaded = await resolvePdfChunks(filePath, {
+          trace: (step, fn) => traceIngestStep(step, traceCtx, fn),
+        });
+        chunks = loaded.chunks;
+        pages = loaded.pages;
+        await job.updateProgress(25);
+        await this.updateIngestJob(ingestJob?.id, { progress: 25 });
+      } else {
+        const text = await traceIngestStep("parse", traceCtx, () =>
+          parseDocument(filePath, mimeType),
+        );
+        await job.updateProgress(25);
+        await this.updateIngestJob(ingestJob?.id, { progress: 25 });
+        chunks = await traceIngestStep("split", traceCtx, () => splitText(text));
+      }
       await job.updateProgress(50);
       await this.updateIngestJob(ingestJob?.id, { progress: 50 });
 
@@ -89,26 +101,37 @@ export class IngestProcessor extends WorkerHost {
       const document = await this.documentRepo.findOne({
         where: { id: documentId, workspaceId },
       });
-      const records = toChunkRecords(chunks, vectors, {
+      const recordMeta = {
         workspaceId,
         documentId,
         title: title ?? document?.title,
         source: document?.source ?? undefined,
         category: category ?? document?.category ?? undefined,
         tags: tags ?? document?.tags,
-      });
+      };
+      const records =
+        pages !== undefined
+          ? toChunkRecords(chunks, vectors, recordMeta, pages)
+          : toChunkRecords(chunks, vectors, recordMeta);
 
       await traceIngestStep("upsert", traceCtx, () => upsertChunks(records));
       await job.updateProgress(90);
       await this.updateIngestJob(ingestJob?.id, { progress: 90 });
 
       if (isGraphIngestEnabled()) {
-        await traceIngestStep("graph-extract", traceCtx, () =>
-          extractAndUpsertGraph(
-            { workspaceId, documentId, chunks },
-            { dataSource: this.dataSource },
-          ),
-        );
+        try {
+          await traceIngestStep("graph-extract", traceCtx, () =>
+            extractAndUpsertGraph(
+              { workspaceId, documentId, chunks },
+              { dataSource: this.dataSource },
+            ),
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          this.logger.warn(
+            `Skip graph-extract for ${documentId} after failure; vector ingest stays ready: ${message}`,
+          );
+        }
       } else {
         this.logger.log(
           `Skip graph-extract for ${documentId} (ENABLE_GRAPH_RAG!=true; vector ingest only)`,

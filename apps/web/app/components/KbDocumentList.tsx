@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import KbCategoryCombobox from "./KbCategoryCombobox";
 import KbDeleteConfirm from "./KbDeleteConfirm";
+import PaperMenu from "./PaperMenu";
 
 export type KbDocumentItem = {
   id: string;
@@ -272,15 +273,16 @@ function KbDocumentRow({
                 </label>
                 <label className="kb-field">
                   <span className="kb-field-label">可见性</span>
-                  <select
-                    className="kb-field-input"
+                  <PaperMenu
+                    ariaLabel="可见性"
                     value={editVisibility}
-                    onChange={(e) => setEditVisibility(e.target.value as typeof editVisibility)}
-                  >
-                    <option value="workspace">工作区全员</option>
-                    <option value="private">仅自己</option>
-                    <option value="restricted">指定成员</option>
-                  </select>
+                    onChange={(value) => setEditVisibility(value as typeof editVisibility)}
+                    options={[
+                      { value: "workspace", title: "工作区全员" },
+                      { value: "private", title: "仅自己" },
+                      { value: "restricted", title: "指定成员" },
+                    ]}
+                  />
                 </label>
               </div>
               <div className="kb-doc-edit-actions">

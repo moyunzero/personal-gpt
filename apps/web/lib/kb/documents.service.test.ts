@@ -166,7 +166,6 @@ describe("uploadDocument enqueue contract", () => {
     docFindOneMock.mockImplementation(async ({ id }: { id: string }) => {
       const inserted = insertMock.mock.calls.at(-1)?.[0] as Record<string, unknown> | undefined;
       return {
-        id,
         workspaceId: TEST_CTX.workspaceId,
         ownerId: TEST_CTX.userId,
         title: "sample",
@@ -227,6 +226,7 @@ describe("uploadDocument enqueue contract", () => {
         documentId: document.id,
         mimeType: "application/pdf",
       }),
+      { jobId: job?.id },
     );
     expect(jobUpdateMock).toHaveBeenCalledWith({ id: job?.id }, { bullJobId: "bull-123" });
   });
@@ -247,6 +247,7 @@ describe("uploadDocument enqueue contract", () => {
         category: "docs",
         tags: ["ai", "rag"],
       }),
+      { jobId: expect.any(String) },
     );
   });
 
@@ -271,6 +272,7 @@ describe("uploadDocument enqueue contract", () => {
         filePath: "https://abc123.blob.vercel-storage.com/uploads/x.pdf",
         mimeType: "application/pdf",
       }),
+      { jobId: job?.id },
     );
   });
 
@@ -352,6 +354,7 @@ describe("reindexDocument (INGEST-05)", () => {
         filePath: "/tmp/uploads/reindex.pdf",
         mimeType: "application/pdf",
       }),
+      { jobId: result?.job.id },
     );
     expect(result?.job.id).toBeTruthy();
     expect(jobInsertMock).toHaveBeenCalledWith(

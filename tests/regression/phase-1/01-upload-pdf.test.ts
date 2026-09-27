@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const parseMock = vi.fn();
+const parsePdfMock = vi.fn();
+const readBytesMock = vi.fn();
 const splitMock = vi.fn();
+const splitPdfMock = vi.fn();
 const embedMock = vi.fn();
 const upsertMock = vi.fn();
 const statMock = vi.fn();
@@ -12,10 +15,14 @@ vi.mock("node:fs/promises", () => ({
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/parse", () => ({
   parseDocument: (...args: unknown[]) => parseMock(...args),
+  parsePdfPages: (...args: unknown[]) => parsePdfMock(...args),
+  readIngestBytes: (...args: unknown[]) => readBytesMock(...args),
+  PDF_NO_SELECTABLE_TEXT: "这份 PDF 没有可选中的正文。",
 }));
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/split", () => ({
   splitText: (...args: unknown[]) => splitMock(...args),
+  splitPdfPages: (...args: unknown[]) => splitPdfMock(...args),
   toChunkRecords: (
     chunks: string[],
     vectors: number[][],
@@ -63,7 +70,17 @@ describe("Phase 1 regression #1: upload PDF → ready with chunks", () => {
 
     statMock.mockResolvedValue({ size: 5 * 1024 * 1024 });
     parseMock.mockResolvedValue("Personal GPT knowledge base fixture content.");
+    parsePdfMock.mockResolvedValue({
+      pages: [{ num: 1, text: "Personal GPT knowledge base fixture content." }],
+      headings: [],
+    });
+    readBytesMock.mockResolvedValue(Buffer.from("%PDF"));
     splitMock.mockResolvedValue(["chunk-a", "chunk-b", "chunk-c"]);
+    splitPdfMock.mockResolvedValue([
+      { text: "chunk-a", page: 1 },
+      { text: "chunk-b", page: 1 },
+      { text: "chunk-c", page: 1 },
+    ]);
     embedMock.mockResolvedValue([
       [0.1, 0.2],
       [0.3, 0.4],
@@ -109,8 +126,8 @@ describe("Phase 1 regression #1: upload PDF → ready with chunks", () => {
 
     await processor.process(job as never);
 
-    expect(parseMock).toHaveBeenCalledWith(filePath, "application/pdf");
-    expect(splitMock).toHaveBeenCalled();
+    expect(parsePdfMock).toHaveBeenCalledWith(filePath);
+    expect(splitPdfMock).toHaveBeenCalled();
     expect(embedMock).toHaveBeenCalledWith(["chunk-a", "chunk-b", "chunk-c"]);
     expect(upsertMock).toHaveBeenCalled();
 

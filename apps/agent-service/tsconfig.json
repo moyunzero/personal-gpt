@@ -12,7 +12,11 @@
     "baseUrl": "./",
     "paths": {
       "@personal-gpt/shared/routing": ["../../packages/shared/src/routing/index.ts"],
-      "@personal-gpt/shared/metrics-auth": ["../../packages/shared/src/metrics-auth.ts"]
+      "@personal-gpt/shared/metrics-auth": ["../../packages/shared/src/metrics-auth.ts"],
+      "@personal-gpt/shared/ai/chat-model-config": [
+        "../../packages/shared/src/ai/chat-model-config.ts"
+      ],
+      "@personal-gpt/shared/ai/model-presets": ["../../packages/shared/src/ai/model-presets.ts"]
     },
     "incremental": true,
     "skipLibCheck": true,

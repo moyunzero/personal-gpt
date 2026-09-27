@@ -11,9 +11,8 @@ const KB_MISS_RE = /知识库未找到足够(?:相关)?依据/;
 export function isKbSearchToolOutput(content: string): boolean {
   if (/KB_SEARCH_STATUS:/i.test(content)) return true;
   const trimmed = content.trim();
-  return (
-    trimmed.includes("[citation") && trimmed.includes("documentId:") && trimmed.includes("snippet:")
-  );
+  const hasMarker = trimmed.includes("[citation") || /\[S\d+\]/.test(trimmed);
+  return hasMarker && trimmed.includes("documentId:") && trimmed.includes("snippet:");
 }
 
 /** 正文是否已有足够实质内容（排除纯 miss 模板） */
@@ -33,10 +32,14 @@ export function hasSubstantiveKbAnswer(text: string): boolean {
 export function formatKbAnswerFromCitations(citations: Citation[], _userText: string): string {
   if (citations.length === 0) return "";
 
-  const sorted = [...citations].sort((a, b) => b.similarity - a.similarity);
+  const indexed = citations.map((citation, index) => ({
+    citation,
+    sourceNumber: citation.sourceNumber ?? index + 1,
+  }));
+  const sorted = [...indexed].sort((a, b) => b.citation.similarity - a.citation.similarity);
   const lines = ["根据知识库检索结果：", ""];
 
-  const top = sorted[0]!;
+  const top = sorted[0]!.citation;
   const snippet = top.snippet.trim();
   if (snippet) {
     lines.push(snippet.length > SNIPPET_MAX ? `${snippet.slice(0, SNIPPET_MAX)}…` : snippet);
@@ -44,9 +47,9 @@ export function formatKbAnswerFromCitations(citations: Citation[], _userText: st
   }
 
   lines.push("**参考来源：**");
-  for (const c of sorted.slice(0, 3)) {
-    const src = c.source?.trim() ? `（${c.source.trim()}）` : "";
-    lines.push(`- ${c.title}${src}`);
+  for (const item of sorted.slice(0, 3)) {
+    const src = item.citation.source?.trim() ? `（${item.citation.source.trim()}）` : "";
+    lines.push(`- [S${item.sourceNumber}] ${item.citation.title}${src}`);
   }
 
   return lines.join("\n");

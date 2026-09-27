@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import type { Citation } from "@personal-gpt/shared/types/kb";
 
+import { groupCitationsByDocument, type CitationDocumentGroup } from "./group-citations";
+
 interface CitationCardsProps {
   citations: Citation[];
 }
@@ -12,9 +14,35 @@ function formatSimilarity(similarity: number): string {
   return `${Math.round(similarity * 100)}%`;
 }
 
-function CitationCard({ citation }: { citation: Citation }) {
+function sharedPage(group: CitationDocumentGroup): number | undefined {
+  const first = group.snippets[0]?.page;
+  if (typeof first !== "number" || !Number.isFinite(first)) return undefined;
+  return group.snippets.every((snippet) => snippet.page === first) ? first : undefined;
+}
+
+function pagesFollowSnippets(group: CitationDocumentGroup): boolean {
+  if (group.snippets.length < 2) return false;
+  const pages = new Set<number>();
+  for (const snippet of group.snippets) {
+    if (typeof snippet.page !== "number" || !Number.isFinite(snippet.page)) return false;
+    pages.add(snippet.page);
+  }
+  return pages.size > 1;
+}
+
+const SEED_SOURCES = new Set(["prompt-suggestion", "psychology-qa"]);
+
+function canOpenOriginal(group: CitationDocumentGroup): boolean {
+  if (!group.documentId || group.documentId.startsWith("unknown-")) return false;
+  if (group.source && SEED_SOURCES.has(group.source)) return false;
+  return true;
+}
+
+function CitationCard({ group }: { group: CitationDocumentGroup }) {
   const [expanded, setExpanded] = useState(false);
-  const cardId = `citation-${citation.documentId}-${citation.chunkIndex ?? 0}`;
+  const panelId = `citation-${group.documentId}-panel`;
+  const page = sharedPage(group);
+  const labelPerSnippet = pagesFollowSnippets(group);
 
   return (
     <article className="citation-card">
@@ -22,12 +50,12 @@ function CitationCard({ citation }: { citation: Citation }) {
         type="button"
         className="citation-card-header"
         aria-expanded={expanded}
-        aria-controls={`${cardId}-snippet`}
+        aria-controls={panelId}
         onClick={() => setExpanded((open) => !open)}
       >
-        <span className="citation-card-title">{citation.title}</span>
+        <span className="citation-card-title">{group.title}</span>
         <span className="citation-card-meta">
-          <span className="citation-card-similarity">{formatSimilarity(citation.similarity)}</span>
+          <span className="citation-card-similarity">{formatSimilarity(group.similarity)}</span>
           <svg
             className={`citation-card-chevron${expanded ? " citation-card-chevron-open" : ""}`}
             viewBox="0 0 16 16"
@@ -44,10 +72,26 @@ function CitationCard({ citation }: { citation: Citation }) {
           </svg>
         </span>
       </button>
+      {canOpenOriginal(group) ? (
+        <a
+          className="citation-card-meta"
+          href={`/api/kb/documents/${encodeURIComponent(group.documentId)}/file${page != null ? `#page=${page}` : ""}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {page != null ? `第 ${page} 页 · 打开原文` : "打开原文"}
+        </a>
+      ) : null}
       {expanded ? (
-        <p id={`${cardId}-snippet`} className="citation-card-snippet">
-          {citation.snippet}
-        </p>
+        <div id={panelId}>
+          {group.snippets.map((item) => (
+            <p key={item.sourceNumber} className="citation-card-snippet">
+              {`[S${item.sourceNumber}] ${
+                labelPerSnippet && typeof item.page === "number" ? `第 ${item.page} 页 ` : ""
+              }${item.snippet}`}
+            </p>
+          ))}
+        </div>
       ) : null}
     </article>
   );
@@ -62,11 +106,8 @@ export default function CitationCards({ citations }: CitationCardsProps) {
     <div className="citation-cards" aria-label="引用来源">
       <p className="citation-cards-label">引用来源</p>
       <div className="citation-cards-list">
-        {citations.map((citation, index) => (
-          <CitationCard
-            key={`${citation.documentId}-${citation.chunkIndex ?? index}`}
-            citation={citation}
-          />
+        {groupCitationsByDocument(citations).map((group) => (
+          <CitationCard key={group.documentId} group={group} />
         ))}
       </div>
     </div>

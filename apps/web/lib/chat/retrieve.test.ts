@@ -86,4 +86,99 @@ describe("getRelevantContext", () => {
 
     expect(result.kind).toBe("no-docs");
   });
+
+  it("drops a second hit below 0.55 from the numbered list", async () => {
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "高相关段落",
+        similarity: 0.9,
+        source: "legacy",
+        title: "高命中",
+        documentId: "doc-high",
+        chunkIndex: 0,
+      },
+      {
+        text: "低相关段落",
+        similarity: 0.54,
+        source: "legacy",
+        title: "低命中",
+        documentId: "doc-low",
+        chunkIndex: 1,
+      },
+    ]);
+
+    const result = await getRelevantContext("介绍一下某个项目背景", "req-5");
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0]?.documentId).toBe("doc-high");
+    expect(result.blocks).toContain("[S1]");
+    expect(result.blocks).not.toContain("[S2]");
+    expect(result.blocks).not.toContain("低相关段落");
+  });
+
+  it("keeps a named document's opening chunks below the similarity gate", async () => {
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "later page lorem",
+        similarity: 0.2,
+        source: "sample-pdf-1mb",
+        title: "sample-pdf-1mb",
+        documentId: "pdf-1mb",
+        chunkIndex: 4,
+      },
+      {
+        text: "opening Lorem ipsum",
+        similarity: 0.11,
+        source: "sample-pdf-1mb",
+        title: "sample-pdf-1mb",
+        documentId: "pdf-1mb",
+        chunkIndex: 0,
+      },
+    ]);
+
+    const result = await getRelevantContext("sample-pdf-1mb文件讲的什么", "req-6", undefined, {
+      namedDocument: true,
+      documentIds: ["pdf-1mb"],
+    });
+
+    expect(hybridSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ documentIds: ["pdf-1mb"] }),
+      expect.any(Object),
+    );
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.blocks).toContain("Lorem");
+    expect(result.blocks.indexOf("opening")).toBeLessThan(result.blocks.indexOf("later"));
+  });
+
+  it("keeps the highest-ranked named hits, then orders them by chunk", async () => {
+    const hits = [
+      {
+        text: "most relevant later chunk",
+        similarity: 0.9,
+        documentId: "pdf-1mb",
+        chunkIndex: 9,
+      },
+      ...Array.from({ length: 5 }, (_, index) => ({
+        text: `early filler ${index}`,
+        similarity: 0.1,
+        documentId: "pdf-1mb",
+        chunkIndex: index,
+      })),
+    ];
+    hybridSearchMock.mockResolvedValueOnce(hits);
+    const result = await getRelevantContext("sample-pdf-1mb文件讲的什么", "req-7", undefined, {
+      namedDocument: true,
+      documentIds: ["pdf-1mb"],
+    });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.blocks).toContain("most relevant later chunk");
+    expect(result.blocks).not.toContain("early filler 4");
+    expect(result.blocks.indexOf("early filler 0")).toBeLessThan(
+      result.blocks.indexOf("most relevant later chunk"),
+    );
+  });
 });

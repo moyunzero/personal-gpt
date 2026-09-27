@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import PaperMenu from "@/app/components/PaperMenu";
+
 type WorkspaceRow = {
   id: string;
   name: string;
@@ -198,21 +200,18 @@ export default function WorkspaceSwitcher({ variant = "default" }: WorkspaceSwit
         <span className="workspace-switcher-label">工作区…</span>
       ) : (
         <>
-          <label className="workspace-switcher-label" htmlFor="workspace-select">
-            工作区
-          </label>
-          <select
-            id="workspace-select"
-            className="kb-field-input workspace-switcher-select"
+          <span className="workspace-switcher-label">工作区</span>
+          <PaperMenu
+            ariaLabel="工作区"
+            placeholder="工作区"
             value={active?.id ?? ""}
-            onChange={(e) => void switchWorkspace(e.target.value)}
-          >
-            {workspaces.map((ws) => (
-              <option key={ws.id} value={ws.id}>
-                {ws.name} ({ws.role})
-              </option>
-            ))}
-          </select>
+            onChange={(id) => void switchWorkspace(id)}
+            options={workspaces.map((ws) => ({
+              value: ws.id,
+              title: ws.name,
+              detail: ws.role,
+            }))}
+          />
           <div className="workspace-switcher-create">
             <input
               className="kb-field-input"

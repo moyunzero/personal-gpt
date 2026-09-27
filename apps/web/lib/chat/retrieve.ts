@@ -17,6 +17,7 @@ import {
   type RetrievedDoc,
   type VectorSearchResult,
 } from "./context";
+import { focusTableRow } from "./named-document";
 import {
   ENABLE_HYDE,
   ENABLE_MULTI_QUERY,
@@ -26,6 +27,21 @@ import {
   TOP1_SIMILARITY_THRESHOLD,
 } from "./rag-options";
 import { traceRetrieveStep } from "./tracing";
+
+function selectNamedHits(hits: RetrievedChunk[], page?: number): RetrievedChunk[] {
+  const filtered = page != null ? hits.filter((hit) => hit.page === page) : hits;
+  const ids = [
+    ...new Set(filtered.map((hit) => hit.documentId).filter((id): id is string => Boolean(id))),
+  ];
+  const perDoc = ids.length > 1 ? 3 : RETRIEVAL_LIMIT;
+  const out: RetrievedChunk[] = [];
+  for (const id of ids) {
+    const ranked = filtered.filter((hit) => hit.documentId === id).slice(0, perDoc);
+    ranked.sort((a, b) => (a.chunkIndex ?? 0) - (b.chunkIndex ?? 0));
+    out.push(...ranked);
+  }
+  return out;
+}
 
 function hitKey(hit: RetrievedChunk): string {
   return `${hit.documentId ?? "unknown"}:${hit.chunkIndex ?? 0}`;
@@ -91,6 +107,7 @@ function mapHitsToDocs(hits: RetrievedChunk[]): RetrievedDoc[] {
     $similarity: hit.similarity,
     documentId: hit.documentId,
     chunkIndex: hit.chunkIndex,
+    ...(typeof hit.page === "number" && Number.isFinite(hit.page) ? { page: hit.page } : {}),
   }));
 }
 
@@ -135,6 +152,10 @@ async function awaitSearchWithGrace(
 export type GetRelevantContextOptions = {
   corpus?: Corpus;
   documentIds?: string[];
+  /** Question names a ready document. Keep its opening chunks even below the similarity gate. */
+  namedDocument?: boolean;
+  /** Restrict named-document hits to this page. */
+  page?: number;
   /** 测试注入 hybridSearch deps */
   hybridDeps?: HybridSearchDeps;
 };
@@ -191,8 +212,9 @@ export async function getRelevantContext(
                 ...(embeddingInput !== searchQuery ? { embedQuery: embeddingInput } : {}),
                 workspaceId,
                 corpus,
-                limit: RETRIEVAL_LIMIT,
+                limit: options.namedDocument ? 30 : RETRIEVAL_LIMIT,
                 documentIds: options.documentIds,
+                ...(options.page != null ? { page: options.page } : {}),
               },
               options.hybridDeps ?? {},
             ),
@@ -209,11 +231,29 @@ export async function getRelevantContext(
           })),
         });
 
-        if (!passesTop1PreCheck(mergedHits)) {
+        const useNamedDocument = options.namedDocument === true;
+        const pageHits =
+          options.page != null ? mergedHits.filter((hit) => hit.page === options.page) : mergedHits;
+        const narrowed = options.page != null ? pageHits : mergedHits;
+        const candidateHits = useNamedDocument
+          ? selectNamedHits(narrowed, options.page).map((hit) => ({
+              ...hit,
+              text: focusTableRow(query, hit.text),
+            }))
+          : narrowed;
+
+        if (!useNamedDocument && !passesTop1PreCheck(candidateHits)) {
           return { kind: "no-docs" } as const;
         }
 
-        const relevantDocs = mapHitsToDocs(mergedHits);
+        if (candidateHits.length === 0) {
+          return { kind: "no-docs" } as const;
+        }
+
+        const numberedHits = useNamedDocument
+          ? candidateHits
+          : candidateHits.filter((hit) => hit.similarity >= TOP1_SIMILARITY_THRESHOLD);
+        const relevantDocs = mapHitsToDocs(numberedHits);
         const blocks = formatContextBlocks(relevantDocs);
         const citations = mapDocsToCitations(relevantDocs);
         const sources = Array.from(new Set(relevantDocs.map((doc) => doc.source ?? "unknown")));

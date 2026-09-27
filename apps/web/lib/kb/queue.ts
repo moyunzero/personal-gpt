@@ -21,7 +21,11 @@ function getRedisConnection(): { url: string } {
 export function getIngestQueue(): Queue {
   if (!ingestQueue) {
     ingestQueue = new Queue(INGEST_QUEUE_NAME, {
-      connection: getRedisConnection(),
+      connection: {
+        ...getRedisConnection(),
+        connectTimeout: 2000,
+        maxRetriesPerRequest: 1,
+      },
       defaultJobOptions: INGEST_DEFAULT_JOB_OPTIONS,
     });
   }

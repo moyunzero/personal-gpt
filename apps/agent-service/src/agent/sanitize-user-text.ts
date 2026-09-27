@@ -2,6 +2,8 @@
  * 面向用户的 Agent 正文消毒：去掉 KB 工具协议标记，避免技术码外泄。
  */
 
+import { stripSourceMarkers } from "@personal-gpt/shared";
+
 /** 非 fence 段：折叠行内连续空白，保留行首缩进（嵌套列表 / 缩进代码） */
 function normalizeNonFenceWhitespace(part: string): string {
   return part
@@ -118,7 +120,7 @@ export function stripGraphTechLeakLines(text: string): string {
 export function sanitizeUserFacingAgentText(text: string): string {
   if (!text) return text;
 
-  let out = stripToolCallLeakText(text);
+  let out = stripSourceMarkers(stripToolCallLeakText(text));
   out = stripGraphTechLeakLines(out);
   // 常见句式：「（KB_SEARCH_STATUS 为 NO_RELEVANT_HIT）」
   out = out.replace(

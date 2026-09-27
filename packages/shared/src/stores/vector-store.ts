@@ -26,6 +26,7 @@ export interface RetrievedChunk {
   category?: string;
   documentId?: string;
   chunkIndex?: number;
+  page?: number;
   /** Dedicated reranker relevance score (distinct from vector cosine similarity). */
   rerankScore?: number;
   keywords?: string[];

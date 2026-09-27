@@ -165,7 +165,8 @@ export async function POST(req: Request) {
       );
     } catch (error) {
       if (error instanceof UploadValidationError) {
-        return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+        const status = error.code === "queue_unavailable" ? 503 : 400;
+        return NextResponse.json({ error: error.message, code: error.code }, { status });
       }
       const message = error instanceof Error ? error.message : String(error);
       return NextResponse.json({ error: message }, { status: 500 });

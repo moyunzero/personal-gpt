@@ -77,6 +77,14 @@
       "types": "./src/ai/chat-provider.ts",
       "default": "./dist/ai/chat-provider.js"
     },
+    "./ai/chat-model-config": {
+      "types": "./src/ai/chat-model-config.ts",
+      "default": "./dist/ai/chat-model-config.js"
+    },
+    "./ai/model-presets": {
+      "types": "./src/ai/model-presets.ts",
+      "default": "./dist/ai/model-presets.js"
+    },
     "./ai/embedding-models": {
       "types": "./src/ai/embedding-models.ts",
       "default": "./dist/ai/embedding-models.js"

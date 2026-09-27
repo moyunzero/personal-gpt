@@ -3,6 +3,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { resetKbSourceOrdinal } from "./kb-search-context";
+
 const { hybridSearchMock } = vi.hoisted(() => ({
   hybridSearchMock: vi.fn(),
 }));
@@ -20,6 +22,7 @@ describe("kb_search tool", () => {
 
   beforeEach(() => {
     delete process.env.AGENT_KB_MIN_SIMILARITY;
+    resetKbSourceOrdinal();
     hybridSearchMock.mockReset();
     hybridSearchMock.mockResolvedValue([
       {
@@ -88,6 +91,7 @@ describe("kb_search tool", () => {
     expect(out).toContain(KB_SEARCH_NO_HIT_STATUS);
     expect(out).toMatch(/禁止编造/);
     expect(out).not.toMatch(/\[citation/);
+    expect(out).not.toMatch(/\[S1\]/);
   });
 
   it("keeps high-similarity hits with HIT status", async () => {
@@ -224,8 +228,46 @@ describe("kb_search tool", () => {
     );
     expect(out1).toContain("KB_SEARCH_STATUS: HIT");
     expect(out2).toContain("KB_SEARCH_STATUS: HIT");
+    expect(out1).toMatch(/\[S1\]/);
+    expect(out2).toMatch(/\[S2\]/);
+    expect(out2).not.toMatch(/\[S1\]/);
     // Distinct subqueries fit comfortably under configured recursion limit (D-35)
     expect(2).toBeLessThanOrEqual(recursionLimit);
+  });
+
+  it("writes a page line immediately after chunkIndex only for a finite page", async () => {
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "第三页条款",
+        similarity: 0.91,
+        title: "差旅政策",
+        source: "policy.pdf",
+        documentId: "doc-1",
+        chunkIndex: 2,
+        page: 7,
+      },
+    ]);
+    const { invokeKbSearch } = await import("./kb-search.tool");
+    const withPage = await invokeKbSearch({ query: "差旅报销" });
+    const withPageLines = withPage.split("\n");
+    const chunkLine = withPageLines.indexOf("chunkIndex: 2");
+    expect(chunkLine).toBeGreaterThanOrEqual(0);
+    expect(withPageLines[chunkLine + 1]).toBe("page: 7");
+
+    resetKbSourceOrdinal();
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "报销需提交发票原件",
+        similarity: 0.91,
+        title: "差旅政策",
+        source: "policy.md",
+        documentId: "doc-1",
+        chunkIndex: 0,
+      },
+    ]);
+    const withoutPage = await invokeKbSearch({ query: "差旅报销" });
+    expect(withoutPage).toMatch(/chunkIndex: 0/);
+    expect(withoutPage).not.toMatch(/^page:/m);
   });
 
   it("does not import @datastax/astra-db-ts; retrieve uses hybridSearch", async () => {

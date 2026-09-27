@@ -11,6 +11,7 @@ import Bubble from "./components/Bubble";
 import ChatErrorCard from "./components/ChatErrorCard";
 import type { ChatSessionRow } from "./components/ChatSidebar";
 import CorpusToggle, { type CorpusChoice } from "./components/CorpusToggle";
+import ModelChip from "./components/ModelChip";
 import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
@@ -60,6 +61,9 @@ export default function Home() {
   const streamRef = useRef<HTMLElement>(null);
   const messagesCacheRef = useRef<Record<string, UiChatMessage[]>>({});
   const skipHistoryLoadRef = useRef(false);
+  const [savedModels, setSavedModels] = useState<{ id: string; modelId: string }[]>([]);
+  const [chatModelId, setChatModelId] = useState("");
+  const [agentModelId, setAgentModelId] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -95,6 +99,29 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated !== true) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await fetch("/api/models");
+      if (!res.ok || cancelled) return;
+      const data = (await res.json()) as {
+        models?: { id: string; modelId: string }[];
+        chatModelId?: string;
+        agentModelId?: string;
+      };
+      if (cancelled) return;
+      setSavedModels(data.models ?? []);
+      setChatModelId(data.chatModelId ?? "");
+      setAgentModelId(data.agentModelId ?? "");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const selectedModelId = mode === "agent" ? agentModelId : chatModelId;
+
   const handleModeChange = (next: ChatMode) => {
     if (next === "agent" && isAuthenticated === false) {
       window.location.href = "/api/auth/signin?callbackUrl=" + encodeURIComponent("/");
@@ -111,9 +138,10 @@ export default function Home() {
           corpus: isAuthenticated === false ? "seed" : corpus,
           ...(userKey && isAuthenticated !== false ? { userKey } : {}),
           ...(threadId ? { thread_id: threadId } : {}),
+          ...(selectedModelId ? { model: selectedModelId } : {}),
         },
       }),
-    [mode, corpus, userKey, threadId, isAuthenticated],
+    [mode, corpus, userKey, threadId, isAuthenticated, selectedModelId],
   );
 
   const { messages, sendMessage, regenerate, status, error, clearError, setMessages } = useChat({
@@ -377,6 +405,36 @@ export default function Home() {
         <form onSubmit={handleSubmit} className="composer">
           <div className="composer-inner">
             <div className="composer-toolbar">
+              {isAuthenticated ? (
+                <ModelChip
+                  mode={mode}
+                  modelId={selectedModelId}
+                  models={savedModels}
+                  disabled={isLoading}
+                  onSelect={(modelId) => {
+                    const previous = mode === "agent" ? agentModelId : chatModelId;
+                    const restore = () => {
+                      if (mode === "agent") setAgentModelId(previous);
+                      else setChatModelId(previous);
+                    };
+                    if (mode === "agent") setAgentModelId(modelId);
+                    else setChatModelId(modelId);
+                    void fetch("/api/models", {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(
+                        mode === "agent" ? { agentModelId: modelId } : { chatModelId: modelId },
+                      ),
+                    })
+                      .then((res) => {
+                        if (!res.ok) restore();
+                      })
+                      .catch(restore);
+                  }}
+                />
+              ) : (
+                <span />
+              )}
               <span className="composer-corpus-hint">
                 当前：
                 {isAuthenticated === false

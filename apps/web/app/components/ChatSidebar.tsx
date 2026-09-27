@@ -16,7 +16,7 @@ export type ChatSessionRow = {
 };
 
 type ChatSidebarProps = {
-  activePage: "chat" | "kb";
+  activePage: "chat" | "kb" | "settings";
   mode?: ChatMode;
   onModeChange?: (mode: ChatMode) => void;
   modeDisabled?: boolean;
@@ -145,6 +145,12 @@ export default function ChatSidebar({
         )}
         <Link href="/kb" className={`chat-sidebar-item${activePage === "kb" ? " active" : ""}`}>
           知识库
+        </Link>
+        <Link
+          href="/settings/models"
+          className={`chat-sidebar-item${activePage === "settings" ? " active" : ""}`}
+        >
+          设置
         </Link>
       </div>
 

@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Personal · 对话中切换模型 — 设计稿</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Outfit:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #2c241f;
+        --soft: #52463f;
+        --muted: #8a7d74;
+        --line: #ebe4dc;
+        --paper: #f7f2ec;
+        --card: #fffaf5;
+        --side: #1c1714;
+        --accent: #b36b5c;
+        --font: Outfit, "PingFang SC", sans-serif;
+        --serif: "Instrument Serif", Georgia, serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #14110f;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: var(--font);
+        color: var(--ink);
+      }
+      .app {
+        width: min(1100px, 100%);
+        height: min(820px, calc(100vh - 48px));
+        display: grid;
+        grid-template-columns: 232px 1fr;
+        background: var(--paper);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+      }
+      aside {
+        background: var(--side);
+        color: #f7f1eb;
+        padding: 22px 14px;
+      }
+      .brand {
+        padding: 0 8px 18px;
+        font-family: var(--serif);
+        font-size: 22px;
+      }
+      .brand span {
+        display: block;
+        font-family: var(--font);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        color: #a8988e;
+      }
+      nav button {
+        width: 100%;
+        text-align: left;
+        border: 0;
+        background: transparent;
+        color: #d9cfc7;
+        font: inherit;
+        font-size: 14px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      nav button.on {
+        background: #332c27;
+        color: #fffaf5;
+      }
+      .chat,
+      .settings {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .settings {
+        display: none;
+        padding: 28px 36px;
+        overflow: auto;
+      }
+      .settings.show {
+        display: block;
+      }
+      .chat.hide {
+        display: none;
+      }
+      .bar {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 22px;
+      }
+      .modes {
+        display: flex;
+        background: #efe7df;
+        border-radius: 999px;
+        padding: 4px;
+      }
+      .modes button {
+        border: 0;
+        background: transparent;
+        font: inherit;
+        padding: 6px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        color: var(--soft);
+      }
+      .modes button.on {
+        background: var(--card);
+        color: var(--ink);
+      }
+      .thread {
+        flex: 1;
+        padding: 8px 18% 0;
+      }
+      .bubble {
+        margin-left: auto;
+        max-width: 70%;
+        background: #efe4da;
+        border-radius: 16px 16px 4px 16px;
+        padding: 12px 14px;
+      }
+      .composer-wrap {
+        padding: 0 12% 22px;
+        position: relative;
+      }
+      .composer {
+        background: var(--card);
+        border: 1px solid #ddd3c8;
+        border-radius: 18px;
+        box-shadow: 0 10px 28px rgba(44, 36, 31, 0.06);
+      }
+      .composer-tools {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px 0;
+      }
+      .model-btn {
+        border: 0;
+        background: #f3ece4;
+        border-radius: 999px;
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 10px;
+        cursor: pointer;
+        color: var(--ink);
+      }
+      .hint {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      textarea {
+        width: 100%;
+        border: 0;
+        resize: none;
+        background: transparent;
+        font: inherit;
+        font-size: 15px;
+        padding: 10px 14px 14px;
+        outline: none;
+      }
+      .menu {
+        position: absolute;
+        left: calc(12% + 12px);
+        bottom: 118px;
+        width: 280px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 16px 40px rgba(44, 36, 31, 0.12);
+        padding: 6px;
+        display: none;
+      }
+      .menu.open {
+        display: block;
+      }
+      .menu button {
+        width: 100%;
+        text-align: left;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .menu button small {
+        display: block;
+        color: var(--muted);
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+      }
+      .menu button.on {
+        background: #f5e8e3;
+      }
+      .menu .manage {
+        border-top: 1px solid var(--line);
+        margin-top: 4px;
+        color: var(--accent);
+      }
+      h1 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 34px;
+        margin: 0;
+      }
+      .sub {
+        color: var(--soft);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .card {
+        margin-top: 18px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside>
+        <div class="brand">Personal<span>Emotion GPT</span></div>
+        <nav>
+          <button type="button" id="nav-chat" class="on">对话</button>
+          <button type="button">Agent</button>
+          <button type="button">知识库</button>
+          <button type="button" id="nav-settings">设置 · 模型供应商</button>
+        </nav>
+      </aside>
+      <section class="chat" id="view-chat">
+        <div class="bar">
+          <div class="modes">
+            <button type="button" class="on" data-mode="chat">Chat</button>
+            <button type="button" data-mode="agent">Agent</button>
+          </div>
+          <span class="hint" id="mode-note">当前对话使用的模型</span>
+        </div>
+        <div class="thread">
+          <div class="bubble">介绍一下 MoCode</div>
+        </div>
+        <div class="composer-wrap">
+          <div class="menu" id="menu"></div>
+          <div class="composer">
+            <div class="composer-tools">
+              <button class="model-btn" type="button" id="model-btn">GPT-4o mini</button>
+              <span class="hint">只列出设置里已添加的模型</span>
+            </div>
+            <textarea rows="2" placeholder="想问点啥呢～"></textarea>
+          </div>
+        </div>
+      </section>
+      <section class="settings" id="view-settings">
+        <h1>模型供应商</h1>
+        <p class="sub">密钥和自定义模型只在这里添加。对话页只做切换，不再填写 API key。</p>
+        <article class="card">
+          <b>OpenRouter</b>
+          <p class="sub">已连接。系统模型 openai/gpt-4o-mini。Agent 默认与系统模型相同。</p>
+        </article>
+      </section>
+    </div>
+    <script>
+      const models = [
+        { title: "GPT-4o mini", id: "openai/gpt-4o-mini" },
+        { title: "Gemini Flash", id: "google/gemini-2.5-flash" },
+        { title: "DeepSeek V3", id: "deepseek/deepseek-chat" },
+      ];
+      const chosen = { chat: models[0], agent: models[0] };
+      let mode = "chat";
+      const menu = document.getElementById("menu");
+      const btn = document.getElementById("model-btn");
+
+      function paint() {
+        const current = chosen[mode];
+        btn.textContent = current.title;
+        document.getElementById("mode-note").textContent =
+          mode === "chat" ? "当前对话使用的模型" : "当前 Agent 使用的模型";
+        menu.innerHTML =
+          models
+            .map(
+              (m) =>
+                `<button type="button" class="${m.id === current.id ? "on" : ""}" data-id="${m.id}">${m.title}<small>${m.id}</small></button>`,
+            )
+            .join("") + `<button type="button" class="manage" id="go-settings">管理模型</button>`;
+        menu.querySelectorAll("[data-id]").forEach((el) =>
+          el.addEventListener("click", () => {
+            chosen[mode] = models.find((m) => m.id === el.dataset.id);
+            menu.classList.remove("open");
+            paint();
+          }),
+        );
+        document.getElementById("go-settings").addEventListener("click", showSettings);
+      }
+      function showSettings() {
+        document.getElementById("view-chat").classList.add("hide");
+        document.getElementById("view-settings").classList.add("show");
+        document.getElementById("nav-chat").classList.remove("on");
+        document.getElementById("nav-settings").classList.add("on");
+      }
+      function showChat() {
+        document.getElementById("view-chat").classList.remove("hide");
+        document.getElementById("view-settings").classList.remove("show");
+        document.getElementById("nav-settings").classList.remove("on");
+        document.getElementById("nav-chat").classList.add("on");
+      }
+      btn.addEventListener("click", () => menu.classList.toggle("open"));
+      document.querySelectorAll(".modes button").forEach((el) =>
+        el.addEventListener("click", () => {
+          mode = el.dataset.mode;
+          document
+            .querySelectorAll(".modes button")
+            .forEach((b) => b.classList.toggle("on", b === el));
+          menu.classList.remove("open");
+          paint();
+        }),
+      );
+      document.getElementById("nav-settings").addEventListener("click", showSettings);
+      document.getElementById("nav-chat").addEventListener("click", showChat);
+      paint();
+    </script>
+  </body>
+</html>

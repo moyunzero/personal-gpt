@@ -4,6 +4,7 @@ import { upload } from "@vercel/blob/client";
 import { useRef, useState } from "react";
 
 import type { KbDocumentItem } from "./KbDocumentList";
+import PaperMenu from "./PaperMenu";
 
 type KbUploadZoneProps = {
   onUploaded: (item: KbDocumentItem) => void;
@@ -29,6 +30,19 @@ const EMPTY_META: UploadMeta = {
   title: "",
   visibility: "workspace",
 };
+
+const SERVERLESS_MULTIPART_LIMIT = 4.5 * 1024 * 1024;
+const LOCAL_MULTIPART_LIMIT = 20 * 1024 * 1024;
+
+/** 仅当服务端 multipart 上限不低于本地 20MB 时，Blob 未配置才改走本地上限。 */
+export function multipartLimitAfterBlobFailure(error: unknown, serverMaxBytes?: number): number {
+  const message = error instanceof Error ? error.message : "";
+  const blobNotConfigured = /Failed to retrieve the client token|blob_unavailable/i.test(message);
+  if (blobNotConfigured && serverMaxBytes != null && serverMaxBytes >= LOCAL_MULTIPART_LIMIT) {
+    return LOCAL_MULTIPART_LIMIT;
+  }
+  return SERVERLESS_MULTIPART_LIMIT;
+}
 
 const MIME_EXT: Record<string, string> = {
   "application/pdf": "pdf",
@@ -145,8 +159,8 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
       try {
         document = await uploadViaBlobThenRegister(file, uploadMeta);
       } catch (blobErr) {
-        // 大文件不能回退 multipart（会撞 Serverless 4.5MB）；小文件可回退到本地/MinIO 路径
-        if (file.size > 4.5 * 1024 * 1024) {
+        const maxMultipart = multipartLimitAfterBlobFailure(blobErr, SERVERLESS_MULTIPART_LIMIT);
+        if (file.size > maxMultipart) {
           throw blobErr;
         }
         document = await uploadViaMultipart(file, uploadMeta);
@@ -265,21 +279,22 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
             </label>
             <label className="kb-field">
               <span className="kb-field-label">可见性</span>
-              <select
-                className="kb-field-input"
+              <PaperMenu
+                ariaLabel="可见性"
                 value={meta.visibility}
-                onChange={(e) =>
+                disabled={uploading}
+                onChange={(visibility) =>
                   setMeta((m) => ({
                     ...m,
-                    visibility: e.target.value as UploadMeta["visibility"],
+                    visibility: visibility as UploadMeta["visibility"],
                   }))
                 }
-                disabled={uploading}
-              >
-                <option value="workspace">工作区全员</option>
-                <option value="private">仅自己</option>
-                <option value="restricted">指定成员</option>
-              </select>
+                options={[
+                  { value: "workspace", title: "工作区全员" },
+                  { value: "private", title: "仅自己" },
+                  { value: "restricted", title: "指定成员" },
+                ]}
+              />
             </label>
           </div>
         </div>

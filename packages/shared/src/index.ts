@@ -1,11 +1,17 @@
 export * from "./ai/groq-models";
 export * from "./ai/chat-provider";
+export * from "./ai/chat-model-config";
 export * from "./ai/embedding-models";
 export * from "./ai/embeddings";
 export * from "./ai/rag-helper";
 export * from "./constants/workspace";
 export * from "./constants/queue";
 export * from "./types/kb";
+export {
+  filterCitationsBySourceMarkers,
+  SourceMarkerStripper,
+  stripSourceMarkers,
+} from "./kb/used-citations";
 export * from "./types/agent";
 export * from "./schemas/env";
 export * from "./utils/ingest";
@@ -95,8 +101,10 @@ export { normalizeEntityName } from "./graph/normalize-entity";
 export {
   extractGraphFromChunk,
   extractGraphFromChunks,
+  workspaceGraphEndpoint,
   type ExtractedEntity,
   type ExtractedRelation,
+  type GraphModelEndpoint,
 } from "./graph/extract-entities";
 export {
   upsertDocumentGraph,

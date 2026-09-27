@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const parseMock = vi.fn();
+const parsePdfMock = vi.fn();
+const readBytesMock = vi.fn();
 const splitMock = vi.fn();
+const splitPdfMock = vi.fn();
 const embedMock = vi.fn();
 const upsertMock = vi.fn();
 const graphExtractMock = vi.fn();
@@ -15,10 +18,14 @@ vi.mock("node:fs/promises", () => ({
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/parse", () => ({
   parseDocument: (...args: unknown[]) => parseMock(...args),
+  parsePdfPages: (...args: unknown[]) => parsePdfMock(...args),
+  readIngestBytes: (...args: unknown[]) => readBytesMock(...args),
+  PDF_NO_SELECTABLE_TEXT: "这份 PDF 没有可选中的正文。",
 }));
 
 vi.mock("../../../apps/ingest-worker/src/ingest/pipeline/split", () => ({
   splitText: (...args: unknown[]) => splitMock(...args),
+  splitPdfPages: (...args: unknown[]) => splitPdfMock(...args),
   toChunkRecords: (
     chunks: string[],
     vectors: number[][],
@@ -77,7 +84,13 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
 
     statMock.mockResolvedValue({ size: 1024 });
     parseMock.mockResolvedValue("fixture text");
+    parsePdfMock.mockResolvedValue({
+      pages: [{ num: 1, text: "fixture text" }],
+      headings: [],
+    });
+    readBytesMock.mockResolvedValue(Buffer.from("%PDF"));
     splitMock.mockResolvedValue(chunks);
+    splitPdfMock.mockResolvedValue(chunks.map((text, index) => ({ text, page: index + 1 })));
     embedMock.mockResolvedValue([
       [0.1, 0.2],
       [0.3, 0.4],
@@ -166,7 +179,7 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
     expect(readyUpdate?.[1]?.chunkCount).toBe(chunks.length);
   });
 
-  it("marks document failed when graph-extract throws (D-09)", async () => {
+  it("keeps the document ready when graph-extract throws", async () => {
     graphExtractMock.mockRejectedValue(new Error("neo4j unavailable"));
 
     const job = {
@@ -181,15 +194,12 @@ describe("Phase 4 regression #1: ingest graph-extract step", () => {
       updateProgress: jobProgressMock,
     };
 
-    await expect(processor.process(job as never)).rejects.toThrow("neo4j unavailable");
+    await processor.process(job as never);
 
-    expect(deleteDocumentMock).toHaveBeenCalledWith(workspaceId, documentId, "user", {
-      dataSource: expect.anything(),
-    });
-    const failedDocUpdate = documentUpdateMock.mock.calls.find(
-      (call) => call[1]?.status === "failed",
-    );
-    expect(failedDocUpdate).toBeDefined();
-    expect(documentUpdateMock.mock.calls.some((call) => call[1]?.status === "ready")).toBe(false);
+    expect(deleteDocumentMock).not.toHaveBeenCalled();
+    const readyUpdate = documentUpdateMock.mock.calls.find((call) => call[1]?.status === "ready");
+    expect(readyUpdate?.[1]?.chunkCount).toBe(chunks.length);
+    expect(documentUpdateMock.mock.calls.some((call) => call[1]?.status === "failed")).toBe(false);
+    expect(jobProgressMock.mock.calls.map((call) => call[0])).toEqual([0, 25, 50, 75, 90, 100]);
   });
 });
