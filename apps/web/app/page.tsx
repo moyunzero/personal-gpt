@@ -342,7 +342,7 @@ export default function Home() {
               <div className="empty-state">
                 <h1 className="starter-headline">做个树洞吧</h1>
                 <p className="starter-sub">
-                  也可以了解我的经历与作品。选一个话题开始，或者直接告诉我你最近在想什么。
+                  这里可以随便说。选一个话题开始，或者直接告诉我你最近在想什么。
                 </p>
                 <PromptSuggestionsRow onPromptClick={handlePrompt} />
               </div>
