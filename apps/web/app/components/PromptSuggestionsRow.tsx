@@ -5,9 +5,9 @@ interface PromptSuggestionsRowProps {
 }
 
 const PROMPTS: { text: string; description: string }[] = [
-  { text: "介绍一下 MoCode", description: "了解项目背景与核心能力" },
-  { text: "LookJob 怎么帮你找工作", description: "求职流程与匹配思路" },
-  { text: "介绍一下你自己", description: "认识这位个人助手" },
+  { text: "你能帮我做什么", description: "了解助手能力与使用方式" },
+  { text: "随便聊聊", description: "没有主题也可以，想到哪说到哪" },
+  { text: "帮我理清思路", description: "把一团乱麻慢慢说清楚" },
   { text: "心情不好怎么办", description: "慢慢说，这里先听你讲" },
 ];
 
