@@ -4,6 +4,7 @@ import Nodemailer from "next-auth/providers/nodemailer";
 import { TypeORMAdapter } from "@auth/typeorm-adapter";
 
 import { authConfig } from "@/auth.config";
+import { resolveAuthSecret } from "@/lib/auth/resolve-auth-secret";
 import { getDataSource } from "@/lib/db/get-data-source";
 
 /** Rewrite Auth.js callback URL → /auth/confirm so email scanners don't burn the token. */
@@ -34,8 +35,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     error: "/auth/error",
   },
-  // Build/CI may lack secrets; runtime still needs real EMAIL_SERVER to deliver mail.
-  secret: authEnv("AUTH_SECRET") || authEnv("NEXTAUTH_SECRET") || "ci-build-placeholder",
+  // Build/CI may lack secrets; production runtime rejects placeholder via resolveAuthSecret.
+  secret: resolveAuthSecret(),
   // Default adapter entities live in node_modules (serverExternalPackages) so
   // Next prod minification cannot mangle class/relation names TypeORM needs.
   adapter: TypeORMAdapter({
