@@ -13,7 +13,7 @@ function allowsBuildPlaceholder(env: NodeJS.ProcessEnv): boolean {
 
 /** Resolve Auth.js secret with production fail-closed and next-build escape. */
 export function resolveAuthSecret(env: NodeJS.ProcessEnv = process.env): string {
-  const raw = (env.AUTH_SECRET?.trim() || env.NEXTAUTH_SECRET?.trim() || "");
+  const raw = env.AUTH_SECRET?.trim() || env.NEXTAUTH_SECRET?.trim() || "";
   const isPlaceholder = !raw || raw === PLACEHOLDER;
   const isProd = env.NODE_ENV === "production";
 

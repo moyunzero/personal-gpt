@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  focusKbDeleteDialog,
-  kbDeleteConfirmHandlesEscape,
-} from "./KbDeleteConfirm";
+import { focusKbDeleteDialog, kbDeleteConfirmHandlesEscape } from "./KbDeleteConfirm";
 
 describe("KbDeleteConfirm a11y helpers (D-20②)", () => {
   it("Escape key should cancel", () => {

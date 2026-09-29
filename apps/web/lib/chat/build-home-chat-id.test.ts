@@ -16,9 +16,7 @@ describe("buildHomeChatId", () => {
   });
 
   it("changes when mode changes", () => {
-    expect(buildHomeChatId({ ...base, mode: "agent" })).toBe(
-      "home:agent:thread-a:user:model-1",
-    );
+    expect(buildHomeChatId({ ...base, mode: "agent" })).toBe("home:agent:thread-a:user:model-1");
   });
 
   it("changes when threadId changes", () => {
@@ -34,9 +32,7 @@ describe("buildHomeChatId", () => {
   });
 
   it("changes when corpus changes for authenticated users", () => {
-    expect(buildHomeChatId({ ...base, corpus: "seed" })).toBe(
-      "home:chat:thread-a:seed:model-1",
-    );
+    expect(buildHomeChatId({ ...base, corpus: "seed" })).toBe("home:chat:thread-a:seed:model-1");
   });
 
   it("forces seed corpus segment for guests regardless of corpus toggle", () => {
