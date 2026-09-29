@@ -35,9 +35,11 @@ export async function resolveGraphEntity(
     const hits = await findCatalogEntitiesInQuery(workspaceId, query, store);
     const allowed = deps.allowedDocumentIds;
     const filtered =
-      allowed?.length && allowed.length > 0
-        ? hits.filter((hit) => allowed.includes(hit.sourceDocumentId))
-        : hits;
+      allowed === undefined
+        ? hits
+        : allowed.length === 0
+          ? []
+          : hits.filter((hit) => allowed.includes(hit.sourceDocumentId));
     if (filtered.length > 0) {
       const hit = filtered[0]!;
       return {
