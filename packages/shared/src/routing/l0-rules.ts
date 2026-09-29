@@ -47,8 +47,9 @@ export function isGreetingOnly(text: string): boolean {
   return GREETING_PHRASES.has(core);
 }
 
-/** D-06: relation lexicon — excludes standalone 「有哪些」/「包含」/「路径」 (WR-02) */
-export const GRAPH_RELATION_RE = /原料|配料|工艺|用了什么|关系|关联/i;
+/** D-06 / D-19: relation lexicon — excludes standalone 「有哪些」/「包含」/「路径」 (WR-02); English ingredient / manufacturing|production process cues (FIX-S3-04, WR-01) */
+export const GRAPH_RELATION_RE =
+  /原料|配料|工艺|用了什么|关系|关联|\bingredients?\b|\b(?:manufacturing|production)\s+process\b/i;
 
 export const KB_RE = /知识库|企业.?库|内部.?文档|kb\b|引用/i;
 /** WR-B-07: exclude standalone 「搜索」 — KB listing uses KB_RE, not web research */
@@ -67,6 +68,7 @@ export async function matchGraphRelationL0(
   if (!hasGraphRelationCue(query)) return null;
   const entity = await resolveGraphEntity(query, ctx.workspaceId, {
     catalogStore: ctx.catalogStore,
+    allowedDocumentIds: ctx.allowedDocumentIds,
   });
   if (!entity) return null;
   const mixed = KB_RE.test(query) || REPORT_RE.test(query) || WEB_RE.test(query);
@@ -115,7 +117,10 @@ export async function orderSpecialistsByKeywordAppearance(
   const wantsWeb = WEB_RE.test(t) && !refusesWeb;
   const wantsReport = REPORT_RE.test(t);
   const wantsAnalyst = ANALYST_RE.test(t);
-  const entity = await resolveGraphEntity(t, ctx.workspaceId, { catalogStore: ctx.catalogStore });
+  const entity = await resolveGraphEntity(t, ctx.workspaceId, {
+    catalogStore: ctx.catalogStore,
+    allowedDocumentIds: ctx.allowedDocumentIds,
+  });
   const wantsGraph = GRAPH_KB_RE.test(t) || (hasGraphRelationCue(t) && entity !== null);
 
   const need: SpecialistNeed[] = [];
@@ -151,6 +156,7 @@ export async function matchMultiStepL0(
 
   const entity = await resolveGraphEntity(query, ctx.workspaceId, {
     catalogStore: ctx.catalogStore,
+    allowedDocumentIds: ctx.allowedDocumentIds,
   });
   const hasGraph = hasGraphRelationCue(query) && entity !== null;
   const hasKb = KB_RE.test(query);

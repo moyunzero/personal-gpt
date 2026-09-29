@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   isPureMathExpression,
@@ -6,6 +6,29 @@ import {
   matchL0Rules,
   orderSpecialistsByKeywordAppearance,
 } from "./l0-rules";
+import { setEntityCatalogStoreForTests, type EntityCatalogStore } from "./entity-resolve";
+
+function createMockStore(
+  rows: Array<{
+    id: string;
+    workspaceId: string;
+    normalizedName: string;
+    entityType: "product";
+    displayName: string;
+    neo4jNodeId: string;
+    sourceDocumentId: string;
+  }>,
+): EntityCatalogStore {
+  return {
+    findByWorkspace: vi.fn(async (workspaceId: string) =>
+      rows.filter((row) => row.workspaceId === workspaceId),
+    ),
+    findByDocument: vi.fn(async () => []),
+    upsert: vi.fn(),
+    deleteByDocument: vi.fn(async () => 0),
+    ensureWorkspaceReadAcl: vi.fn(),
+  };
+}
 
 describe("isPureMathExpression", () => {
   it("requires at least one digit", () => {
@@ -37,6 +60,61 @@ describe("matchGraphRelationL0 (D-06 / H-04)", () => {
   it("「珍珠奶茶有哪些优惠」→ not graph_relation (WR-02)", async () => {
     expect(await matchGraphRelationL0("珍珠奶茶有哪些优惠活动")).toBeNull();
     expect(await matchL0Rules("珍珠奶茶有哪些优惠活动")).toBeNull();
+  });
+
+  it("English ingredient cue + seed entity → graph_relation (D-19 / FIX-S3-04)", async () => {
+    const q = "What ingredient is used in pearl milk tea?";
+    const hit = await matchGraphRelationL0(q);
+    expect(hit).not.toBeNull();
+    expect(hit!.primary).toBe("graph_relation");
+    expect(hit!.retrieverTools).toEqual(["graph_search"]);
+    expect(hit!.reason).toBe("l0:graph_relation:seed_entity");
+  });
+
+  it("English manufacturing process cue + seed entity → graph_relation (D-19 / FIX-S3-04)", async () => {
+    const q = "Describe the manufacturing process for pearl milk tea";
+    const hit = await matchGraphRelationL0(q);
+    expect(hit).not.toBeNull();
+    expect(hit!.primary).toBe("graph_relation");
+    expect(hit!.retrieverTools).toEqual(["graph_search"]);
+  });
+
+  it("English production process cue + seed entity → graph_relation (WR-01)", async () => {
+    const q = "What is the production process of pearl milk tea?";
+    const hit = await matchGraphRelationL0(q);
+    expect(hit).not.toBeNull();
+    expect(hit!.primary).toBe("graph_relation");
+  });
+
+  it("bare English process verb + seed entity → not graph_relation (WR-01)", async () => {
+    expect(await matchGraphRelationL0("process the pearl milk tea inventory")).toBeNull();
+    expect(await matchGraphRelationL0("process returns for pearl milk tea")).toBeNull();
+    expect(await matchGraphRelationL0("Please process this pearl milk tea request")).toBeNull();
+  });
+
+  it("catalog entity denied by empty allowedDocumentIds → not graph_relation (WR-04)", async () => {
+    const workspaceId = "ws-acl-l0";
+    const store = createMockStore([
+      {
+        id: "cat-1",
+        workspaceId,
+        normalizedName: "project atlas",
+        entityType: "product",
+        displayName: "Project Atlas",
+        neo4jNodeId: "entity:ws-acl-l0:project atlas:product",
+        sourceDocumentId: "doc-secret",
+      },
+    ]);
+    setEntityCatalogStoreForTests(store);
+    try {
+      const hit = await matchGraphRelationL0("Project Atlas 用了什么工艺？", {
+        workspaceId,
+        allowedDocumentIds: [],
+      });
+      expect(hit).toBeNull();
+    } finally {
+      setEntityCatalogStoreForTests(null);
+    }
   });
 });
 

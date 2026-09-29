@@ -87,6 +87,8 @@ export async function resolveIntentPlanForAgent(input: {
   const documentIds = input.allowedDocumentIds;
 
   return resolveIntentPlan(input.query, {
+    workspaceId: input.workspaceId,
+    allowedDocumentIds: documentIds,
     probeKb: async (q: string) => {
       const out = await invokeKbSearch({
         query: extractKbSearchQuery(q),

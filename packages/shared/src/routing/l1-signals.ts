@@ -6,6 +6,8 @@ import type { KbProbeResult, L1Signals } from "./types";
 export interface CollectL1SignalsDeps {
   workspaceId?: string;
   catalogStore?: EntityCatalogStore;
+  /** Security trim: omit catalog entities from forbidden documents (D-21 / WR-04). */
+  allowedDocumentIds?: string[];
   probeKb?: (query: string) => Promise<KbProbeResult>;
   routeRetrieveSimilarity?: number;
   routeDirectSimilarity?: number;
@@ -15,6 +17,7 @@ async function detectGraphSignal(query: string, deps: CollectL1SignalsDeps): Pro
   if (!hasGraphRelationCue(query)) return false;
   const entity = await resolveGraphEntity(query, deps.workspaceId, {
     catalogStore: deps.catalogStore,
+    allowedDocumentIds: deps.allowedDocumentIds,
   });
   return entity !== null;
 }

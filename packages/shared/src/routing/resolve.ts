@@ -9,6 +9,8 @@ import type { IntentPlan, KbProbeResult, RouterLayer } from "./types";
 export interface ResolveIntentPlanDeps {
   workspaceId?: string;
   catalogStore?: EntityCatalogStore;
+  /** Security trim: omit catalog entities from forbidden documents (D-21 / WR-04). */
+  allowedDocumentIds?: string[];
   probeKb?: (query: string) => Promise<KbProbeResult>;
   classifyL2?: (query: string) => Promise<Partial<IntentPlan> | null>;
   neo4jAvailable?: () => boolean;
@@ -33,6 +35,7 @@ export async function resolveIntentPlan(
   const routingCtx = {
     workspaceId: deps.workspaceId,
     catalogStore: deps.catalogStore,
+    allowedDocumentIds: deps.allowedDocumentIds,
   };
 
   const l0 = await matchL0Rules(query, routingCtx);
@@ -43,6 +46,7 @@ export async function resolveIntentPlan(
     l1 = await collectL1Signals(query, {
       workspaceId: deps.workspaceId,
       catalogStore: deps.catalogStore,
+      allowedDocumentIds: deps.allowedDocumentIds,
       probeKb: deps.probeKb,
       routeRetrieveSimilarity: config.routeRetrieveSimilarity,
       routeDirectSimilarity: config.routeDirectSimilarity,

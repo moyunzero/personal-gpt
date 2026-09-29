@@ -74,6 +74,8 @@ import {
 } from "../tools/web-search.tool";
 import { sanitizeUserFacingAgentText, isToolCallLeakText } from "./sanitize-user-text";
 import type { RetrievalContext } from "./retrieval-context";
+import { chooseMemoryUserKey } from "./memory-session-key";
+import { graphFallbackInvokeArgs } from "./graph-fallback-args";
 import { formatGraphAnswerFromToolOutput } from "./graph-answer-format";
 import {
   formatKbAnswerFromCitations,
@@ -1323,8 +1325,9 @@ export class AgentService {
     const abortSignal = attachResponseAbortSignal(res);
     // 请求级 runId：避免同 thread 并发互相覆盖 KB/web 配额状态
     const runId = randomUUID();
+    const memoryUserKey = chooseMemoryUserKey(retrievalCtx, parsed.userKey);
     const memoryBlock = await withBoundedTimeout(
-      loadMemoryContextBlock({ workspaceId, userKey: parsed.userKey }, userText),
+      loadMemoryContextBlock({ workspaceId, userKey: memoryUserKey }, userText),
       MEMORY_LOAD_TIMEOUT_MS,
       "",
     ).catch(() => "");
@@ -1573,7 +1576,13 @@ export class AgentService {
                     ) {
                       try {
                         const graphOut = await raceExternalCall(
-                          invokeGraphSearch({ question: userText, documentIds }),
+                          invokeGraphSearch(
+                            graphFallbackInvokeArgs({
+                              question: userText,
+                              workspaceId,
+                              documentIds,
+                            }),
+                          ),
                           { signal: abortSignal },
                         );
                         if (graphOut) {
@@ -2018,7 +2027,7 @@ export class AgentService {
             try {
               if (assistantForMemory.trim()) {
                 await persistTurnMemory(
-                  { workspaceId, userKey: parsed.userKey },
+                  { workspaceId, userKey: memoryUserKey },
                   userText,
                   assistantForMemory,
                 );

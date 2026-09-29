@@ -1,13 +1,9 @@
+"use client";
+
 import Link from "next/link";
 
 import ModeSegmentedControl, { type ChatMode } from "./ModeSegmentedControl";
-
-/** 品牌星标（消息头像等复用） */
-export const SpikeMark = ({ className = "" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path d="M12 2 L13 11 L22 12 L13 13 L12 22 L11 13 L2 12 L11 11 Z" />
-  </svg>
-);
+import { useSidebarDrawer } from "./AppShell";
 
 type AppHeaderProps = {
   activePage: "chat" | "kb";
@@ -30,14 +26,41 @@ export default function AppHeader({
   onNewThread,
   isAuthenticated = null,
 }: AppHeaderProps) {
+  const drawer = useSidebarDrawer();
+
   return (
     <header className="chat-header">
       <div className="chat-header-inner app-header-inner">
-        {activePage === "chat" && mode && onModeChange ? (
-          <ModeSegmentedControl mode={mode} onChange={onModeChange} disabled={modeDisabled} />
-        ) : (
-          <span className="chat-header-page-title">{activePage === "kb" ? "知识库" : "对话"}</span>
-        )}
+        <div className="app-header-leading">
+          {drawer ? (
+            <button
+              type="button"
+              className="app-header-hamburger"
+              aria-label={drawer.open ? "关闭菜单" : "打开菜单"}
+              aria-expanded={drawer.open}
+              onClick={drawer.toggle}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
+                <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
+              </svg>
+            </button>
+          ) : null}
+          {activePage === "chat" && mode && onModeChange ? (
+            <ModeSegmentedControl mode={mode} onChange={onModeChange} disabled={modeDisabled} />
+          ) : (
+            <span className="chat-header-page-title">
+              {activePage === "kb" ? "知识库" : "对话"}
+            </span>
+          )}
+        </div>
 
         <div className="app-header-cluster">
           <nav className="app-header-nav" aria-label="快捷操作">

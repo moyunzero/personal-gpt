@@ -103,7 +103,10 @@ const Bubble = ({
 
   if (role === "assistant") {
     return (
-      <div className="message message-assistant">
+      <div
+        className="message message-assistant"
+        {...(isStreaming ? { "aria-live": "polite" as const } : {})}
+      >
         <AssistantAvatar />
         <div className="message-body">
           {agentMode ? <p className="message-role-line">助手 · Agent</p> : null}

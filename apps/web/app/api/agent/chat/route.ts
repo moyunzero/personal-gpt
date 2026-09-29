@@ -23,6 +23,7 @@ import {
   combineAbortSignals,
   createUpstreamTimeoutSignal,
 } from "./abort-signals";
+import { injectSessionUserKey } from "./inject-session-user-key";
 import { pipeUpstreamBody } from "./pipe-upstream";
 
 export const runtime = "nodejs";
@@ -140,6 +141,7 @@ export async function POST(req: Request) {
       parsedBody.thread_id = rawThread;
       delete parsedBody.llmApiKey;
       delete parsedBody.llmBaseUrl;
+      injectSessionUserKey(parsedBody, retrievalCtx);
       if (typeof parsedBody.model === "string" && parsedBody.model.trim()) {
         const saved = await lookupWorkspaceModelKey(retrievalCtx.workspaceId, parsedBody.model);
         if (!saved) {

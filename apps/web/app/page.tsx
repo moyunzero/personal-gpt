@@ -15,13 +15,14 @@ import ModelChip from "./components/ModelChip";
 import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
+import { buildHomeChatId } from "@/lib/chat/build-home-chat-id";
+import { composerIsStop, isChatBusy } from "@/lib/chat/composer-busy";
 import { getOrCreateThreadId, rotateThreadId, setThreadId } from "@/lib/chat/thread-id";
 import {
   mapPersistedMessages,
   sessionCacheKey,
   type UiChatMessage,
 } from "@/lib/chat/session-messages";
-import { getOrCreateUserKey } from "@/lib/chat/user-key";
 
 function lastUserTextFromMessages(messages: { role?: string; parts?: unknown[] }[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -49,7 +50,6 @@ export default function Home() {
   const [corpus, setCorpus] = useState<CorpusChoice>("user");
   const [input, setInput] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [userKey] = useState(() => (typeof window !== "undefined" ? getOrCreateUserKey() : ""));
   const [threadRevision, setThreadRevision] = useState(0);
   const [sessionsRevision, setSessionsRevision] = useState(0);
   const threadId = useMemo(() => {
@@ -61,6 +61,8 @@ export default function Home() {
   const streamRef = useRef<HTMLElement>(null);
   const messagesCacheRef = useRef<Record<string, UiChatMessage[]>>({});
   const skipHistoryLoadRef = useRef(false);
+  /** Bump on each stop-then-mutate switch so stale awaits cannot apply later. */
+  const switchGenRef = useRef(0);
   const [savedModels, setSavedModels] = useState<{ id: string; modelId: string }[]>([]);
   const [chatModelId, setChatModelId] = useState("");
   const [agentModelId, setAgentModelId] = useState("");
@@ -122,38 +124,46 @@ export default function Home() {
 
   const selectedModelId = mode === "agent" ? agentModelId : chatModelId;
 
-  const handleModeChange = (next: ChatMode) => {
-    if (next === "agent" && isAuthenticated === false) {
-      window.location.href = "/api/auth/signin?callbackUrl=" + encodeURIComponent("/");
-      return;
-    }
-    setMode(next);
-  };
-
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: mode === "agent" ? "/api/agent/chat" : "/api/chat",
         body: {
           corpus: isAuthenticated === false ? "seed" : corpus,
-          ...(userKey && isAuthenticated !== false ? { userKey } : {}),
+          // D-11: authenticated clients omit userKey; guests have no memory key
           ...(threadId ? { thread_id: threadId } : {}),
           ...(selectedModelId ? { model: selectedModelId } : {}),
         },
       }),
-    [mode, corpus, userKey, threadId, isAuthenticated, selectedModelId],
+    [mode, corpus, threadId, isAuthenticated, selectedModelId],
   );
 
-  const { messages, sendMessage, regenerate, status, error, clearError, setMessages } = useChat({
-    id: `home-${mode}`,
-    transport,
+  const homeChatId = buildHomeChatId({
+    mode,
+    threadId,
+    corpus,
+    isAuthenticated,
+    selectedModelId,
   });
 
+  const { messages, sendMessage, regenerate, status, error, clearError, setMessages, stop } =
+    useChat({
+      id: homeChatId,
+      transport,
+    });
+
   const noMessages = messages.length === 0;
-  const isLoading = status === "submitted" || status === "streaming";
+  const isLoading = isChatBusy(status);
+  const showStop = composerIsStop(status);
   const showErrorCard = Boolean(error) && !isLoading;
   const showAgentErrorCard = showErrorCard && mode === "agent";
   const showChatError = showErrorCard && mode === "chat";
+
+  useEffect(() => {
+    return () => {
+      void stop();
+    };
+  }, [stop]);
 
   useEffect(() => {
     const el = streamRef.current;
@@ -224,6 +234,54 @@ export default function Home() {
     messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
   }, [messages, chatKey, threadId]);
 
+  const handleModeChange = (next: ChatMode) => {
+    if (next === "agent" && isAuthenticated === false) {
+      window.location.href = "/api/auth/signin?callbackUrl=" + encodeURIComponent("/");
+      return;
+    }
+    const gen = ++switchGenRef.current;
+    void (async () => {
+      await stop();
+      if (gen !== switchGenRef.current) return;
+      setMode(next);
+    })();
+  };
+
+  const handleCorpusChange = (next: CorpusChoice) => {
+    const gen = ++switchGenRef.current;
+    void (async () => {
+      await stop();
+      if (gen !== switchGenRef.current) return;
+      setCorpus(next);
+    })();
+  };
+
+  const handleModelSelect = (modelId: string) => {
+    const gen = ++switchGenRef.current;
+    void (async () => {
+      await stop();
+      if (gen !== switchGenRef.current) return;
+      const previous = mode === "agent" ? agentModelId : chatModelId;
+      const restore = () => {
+        if (mode === "agent") setAgentModelId(previous);
+        else setChatModelId(previous);
+      };
+      if (mode === "agent") setAgentModelId(modelId);
+      else setChatModelId(modelId);
+      void fetch("/api/models", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          mode === "agent" ? { agentModelId: modelId } : { chatModelId: modelId },
+        ),
+      })
+        .then((res) => {
+          if (!res.ok) restore();
+        })
+        .catch(restore);
+    })();
+  };
+
   const handlePrompt = async (promptText: string) => {
     clearError();
     await sendMessage({ text: promptText });
@@ -245,53 +303,73 @@ export default function Home() {
   };
 
   const handleSwitchToChat = () => {
-    clearError();
-    setMode("chat");
+    const gen = ++switchGenRef.current;
+    void (async () => {
+      await stop();
+      if (gen !== switchGenRef.current) return;
+      clearError();
+      setMode("chat");
+    })();
   };
 
   const handleNewThread = () => {
-    clearError();
-    if (threadId && messages.length > 0) {
-      messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
-    }
-    skipHistoryLoadRef.current = true;
-    rotateThreadId(mode);
-    setThreadRevision((n) => n + 1);
-    setMessages([]);
-    setInput("");
-    setSessionsRevision((n) => n + 1);
+    const gen = ++switchGenRef.current;
+    void (async () => {
+      await stop();
+      if (gen !== switchGenRef.current) return;
+      clearError();
+      if (threadId && messages.length > 0) {
+        messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
+      }
+      skipHistoryLoadRef.current = true;
+      rotateThreadId(mode);
+      setThreadRevision((n) => n + 1);
+      setMessages([]);
+      setInput("");
+      setSessionsRevision((n) => n + 1);
+    })();
   };
 
   const handleSelectSession = (session: ChatSessionRow) => {
     if (session.threadId === threadId && session.mode === mode) return;
-    clearError();
-    if (threadId && messages.length > 0) {
-      messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
-    }
-    const nextMode = session.mode === "agent" ? "agent" : "chat";
-    const nextKey = sessionCacheKey(nextMode, session.threadId);
-    const cached = messagesCacheRef.current[nextKey];
-    setMode(nextMode);
-    setThreadId(nextMode, session.threadId);
-    setThreadRevision((n) => n + 1);
-    setInput("");
-    if (cached?.length) {
-      setMessages(cached);
-    } else {
-      setMessages([]);
-    }
+    const gen = ++switchGenRef.current;
+    void (async () => {
+      await stop();
+      if (gen !== switchGenRef.current) return;
+      clearError();
+      if (threadId && messages.length > 0) {
+        messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
+      }
+      const nextMode = session.mode === "agent" ? "agent" : "chat";
+      const nextKey = sessionCacheKey(nextMode, session.threadId);
+      const cached = messagesCacheRef.current[nextKey];
+      setMode(nextMode);
+      setThreadId(nextMode, session.threadId);
+      setThreadRevision((n) => n + 1);
+      setInput("");
+      if (cached?.length) {
+        setMessages(cached);
+      } else {
+        setMessages([]);
+      }
+    })();
   };
 
   const handleDeleteSession = (session: ChatSessionRow) => {
     const key = sessionCacheKey(session.mode === "agent" ? "agent" : "chat", session.threadId);
     delete messagesCacheRef.current[key];
     if (session.threadId !== threadId) return;
-    clearError();
-    skipHistoryLoadRef.current = true;
-    rotateThreadId(mode);
-    setThreadRevision((n) => n + 1);
-    setMessages([]);
-    setInput("");
+    const gen = ++switchGenRef.current;
+    void (async () => {
+      await stop();
+      if (gen !== switchGenRef.current) return;
+      clearError();
+      skipHistoryLoadRef.current = true;
+      rotateThreadId(mode);
+      setThreadRevision((n) => n + 1);
+      setMessages([]);
+      setInput("");
+    })();
   };
 
   return (
@@ -299,7 +377,7 @@ export default function Home() {
       activePage="chat"
       mode={mode}
       onModeChange={handleModeChange}
-      modeDisabled={isLoading}
+      modeDisabled={false}
       onNewThread={handleNewThread}
       activeThreadId={threadId}
       onSelectSession={(s) => void handleSelectSession(s)}
@@ -311,7 +389,7 @@ export default function Home() {
           activePage="chat"
           mode={mode}
           onModeChange={handleModeChange}
-          modeDisabled={isLoading}
+          modeDisabled={false}
           onNewThread={handleNewThread}
           isAuthenticated={isAuthenticated}
         />
@@ -363,7 +441,7 @@ export default function Home() {
                     }
                   />
                 ))}
-                {isLoading && <LoadingBubble />}
+                {status === "submitted" && <LoadingBubble />}
                 {showAgentErrorCard ? (
                   <div className="message message-assistant">
                     <span className="assistant-avatar" aria-hidden="true">
@@ -410,27 +488,8 @@ export default function Home() {
                   mode={mode}
                   modelId={selectedModelId}
                   models={savedModels}
-                  disabled={isLoading}
-                  onSelect={(modelId) => {
-                    const previous = mode === "agent" ? agentModelId : chatModelId;
-                    const restore = () => {
-                      if (mode === "agent") setAgentModelId(previous);
-                      else setChatModelId(previous);
-                    };
-                    if (mode === "agent") setAgentModelId(modelId);
-                    else setChatModelId(modelId);
-                    void fetch("/api/models", {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(
-                        mode === "agent" ? { agentModelId: modelId } : { chatModelId: modelId },
-                      ),
-                    })
-                      .then((res) => {
-                        if (!res.ok) restore();
-                      })
-                      .catch(restore);
-                  }}
+                  disabled={false}
+                  onSelect={handleModelSelect}
                 />
               ) : (
                 <span />
@@ -445,8 +504,8 @@ export default function Home() {
               </span>
               <CorpusToggle
                 value={isAuthenticated === false ? "seed" : corpus}
-                onChange={setCorpus}
-                disabled={isLoading || isAuthenticated === false}
+                onChange={handleCorpusChange}
+                disabled={isAuthenticated === false}
               />
             </div>
             <div className="composer-shell">
@@ -460,26 +519,24 @@ export default function Home() {
                 disabled={isLoading}
                 aria-label="输入消息"
               />
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="composer-send"
-                aria-label="发送"
-              >
-                {isLoading ? (
-                  <svg className="spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeDasharray="40"
-                      strokeDashoffset="10"
-                    />
+              {showStop ? (
+                <button
+                  type="button"
+                  className="composer-send"
+                  aria-label="停止生成"
+                  onClick={() => void stop()}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <rect x="6" y="6" width="12" height="12" rx="1.5" />
                   </svg>
-                ) : (
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!input.trim()}
+                  className="composer-send"
+                  aria-label="发送"
+                >
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path
                       d="M12 19V5M5 12l7-7 7 7"
@@ -489,8 +546,8 @@ export default function Home() {
                       strokeLinejoin="round"
                     />
                   </svg>
-                )}
-              </button>
+                </button>
+              )}
             </div>
             <p className="composer-hint">
               {showErrorCard

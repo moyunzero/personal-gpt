@@ -1,12 +1,14 @@
 import type { NextAuthConfig } from "next-auth";
 
+import { resolveAuthSecret } from "@/lib/auth/resolve-auth-secret";
+
 /**
  * Edge-safe Auth.js config (no TypeORM adapter).
  * Used by middleware; full adapter lives in auth.ts.
  */
 export const authConfig = {
   trustHost: true,
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  secret: resolveAuthSecret(),
   pages: {
     error: "/auth/error",
   },
