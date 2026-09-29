@@ -48,12 +48,25 @@ describe("matchGraphRelationL0 (D-06 / H-04)", () => {
     expect(hit!.reason).toBe("l0:graph_relation:seed_entity");
   });
 
-  it("English process cue + seed entity → graph_relation (D-19 / FIX-S3-04)", async () => {
-    const q = "Describe the process for pearl milk tea";
+  it("English manufacturing process cue + seed entity → graph_relation (D-19 / FIX-S3-04)", async () => {
+    const q = "Describe the manufacturing process for pearl milk tea";
     const hit = await matchGraphRelationL0(q);
     expect(hit).not.toBeNull();
     expect(hit!.primary).toBe("graph_relation");
     expect(hit!.retrieverTools).toEqual(["graph_search"]);
+  });
+
+  it("English production process cue + seed entity → graph_relation (WR-01)", async () => {
+    const q = "What is the production process of pearl milk tea?";
+    const hit = await matchGraphRelationL0(q);
+    expect(hit).not.toBeNull();
+    expect(hit!.primary).toBe("graph_relation");
+  });
+
+  it("bare English process verb + seed entity → not graph_relation (WR-01)", async () => {
+    expect(await matchGraphRelationL0("process the pearl milk tea inventory")).toBeNull();
+    expect(await matchGraphRelationL0("process returns for pearl milk tea")).toBeNull();
+    expect(await matchGraphRelationL0("Please process this pearl milk tea request")).toBeNull();
   });
 });
 
