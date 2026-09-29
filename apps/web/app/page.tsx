@@ -16,6 +16,7 @@ import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
 import { buildHomeChatId } from "@/lib/chat/build-home-chat-id";
+import { composerIsStop, isChatBusy } from "@/lib/chat/composer-busy";
 import { getOrCreateThreadId, rotateThreadId, setThreadId } from "@/lib/chat/thread-id";
 import {
   mapPersistedMessages,
@@ -150,10 +151,17 @@ export default function Home() {
     });
 
   const noMessages = messages.length === 0;
-  const isLoading = status === "submitted" || status === "streaming";
+  const isLoading = isChatBusy(status);
+  const showStop = composerIsStop(status);
   const showErrorCard = Boolean(error) && !isLoading;
   const showAgentErrorCard = showErrorCard && mode === "agent";
   const showChatError = showErrorCard && mode === "chat";
+
+  useEffect(() => {
+    return () => {
+      void stop();
+    };
+  }, [stop]);
 
   useEffect(() => {
     const el = streamRef.current;
@@ -353,7 +361,7 @@ export default function Home() {
       activePage="chat"
       mode={mode}
       onModeChange={handleModeChange}
-      modeDisabled={isLoading}
+      modeDisabled={false}
       onNewThread={handleNewThread}
       activeThreadId={threadId}
       onSelectSession={(s) => void handleSelectSession(s)}
@@ -365,7 +373,7 @@ export default function Home() {
           activePage="chat"
           mode={mode}
           onModeChange={handleModeChange}
-          modeDisabled={isLoading}
+          modeDisabled={false}
           onNewThread={handleNewThread}
           isAuthenticated={isAuthenticated}
         />
@@ -417,7 +425,7 @@ export default function Home() {
                     }
                   />
                 ))}
-                {isLoading && <LoadingBubble />}
+                {status === "submitted" && <LoadingBubble />}
                 {showAgentErrorCard ? (
                   <div className="message message-assistant">
                     <span className="assistant-avatar" aria-hidden="true">
@@ -464,7 +472,7 @@ export default function Home() {
                   mode={mode}
                   modelId={selectedModelId}
                   models={savedModels}
-                  disabled={isLoading}
+                  disabled={false}
                   onSelect={handleModelSelect}
                 />
               ) : (
@@ -481,7 +489,7 @@ export default function Home() {
               <CorpusToggle
                 value={isAuthenticated === false ? "seed" : corpus}
                 onChange={handleCorpusChange}
-                disabled={isLoading || isAuthenticated === false}
+                disabled={isAuthenticated === false}
               />
             </div>
             <div className="composer-shell">
@@ -495,26 +503,24 @@ export default function Home() {
                 disabled={isLoading}
                 aria-label="输入消息"
               />
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="composer-send"
-                aria-label="发送"
-              >
-                {isLoading ? (
-                  <svg className="spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeDasharray="40"
-                      strokeDashoffset="10"
-                    />
+              {showStop ? (
+                <button
+                  type="button"
+                  className="composer-send"
+                  aria-label="停止生成"
+                  onClick={() => void stop()}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <rect x="6" y="6" width="12" height="12" rx="1.5" />
                   </svg>
-                ) : (
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!input.trim()}
+                  className="composer-send"
+                  aria-label="发送"
+                >
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path
                       d="M12 19V5M5 12l7-7 7 7"
@@ -524,8 +530,8 @@ export default function Home() {
                       strokeLinejoin="round"
                     />
                   </svg>
-                )}
-              </button>
+                </button>
+              )}
             </div>
             <p className="composer-hint">
               {showErrorCard
