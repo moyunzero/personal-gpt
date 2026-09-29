@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { resolveAuthSecret } from "./resolve-auth-secret";
 
-const ENV_KEYS = ["AUTH_SECRET", "NEXTAUTH_SECRET", "NODE_ENV", "NEXT_PHASE"] as const;
+const ENV_KEYS = [
+  "AUTH_SECRET",
+  "NEXTAUTH_SECRET",
+  "NODE_ENV",
+  "NEXT_PHASE",
+  "ALLOW_AUTH_SECRET_PLACEHOLDER",
+] as const;
 
 describe("resolveAuthSecret", () => {
   const previous = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
@@ -44,11 +50,47 @@ describe("resolveAuthSecret", () => {
     }
   });
 
-  it("allows placeholder during next production build", () => {
+  it("rejects NEXT_PHASE alone in production runtime (WR-05)", () => {
+    expect(() =>
+      resolveAuthSecret({
+        NODE_ENV: "production",
+        NEXT_PHASE: "phase-production-build",
+        AUTH_SECRET: "ci-build-placeholder",
+      }),
+    ).toThrow(/AUTH_SECRET|NEXTAUTH_SECRET/);
+  });
+
+  it("allows placeholder when NEXT_PHASE set and argv includes build (next build)", () => {
+    const argv = process.argv.slice();
+    process.argv.push("build");
+    try {
+      expect(
+        resolveAuthSecret({
+          NODE_ENV: "production",
+          NEXT_PHASE: "phase-production-build",
+          AUTH_SECRET: "ci-build-placeholder",
+        }),
+      ).toBe("ci-build-placeholder");
+    } finally {
+      process.argv.length = 0;
+      process.argv.push(...argv);
+    }
+  });
+
+  it("allows placeholder with ALLOW_AUTH_SECRET_PLACEHOLDER=1 (CI/build)", () => {
     expect(
       resolveAuthSecret({
         NODE_ENV: "production",
         NEXT_PHASE: "phase-production-build",
+        ALLOW_AUTH_SECRET_PLACEHOLDER: "1",
+        AUTH_SECRET: "ci-build-placeholder",
+      }),
+    ).toBe("ci-build-placeholder");
+
+    expect(
+      resolveAuthSecret({
+        NODE_ENV: "production",
+        ALLOW_AUTH_SECRET_PLACEHOLDER: "1",
         AUTH_SECRET: "ci-build-placeholder",
       }),
     ).toBe("ci-build-placeholder");
