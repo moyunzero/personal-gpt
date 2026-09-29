@@ -61,6 +61,8 @@ export default function Home() {
   const streamRef = useRef<HTMLElement>(null);
   const messagesCacheRef = useRef<Record<string, UiChatMessage[]>>({});
   const skipHistoryLoadRef = useRef(false);
+  /** Bump on each stop-then-mutate switch so stale awaits cannot apply later. */
+  const switchGenRef = useRef(0);
   const [savedModels, setSavedModels] = useState<{ id: string; modelId: string }[]>([]);
   const [chatModelId, setChatModelId] = useState("");
   const [agentModelId, setAgentModelId] = useState("");
@@ -237,22 +239,28 @@ export default function Home() {
       window.location.href = "/api/auth/signin?callbackUrl=" + encodeURIComponent("/");
       return;
     }
+    const gen = ++switchGenRef.current;
     void (async () => {
       await stop();
+      if (gen !== switchGenRef.current) return;
       setMode(next);
     })();
   };
 
   const handleCorpusChange = (next: CorpusChoice) => {
+    const gen = ++switchGenRef.current;
     void (async () => {
       await stop();
+      if (gen !== switchGenRef.current) return;
       setCorpus(next);
     })();
   };
 
   const handleModelSelect = (modelId: string) => {
+    const gen = ++switchGenRef.current;
     void (async () => {
       await stop();
+      if (gen !== switchGenRef.current) return;
       const previous = mode === "agent" ? agentModelId : chatModelId;
       const restore = () => {
         if (mode === "agent") setAgentModelId(previous);
@@ -295,16 +303,20 @@ export default function Home() {
   };
 
   const handleSwitchToChat = () => {
+    const gen = ++switchGenRef.current;
     void (async () => {
       await stop();
+      if (gen !== switchGenRef.current) return;
       clearError();
       setMode("chat");
     })();
   };
 
   const handleNewThread = () => {
+    const gen = ++switchGenRef.current;
     void (async () => {
       await stop();
+      if (gen !== switchGenRef.current) return;
       clearError();
       if (threadId && messages.length > 0) {
         messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
@@ -320,8 +332,10 @@ export default function Home() {
 
   const handleSelectSession = (session: ChatSessionRow) => {
     if (session.threadId === threadId && session.mode === mode) return;
+    const gen = ++switchGenRef.current;
     void (async () => {
       await stop();
+      if (gen !== switchGenRef.current) return;
       clearError();
       if (threadId && messages.length > 0) {
         messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
@@ -345,8 +359,10 @@ export default function Home() {
     const key = sessionCacheKey(session.mode === "agent" ? "agent" : "chat", session.threadId);
     delete messagesCacheRef.current[key];
     if (session.threadId !== threadId) return;
+    const gen = ++switchGenRef.current;
     void (async () => {
       await stop();
+      if (gen !== switchGenRef.current) return;
       clearError();
       skipHistoryLoadRef.current = true;
       rotateThreadId(mode);
