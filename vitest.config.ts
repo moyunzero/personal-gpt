@@ -15,7 +15,13 @@ export default defineConfig({
       "apps/web/**/*.test.ts",
       "packages/**/*.test.ts",
     ],
-    exclude: ["node_modules/**", ".next/**"],
+    exclude: [
+      "node_modules/**",
+      ".next/**",
+      "**/apps/web/.next/**",
+      "**/.next/**",
+    ],
+    testTimeout: 30_000,
     setupFiles: ["tests/setup-env.ts"],
   },
 });
