@@ -41,6 +41,8 @@ export interface DecideQueryRouteOptions {
   workspaceId?: string;
   requestId?: string;
   corpus?: Corpus;
+  /** Security trim for L0/L1 catalog entity resolve (D-21 / WR-04). */
+  allowedDocumentIds?: string[];
 }
 
 const RouteSchema = z.object({
@@ -239,6 +241,8 @@ async function decideWithSharedRouter(
 ): Promise<QueryRouteDecision> {
   const neo4jOk = await probeNeo4jAvailable();
   const { plan, precheckSimilarity } = await resolveIntentPlan(query, {
+    workspaceId: options.workspaceId,
+    allowedDocumentIds: options.allowedDocumentIds,
     probeKb: async (q) =>
       probeKbRelevance(
         q,

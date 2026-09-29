@@ -68,6 +68,7 @@ export async function matchGraphRelationL0(
   if (!hasGraphRelationCue(query)) return null;
   const entity = await resolveGraphEntity(query, ctx.workspaceId, {
     catalogStore: ctx.catalogStore,
+    allowedDocumentIds: ctx.allowedDocumentIds,
   });
   if (!entity) return null;
   const mixed = KB_RE.test(query) || REPORT_RE.test(query) || WEB_RE.test(query);
@@ -116,7 +117,10 @@ export async function orderSpecialistsByKeywordAppearance(
   const wantsWeb = WEB_RE.test(t) && !refusesWeb;
   const wantsReport = REPORT_RE.test(t);
   const wantsAnalyst = ANALYST_RE.test(t);
-  const entity = await resolveGraphEntity(t, ctx.workspaceId, { catalogStore: ctx.catalogStore });
+  const entity = await resolveGraphEntity(t, ctx.workspaceId, {
+    catalogStore: ctx.catalogStore,
+    allowedDocumentIds: ctx.allowedDocumentIds,
+  });
   const wantsGraph = GRAPH_KB_RE.test(t) || (hasGraphRelationCue(t) && entity !== null);
 
   const need: SpecialistNeed[] = [];
@@ -152,6 +156,7 @@ export async function matchMultiStepL0(
 
   const entity = await resolveGraphEntity(query, ctx.workspaceId, {
     catalogStore: ctx.catalogStore,
+    allowedDocumentIds: ctx.allowedDocumentIds,
   });
   const hasGraph = hasGraphRelationCue(query) && entity !== null;
   const hasKb = KB_RE.test(query);

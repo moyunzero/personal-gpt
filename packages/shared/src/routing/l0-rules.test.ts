@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   isPureMathExpression,
@@ -6,6 +6,29 @@ import {
   matchL0Rules,
   orderSpecialistsByKeywordAppearance,
 } from "./l0-rules";
+import { setEntityCatalogStoreForTests, type EntityCatalogStore } from "./entity-resolve";
+
+function createMockStore(
+  rows: Array<{
+    id: string;
+    workspaceId: string;
+    normalizedName: string;
+    entityType: "product";
+    displayName: string;
+    neo4jNodeId: string;
+    sourceDocumentId: string;
+  }>,
+): EntityCatalogStore {
+  return {
+    findByWorkspace: vi.fn(async (workspaceId: string) =>
+      rows.filter((row) => row.workspaceId === workspaceId),
+    ),
+    findByDocument: vi.fn(async () => []),
+    upsert: vi.fn(),
+    deleteByDocument: vi.fn(async () => 0),
+    ensureWorkspaceReadAcl: vi.fn(),
+  };
+}
 
 describe("isPureMathExpression", () => {
   it("requires at least one digit", () => {
@@ -67,6 +90,31 @@ describe("matchGraphRelationL0 (D-06 / H-04)", () => {
     expect(await matchGraphRelationL0("process the pearl milk tea inventory")).toBeNull();
     expect(await matchGraphRelationL0("process returns for pearl milk tea")).toBeNull();
     expect(await matchGraphRelationL0("Please process this pearl milk tea request")).toBeNull();
+  });
+
+  it("catalog entity denied by empty allowedDocumentIds → not graph_relation (WR-04)", async () => {
+    const workspaceId = "ws-acl-l0";
+    const store = createMockStore([
+      {
+        id: "cat-1",
+        workspaceId,
+        normalizedName: "project atlas",
+        entityType: "product",
+        displayName: "Project Atlas",
+        neo4jNodeId: "entity:ws-acl-l0:project atlas:product",
+        sourceDocumentId: "doc-secret",
+      },
+    ]);
+    setEntityCatalogStoreForTests(store);
+    try {
+      const hit = await matchGraphRelationL0("Project Atlas 用了什么工艺？", {
+        workspaceId,
+        allowedDocumentIds: [],
+      });
+      expect(hit).toBeNull();
+    } finally {
+      setEntityCatalogStoreForTests(null);
+    }
   });
 });
 

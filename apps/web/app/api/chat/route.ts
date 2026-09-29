@@ -274,6 +274,7 @@ export async function POST(req: Request) {
                 workspaceId: retrievalCtx.workspaceId,
                 requestId,
                 corpus,
+                allowedDocumentIds: retrievalCtx.allowedDocumentIds,
               });
         log.debug("query route", {
           corpus,
