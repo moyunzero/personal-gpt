@@ -1857,6 +1857,80 @@ main {
   .chat-sidebar {
     display: none;
   }
+
+  /* D-18 / FIX-S3-05: reuse .chat-sidebar as overlay drawer when open */
+  .app-shell.sidebar-open .chat-sidebar,
+  .app-shell[data-sidebar-open="true"] .chat-sidebar {
+    display: flex;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--sidebar-width);
+    max-width: 85vw;
+    height: 100%;
+    z-index: 40;
+    box-shadow: 8px 0 24px rgba(18, 15, 13, 0.35);
+  }
+
+  .app-shell.sidebar-open .sidebar-drawer-backdrop,
+  .app-shell[data-sidebar-open="true"] .sidebar-drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: rgba(18, 15, 13, 0.45);
+    cursor: pointer;
+  }
+
+  .app-header-hamburger {
+    display: inline-flex;
+  }
+}
+
+.sidebar-drawer-backdrop {
+  display: none;
+}
+
+.app-header-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md, 10px);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.app-header-hamburger:hover {
+  background: rgba(28, 23, 20, 0.06);
+}
+
+.app-header-leading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+/* D-20①: reduce spinner / loading-dots motion */
+@media (prefers-reduced-motion: reduce) {
+  .composer-send .spinner {
+    animation: none;
+  }
+
+  .loading-dots span {
+    animation: none;
+    opacity: 0.7;
+    transform: none;
+  }
 }
 
 /* ============================================================

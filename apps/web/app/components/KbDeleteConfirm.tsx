@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 type KbDeleteConfirmProps = {
   open: boolean;
@@ -14,6 +14,16 @@ type KbDeleteConfirmProps = {
   body?: ReactNode;
 };
 
+/** D-20②: Escape cancels the confirm dialog. */
+export function kbDeleteConfirmHandlesEscape(key: string): boolean {
+  return key === "Escape";
+}
+
+/** D-20②: Move focus into the dialog when it opens (no full trap). */
+export function focusKbDeleteDialog(el: HTMLElement | null): void {
+  el?.focus();
+}
+
 /**
  * 删除二次确认弹层（与 KB 共用同一套 modal UI）。
  */
@@ -26,15 +36,33 @@ export default function KbDeleteConfirm({
   heading = "确认删除文档？",
   body,
 }: KbDeleteConfirmProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    focusKbDeleteDialog(dialogRef.current);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!kbDeleteConfirmHandlesEscape(event.key)) return;
+      if (loading) return;
+      onCancel();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onCancel, loading]);
+
   if (!open) return null;
 
   return (
     <div className="kb-modal-backdrop" role="presentation" onClick={onCancel}>
       <div
+        ref={dialogRef}
         className="kb-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="kb-delete-title"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="kb-delete-title" className="kb-modal-title">
