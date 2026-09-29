@@ -87,6 +87,10 @@ uploads/
 .planning/
 .env*.local
 
+# 本地 GSD 调度状态、验收用的大 PDF，不入库
+.gsd/
+assets/pdf-test/
+
 # 本地产品与开发文档（与 .planning/ 同级，不入库、不推 GitHub）
 docs/
 
