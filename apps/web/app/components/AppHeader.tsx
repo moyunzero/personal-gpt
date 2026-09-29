@@ -36,7 +36,7 @@ export default function AppHeader({
             <button
               type="button"
               className="app-header-hamburger"
-              aria-label="打开菜单"
+              aria-label={drawer.open ? "关闭菜单" : "打开菜单"}
               aria-expanded={drawer.open}
               onClick={drawer.toggle}
             >

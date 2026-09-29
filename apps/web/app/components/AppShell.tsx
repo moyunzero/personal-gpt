@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -53,6 +54,16 @@ export default function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const toggle = useCallback(() => setSidebarOpen((v) => !v), []);
   const close = useCallback(() => setSidebarOpen(false), []);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      close();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [sidebarOpen, close]);
 
   const handleSelectSession = useCallback(
     (session: ChatSessionRow) => {
