@@ -15,7 +15,11 @@ import { createThreadId } from "@/lib/chat/thread-id";
 import { graphPathsToDisplay } from "@/lib/chat/graph-path-display";
 import { type VectorSearchResult } from "@/lib/chat/context";
 import { parseCorpus } from "@/lib/chat/corpus-filters";
-import { loadMemoryContextBlock, parseUserKey, persistTurnMemory } from "@/lib/chat/memory-context";
+import {
+  loadMemoryContextBlock,
+  persistTurnMemory,
+  resolveChatMemoryUserKey,
+} from "@/lib/chat/memory-context";
 import { formatMessages, type InputMessage } from "@/lib/chat/messages";
 import { buildSystemPrompt } from "@/lib/chat/prompt";
 import { decideQueryRoute, type QueryRouteDecision } from "@/lib/chat/query-router";
@@ -196,7 +200,12 @@ export async function POST(req: Request) {
         const { messages } = body;
         // 游客强制种子库，避免扫私人知识库
         const corpus = isGuest ? "seed" : parseCorpus(body.corpus);
-        const userKey = isGuest ? undefined : parseUserKey(body.userKey);
+        // D-09: logged-in memory key = session user id; ignore body.userKey
+        const userKey = resolveChatMemoryUserKey({
+          isGuest,
+          sessionUserId: retrievalCtx.userId,
+          bodyUserKey: body.userKey,
+        });
 
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
           return new Response("No messages provided", {

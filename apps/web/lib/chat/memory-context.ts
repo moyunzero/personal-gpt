@@ -25,6 +25,21 @@ export function parseUserKey(raw: unknown): string | null {
   return trimmed;
 }
 
+/**
+ * Logged-in Chat memory binds to session user id only (D-09).
+ * Guests have no memory namespace. body.userKey is ignored when session present.
+ */
+export function resolveChatMemoryUserKey(input: {
+  isGuest: boolean;
+  sessionUserId: string | null | undefined;
+  bodyUserKey?: unknown;
+}): string | null {
+  void input.bodyUserKey;
+  if (input.isGuest) return null;
+  const id = typeof input.sessionUserId === "string" ? input.sessionUserId.trim() : "";
+  return id || null;
+}
+
 export function isMemoryEnabledUserKey(userKey: string | null): userKey is string {
   return userKey !== null;
 }

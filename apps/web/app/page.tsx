@@ -15,13 +15,13 @@ import ModelChip from "./components/ModelChip";
 import type { ChatMode } from "./components/ModeSegmentedControl";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
+import { buildHomeChatId } from "@/lib/chat/build-home-chat-id";
 import { getOrCreateThreadId, rotateThreadId, setThreadId } from "@/lib/chat/thread-id";
 import {
   mapPersistedMessages,
   sessionCacheKey,
   type UiChatMessage,
 } from "@/lib/chat/session-messages";
-import { getOrCreateUserKey } from "@/lib/chat/user-key";
 
 function lastUserTextFromMessages(messages: { role?: string; parts?: unknown[] }[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -49,7 +49,6 @@ export default function Home() {
   const [corpus, setCorpus] = useState<CorpusChoice>("user");
   const [input, setInput] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [userKey] = useState(() => (typeof window !== "undefined" ? getOrCreateUserKey() : ""));
   const [threadRevision, setThreadRevision] = useState(0);
   const [sessionsRevision, setSessionsRevision] = useState(0);
   const threadId = useMemo(() => {
@@ -122,32 +121,33 @@ export default function Home() {
 
   const selectedModelId = mode === "agent" ? agentModelId : chatModelId;
 
-  const handleModeChange = (next: ChatMode) => {
-    if (next === "agent" && isAuthenticated === false) {
-      window.location.href = "/api/auth/signin?callbackUrl=" + encodeURIComponent("/");
-      return;
-    }
-    setMode(next);
-  };
-
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: mode === "agent" ? "/api/agent/chat" : "/api/chat",
         body: {
           corpus: isAuthenticated === false ? "seed" : corpus,
-          ...(userKey && isAuthenticated !== false ? { userKey } : {}),
+          // D-11: authenticated clients omit userKey; guests have no memory key
           ...(threadId ? { thread_id: threadId } : {}),
           ...(selectedModelId ? { model: selectedModelId } : {}),
         },
       }),
-    [mode, corpus, userKey, threadId, isAuthenticated, selectedModelId],
+    [mode, corpus, threadId, isAuthenticated, selectedModelId],
   );
 
-  const { messages, sendMessage, regenerate, status, error, clearError, setMessages } = useChat({
-    id: `home-${mode}`,
-    transport,
+  const homeChatId = buildHomeChatId({
+    mode,
+    threadId,
+    corpus,
+    isAuthenticated,
+    selectedModelId,
   });
+
+  const { messages, sendMessage, regenerate, status, error, clearError, setMessages, stop } =
+    useChat({
+      id: homeChatId,
+      transport,
+    });
 
   const noMessages = messages.length === 0;
   const isLoading = status === "submitted" || status === "streaming";
@@ -224,6 +224,48 @@ export default function Home() {
     messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
   }, [messages, chatKey, threadId]);
 
+  const handleModeChange = (next: ChatMode) => {
+    if (next === "agent" && isAuthenticated === false) {
+      window.location.href = "/api/auth/signin?callbackUrl=" + encodeURIComponent("/");
+      return;
+    }
+    void (async () => {
+      await stop();
+      setMode(next);
+    })();
+  };
+
+  const handleCorpusChange = (next: CorpusChoice) => {
+    void (async () => {
+      await stop();
+      setCorpus(next);
+    })();
+  };
+
+  const handleModelSelect = (modelId: string) => {
+    void (async () => {
+      await stop();
+      const previous = mode === "agent" ? agentModelId : chatModelId;
+      const restore = () => {
+        if (mode === "agent") setAgentModelId(previous);
+        else setChatModelId(previous);
+      };
+      if (mode === "agent") setAgentModelId(modelId);
+      else setChatModelId(modelId);
+      void fetch("/api/models", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          mode === "agent" ? { agentModelId: modelId } : { chatModelId: modelId },
+        ),
+      })
+        .then((res) => {
+          if (!res.ok) restore();
+        })
+        .catch(restore);
+    })();
+  };
+
   const handlePrompt = async (promptText: string) => {
     clearError();
     await sendMessage({ text: promptText });
@@ -245,53 +287,65 @@ export default function Home() {
   };
 
   const handleSwitchToChat = () => {
-    clearError();
-    setMode("chat");
+    void (async () => {
+      await stop();
+      clearError();
+      setMode("chat");
+    })();
   };
 
   const handleNewThread = () => {
-    clearError();
-    if (threadId && messages.length > 0) {
-      messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
-    }
-    skipHistoryLoadRef.current = true;
-    rotateThreadId(mode);
-    setThreadRevision((n) => n + 1);
-    setMessages([]);
-    setInput("");
-    setSessionsRevision((n) => n + 1);
+    void (async () => {
+      await stop();
+      clearError();
+      if (threadId && messages.length > 0) {
+        messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
+      }
+      skipHistoryLoadRef.current = true;
+      rotateThreadId(mode);
+      setThreadRevision((n) => n + 1);
+      setMessages([]);
+      setInput("");
+      setSessionsRevision((n) => n + 1);
+    })();
   };
 
   const handleSelectSession = (session: ChatSessionRow) => {
     if (session.threadId === threadId && session.mode === mode) return;
-    clearError();
-    if (threadId && messages.length > 0) {
-      messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
-    }
-    const nextMode = session.mode === "agent" ? "agent" : "chat";
-    const nextKey = sessionCacheKey(nextMode, session.threadId);
-    const cached = messagesCacheRef.current[nextKey];
-    setMode(nextMode);
-    setThreadId(nextMode, session.threadId);
-    setThreadRevision((n) => n + 1);
-    setInput("");
-    if (cached?.length) {
-      setMessages(cached);
-    } else {
-      setMessages([]);
-    }
+    void (async () => {
+      await stop();
+      clearError();
+      if (threadId && messages.length > 0) {
+        messagesCacheRef.current[chatKey] = messages as UiChatMessage[];
+      }
+      const nextMode = session.mode === "agent" ? "agent" : "chat";
+      const nextKey = sessionCacheKey(nextMode, session.threadId);
+      const cached = messagesCacheRef.current[nextKey];
+      setMode(nextMode);
+      setThreadId(nextMode, session.threadId);
+      setThreadRevision((n) => n + 1);
+      setInput("");
+      if (cached?.length) {
+        setMessages(cached);
+      } else {
+        setMessages([]);
+      }
+    })();
   };
 
   const handleDeleteSession = (session: ChatSessionRow) => {
     const key = sessionCacheKey(session.mode === "agent" ? "agent" : "chat", session.threadId);
     delete messagesCacheRef.current[key];
     if (session.threadId !== threadId) return;
-    clearError();
-    skipHistoryLoadRef.current = true;
-    rotateThreadId(mode);
-    setThreadRevision((n) => n + 1);
-    setMessages([]);
-    setInput("");
+    void (async () => {
+      await stop();
+      clearError();
+      skipHistoryLoadRef.current = true;
+      rotateThreadId(mode);
+      setThreadRevision((n) => n + 1);
+      setMessages([]);
+      setInput("");
+    })();
   };
 
   return (
@@ -411,26 +465,7 @@ export default function Home() {
                   modelId={selectedModelId}
                   models={savedModels}
                   disabled={isLoading}
-                  onSelect={(modelId) => {
-                    const previous = mode === "agent" ? agentModelId : chatModelId;
-                    const restore = () => {
-                      if (mode === "agent") setAgentModelId(previous);
-                      else setChatModelId(previous);
-                    };
-                    if (mode === "agent") setAgentModelId(modelId);
-                    else setChatModelId(modelId);
-                    void fetch("/api/models", {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(
-                        mode === "agent" ? { agentModelId: modelId } : { chatModelId: modelId },
-                      ),
-                    })
-                      .then((res) => {
-                        if (!res.ok) restore();
-                      })
-                      .catch(restore);
-                  }}
+                  onSelect={handleModelSelect}
                 />
               ) : (
                 <span />
@@ -445,7 +480,7 @@ export default function Home() {
               </span>
               <CorpusToggle
                 value={isAuthenticated === false ? "seed" : corpus}
-                onChange={setCorpus}
+                onChange={handleCorpusChange}
                 disabled={isLoading || isAuthenticated === false}
               />
             </div>
