@@ -38,6 +38,23 @@ describe("matchGraphRelationL0 (D-06 / H-04)", () => {
     expect(await matchGraphRelationL0("珍珠奶茶有哪些优惠活动")).toBeNull();
     expect(await matchL0Rules("珍珠奶茶有哪些优惠活动")).toBeNull();
   });
+
+  it("English ingredient cue + seed entity → graph_relation (D-19 / FIX-S3-04)", async () => {
+    const q = "What ingredient is used in pearl milk tea?";
+    const hit = await matchGraphRelationL0(q);
+    expect(hit).not.toBeNull();
+    expect(hit!.primary).toBe("graph_relation");
+    expect(hit!.retrieverTools).toEqual(["graph_search"]);
+    expect(hit!.reason).toBe("l0:graph_relation:seed_entity");
+  });
+
+  it("English process cue + seed entity → graph_relation (D-19 / FIX-S3-04)", async () => {
+    const q = "Describe the process for pearl milk tea";
+    const hit = await matchGraphRelationL0(q);
+    expect(hit).not.toBeNull();
+    expect(hit!.primary).toBe("graph_relation");
+    expect(hit!.retrieverTools).toEqual(["graph_search"]);
+  });
 });
 
 describe("chitchat L0 (D-03)", () => {
