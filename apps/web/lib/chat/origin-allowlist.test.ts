@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isOriginAllowed } from "./origin-allowlist";
 
-const ALLOWED = new Set([
-  "http://localhost:3000",
-  "https://moyunzero.github.io",
-]);
+const ALLOWED = new Set(["http://localhost:3000", "https://moyunzero.github.io"]);
 
 describe("isOriginAllowed", () => {
   it("accepts whitelisted Origin", () => {

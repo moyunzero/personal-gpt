@@ -1,8 +1,7 @@
 export const EXTERNAL_TOOL_TIMEOUT_MS = 8_000;
 
 export type RaceExternalResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; reason: "timeout" | "error" | "abort" };
+  { ok: true; value: T } | { ok: false; reason: "timeout" | "error" | "abort" };
 
 export function raceValue<T>(result: RaceExternalResult<T>): T | undefined {
   return result.ok ? result.value : undefined;

@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { DocumentEntity } from "@/lib/db/entities/document.entity";
 
-import {
-  canReadDocument,
-  canWriteDocument,
-  type DocumentAccessContext,
-} from "./document-acl";
+import { canReadDocument, canWriteDocument, type DocumentAccessContext } from "./document-acl";
 
-function doc(partial: Partial<DocumentEntity> & Pick<DocumentEntity, "ownerId" | "visibility">): DocumentEntity {
+function doc(
+  partial: Partial<DocumentEntity> & Pick<DocumentEntity, "ownerId" | "visibility">,
+): DocumentEntity {
   return {
     id: "doc-1",
     workspaceId: "ws-1",

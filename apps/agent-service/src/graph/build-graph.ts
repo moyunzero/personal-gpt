@@ -391,22 +391,26 @@ export function buildPrefetchNode(plan: IntentPlan) {
       (plan.fallbackChain.includes("graph_search") || plan.graphSignal === true);
 
     if (graphOnly) {
-      const graphOut = raceValue(await raceExternalCall(
-        invokeGraphSearch({ question: text, workspaceId, documentIds }),
-        raceOpts,
-      ));
+      const graphOut = raceValue(
+        await raceExternalCall(
+          invokeGraphSearch({ question: text, workspaceId, documentIds }),
+          raceOpts,
+        ),
+      );
       if (graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut)) {
         blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
       } else if (graphOut && plan.fallbackChain.includes("kb_search")) {
-        const kbOut = raceValue(await raceExternalCall(
-          invokeKbSearch({
-            query: extractKbSearchQuery(text),
-            userText: text,
-            workspaceId,
-            documentIds,
-          }),
-          raceOpts,
-        ));
+        const kbOut = raceValue(
+          await raceExternalCall(
+            invokeKbSearch({
+              query: extractKbSearchQuery(text),
+              userText: text,
+              workspaceId,
+              documentIds,
+            }),
+            raceOpts,
+          ),
+        );
         blocks.push(`【图谱预检索·工具结果·可信】\n${graphOut}`);
         if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
           blocks.push(`【知识库回退检索·工具结果·可信】\n${kbOut}`);
@@ -417,15 +421,17 @@ export function buildPrefetchNode(plan: IntentPlan) {
     } else if (plan.retrieverTools.includes("kb_search")) {
       let graphInjected = false;
       let graphOutCache: string | undefined;
-      const kbOut = raceValue(await raceExternalCall(
-        invokeKbSearch({
-          query: extractKbSearchQuery(text),
-          userText: text,
-          workspaceId,
-          documentIds,
-        }),
-        raceOpts,
-      ));
+      const kbOut = raceValue(
+        await raceExternalCall(
+          invokeKbSearch({
+            query: extractKbSearchQuery(text),
+            userText: text,
+            workspaceId,
+            documentIds,
+          }),
+          raceOpts,
+        ),
+      );
       if (kbOut) {
         const kbMiss = /KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut);
         if (kbMiss && allowGraphFallback) {

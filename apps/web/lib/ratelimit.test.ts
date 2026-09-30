@@ -100,20 +100,20 @@ describe("checkUserRateLimit 429 shape", () => {
 
 describe("guestRateLimitUnavailable", () => {
   it("fail-closed when no Upstash guest limiter and no REDIS_URL", () => {
-    expect(
-      guestRateLimitUnavailable({ hasGuestUpstashLimiter: false, hasRedisUrl: false }),
-    ).toBe(true);
+    expect(guestRateLimitUnavailable({ hasGuestUpstashLimiter: false, hasRedisUrl: false })).toBe(
+      true,
+    );
   });
 
   it("available when Redis URL is set", () => {
-    expect(
-      guestRateLimitUnavailable({ hasGuestUpstashLimiter: false, hasRedisUrl: true }),
-    ).toBe(false);
+    expect(guestRateLimitUnavailable({ hasGuestUpstashLimiter: false, hasRedisUrl: true })).toBe(
+      false,
+    );
   });
 
   it("available when Upstash guest limiter exists", () => {
-    expect(
-      guestRateLimitUnavailable({ hasGuestUpstashLimiter: true, hasRedisUrl: false }),
-    ).toBe(false);
+    expect(guestRateLimitUnavailable({ hasGuestUpstashLimiter: true, hasRedisUrl: false })).toBe(
+      false,
+    );
   });
 });

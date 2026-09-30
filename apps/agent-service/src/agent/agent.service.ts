@@ -459,14 +459,16 @@ async function prefetchForSingleSpecialist(input: {
   const documentIds = input.allowedDocumentIds;
   let kbSearchExecuted = input.kbSearchPrefetched ?? false;
   if (input.plan.retrieverTools.includes("graph_search")) {
-    const graphOut = raceValue(await raceExternalCall(
-      invokeGraphSearch({
-        question: input.userText,
-        workspaceId: input.workspaceId,
-        documentIds,
-      }),
-      { signal: input.abortSignal },
-    ));
+    const graphOut = raceValue(
+      await raceExternalCall(
+        invokeGraphSearch({
+          question: input.userText,
+          workspaceId: input.workspaceId,
+          documentIds,
+        }),
+        { signal: input.abortSignal },
+      ),
+    );
     if (input.abortSignal?.aborted) return seeds;
     const graphHit = Boolean(graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut));
     if (graphOut) {
@@ -494,15 +496,17 @@ async function prefetchForSingleSpecialist(input: {
     }
     if (!graphHit && input.plan.fallbackChain.includes("kb_search")) {
       kbSearchExecuted = true;
-      const kbOut = raceValue(await raceExternalCall(
-        invokeKbSearch({
-          query: extractKbSearchQuery(input.userText),
-          userText: input.userText,
-          workspaceId: input.workspaceId,
-          documentIds,
-        }),
-        { signal: input.abortSignal },
-      ));
+      const kbOut = raceValue(
+        await raceExternalCall(
+          invokeKbSearch({
+            query: extractKbSearchQuery(input.userText),
+            userText: input.userText,
+            workspaceId: input.workspaceId,
+            documentIds,
+          }),
+          { signal: input.abortSignal },
+        ),
+      );
       if (input.abortSignal?.aborted) return seeds;
       if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
         input.trace.recordTool({
@@ -533,15 +537,17 @@ async function prefetchForSingleSpecialist(input: {
   }
   if (input.plan.retrieverTools.includes("kb_search") && !kbSearchExecuted) {
     kbSearchExecuted = true;
-    const kbOut = raceValue(await raceExternalCall(
-      invokeKbSearch({
-        query: extractKbSearchQuery(input.userText),
-        userText: input.userText,
-        workspaceId: input.workspaceId,
-        documentIds,
-      }),
-      { signal: input.abortSignal },
-    ));
+    const kbOut = raceValue(
+      await raceExternalCall(
+        invokeKbSearch({
+          query: extractKbSearchQuery(input.userText),
+          userText: input.userText,
+          workspaceId: input.workspaceId,
+          documentIds,
+        }),
+        { signal: input.abortSignal },
+      ),
+    );
     if (input.abortSignal?.aborted) return seeds;
     if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
       input.trace.recordTool({
@@ -1483,16 +1489,18 @@ export class AgentService {
                       shouldGraphFallbackAfterKbMiss(intentPlan, routerConfig.enableKbGraphFallback)
                     ) {
                       try {
-                        const graphOut = raceValue(await raceExternalCall(
-                          invokeGraphSearch(
-                            graphFallbackInvokeArgs({
-                              question: userText,
-                              workspaceId,
-                              documentIds,
-                            }),
+                        const graphOut = raceValue(
+                          await raceExternalCall(
+                            invokeGraphSearch(
+                              graphFallbackInvokeArgs({
+                                question: userText,
+                                workspaceId,
+                                documentIds,
+                              }),
+                            ),
+                            { signal: abortSignal },
                           ),
-                          { signal: abortSignal },
-                        ));
+                        );
                         if (graphOut) {
                           trace.recordTool({
                             name: "graph_search",

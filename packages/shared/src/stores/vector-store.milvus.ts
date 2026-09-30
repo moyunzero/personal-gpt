@@ -249,10 +249,7 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
 
       const pageFilter = params.filter?.page;
       const pageEq =
-        pageFilter &&
-        typeof pageFilter === "object" &&
-        pageFilter !== null &&
-        "$eq" in pageFilter
+        pageFilter && typeof pageFilter === "object" && pageFilter !== null && "$eq" in pageFilter
           ? (pageFilter as { $eq: unknown }).$eq
           : undefined;
       if (typeof pageEq === "number" && Number.isFinite(pageEq)) {
