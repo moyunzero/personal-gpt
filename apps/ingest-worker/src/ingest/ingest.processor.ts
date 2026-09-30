@@ -14,7 +14,9 @@ import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity"
 
 import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
+import { shouldCleanupVectorsAfterFailure } from "./ingest-cleanup-policy";
 import { extractAndUpsertGraph } from "./pipeline/graph-extract";
+
 import { resolvePdfChunks } from "./pipeline/mineru-parse";
 import { parseDocument } from "./pipeline/parse";
 import { splitText, toChunkRecords } from "./pipeline/split";
@@ -72,6 +74,7 @@ export class IngestProcessor extends WorkerHost {
       requestId: bullJobId,
     };
 
+    let vectorsCommitted = false;
     try {
       let chunks: string[];
       let pages: number[] | undefined;
@@ -115,6 +118,7 @@ export class IngestProcessor extends WorkerHost {
           : toChunkRecords(chunks, vectors, recordMeta);
 
       await traceIngestStep("upsert", traceCtx, () => upsertChunks(records));
+      vectorsCommitted = true;
       await job.updateProgress(90);
       await this.updateIngestJob(ingestJob?.id, { progress: 90 });
 
@@ -153,14 +157,16 @@ export class IngestProcessor extends WorkerHost {
       ingestFailuresTotal.inc({ step: "ingest" });
       this.logger.error(`Ingest failed for document ${documentId}: ${message}`);
 
-      try {
-        await deleteDocument(workspaceId, documentId, "user", { dataSource: this.dataSource });
-      } catch (cleanupErr) {
-        this.logger.warn(
-          `Vector cleanup after ingest failure failed: ${
-            cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
-          }`,
-        );
+      if (shouldCleanupVectorsAfterFailure({ vectorsCommitted })) {
+        try {
+          await deleteDocument(workspaceId, documentId, "user", { dataSource: this.dataSource });
+        } catch (cleanupErr) {
+          this.logger.warn(
+            `Vector cleanup after ingest failure failed: ${
+              cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
+            }`,
+          );
+        }
       }
 
       await this.documentRepo.update({ id: documentId, workspaceId }, { status: "failed" });
