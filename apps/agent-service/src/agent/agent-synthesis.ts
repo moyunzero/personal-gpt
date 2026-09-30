@@ -42,8 +42,16 @@ export function isRetrieverSynthesisPlan(plan: IntentPlan): boolean {
   );
 }
 
-export function buildSynthesizerSystemPrompt(plan: IntentPlan): string {
+export function buildSynthesizerSystemPrompt(
+  plan: IntentPlan,
+  opts?: { retrievalError?: boolean },
+): string {
   const parts = [BASE_ROLE, SYNTHESIZER_ROLE];
+  if (opts?.retrievalError) {
+    parts.push(
+      "【检索状态】检索暂时不可用（超时或错误）。告知用户检索暂时不可用；不要声称已完整查阅知识库。",
+    );
+  }
   if (plan.primary === "kb_doc" || plan.primary === "kb_graph_hybrid") {
     parts.push(KB_CITATION_RULES);
   }

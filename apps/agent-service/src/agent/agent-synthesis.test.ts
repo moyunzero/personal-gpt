@@ -59,4 +59,10 @@ describe("buildSynthesizerSystemPrompt", () => {
   it("omits KB citation block for graph-only", () => {
     expect(buildSynthesizerSystemPrompt(GRAPH_PLAN)).not.toContain("【知识库引用硬规则】");
   });
+
+  it("includes 检索暂时不可用 when retrievalError is flagged", () => {
+    expect(buildSynthesizerSystemPrompt(KB_PLAN, { retrievalError: true })).toContain(
+      "检索暂时不可用",
+    );
+  });
 });
