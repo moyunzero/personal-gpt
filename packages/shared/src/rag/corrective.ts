@@ -17,13 +17,25 @@ export function correctiveMinScore(): number {
   return Number.isFinite(n) && n >= 0 && n <= 1 ? n : DEFAULT_CORRECTIVE_MIN_SCORE;
 }
 
-/** D-34: 「不够相关」= top1 cosine similarity 低于阈值；空结果亦触发改写。 */
+/** D-34: 「不够相关」= top1 effective score 低于阈值；空结果亦触发改写。
+ * Effective score = max(similarity, rerankScore??0). BM25-only hits often have
+ * similarity 0 but non-empty text + bm25Score — treat those as relevant enough. */
 export function needsCorrectiveRewrite(
   hits: RetrievedChunk[],
   minScore: number = correctiveMinScore(),
 ): boolean {
   if (hits.length === 0) return true;
-  return hits[0]!.similarity < minScore;
+  const top = hits[0]!;
+  const effective = Math.max(top.similarity, top.rerankScore ?? 0);
+  if (effective >= minScore) return false;
+  const bm25Signal =
+    typeof top.bm25Score === "number" &&
+    Number.isFinite(top.bm25Score) &&
+    top.text.trim().length > 0;
+  if (bm25Signal && top.similarity === 0 && (top.rerankScore == null || top.rerankScore === 0)) {
+    return false;
+  }
+  return effective < minScore;
 }
 
 async function defaultRewrite(query: string): Promise<string> {
