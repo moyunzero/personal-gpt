@@ -15,6 +15,7 @@ import { createThreadId } from "@/lib/chat/thread-id";
 import { graphPathsToDisplay } from "@/lib/chat/graph-path-display";
 import { type VectorSearchResult } from "@/lib/chat/context";
 import { parseCorpus } from "@/lib/chat/corpus-filters";
+import { guestRetrievalDocumentIds } from "@/lib/chat/guest-retrieval-ids";
 import {
   loadMemoryContextBlock,
   persistTurnMemory,
@@ -200,6 +201,11 @@ export async function POST(req: Request) {
         const { messages } = body;
         // 游客强制种子库，避免扫私人知识库
         const corpus = isGuest ? "seed" : parseCorpus(body.corpus);
+        const retrievalDocIds = guestRetrievalDocumentIds({
+          isGuest,
+          corpus,
+          allowedDocumentIds: retrievalCtx.allowedDocumentIds,
+        });
         // D-09: logged-in memory key = session user id; ignore body.userKey
         const userKey = resolveChatMemoryUserKey({
           isGuest,
@@ -274,7 +280,7 @@ export async function POST(req: Request) {
                 workspaceId: retrievalCtx.workspaceId,
                 requestId,
                 corpus,
-                allowedDocumentIds: retrievalCtx.allowedDocumentIds,
+                allowedDocumentIds: retrievalDocIds,
               });
         log.debug("query route", {
           corpus,
@@ -297,7 +303,7 @@ export async function POST(req: Request) {
               corpus,
               documentIds: namedDocuments.length
                 ? namedDocuments.map((doc) => doc.id)
-                : retrievalCtx.allowedDocumentIds,
+                : retrievalDocIds,
               namedDocument: namedDocuments.length > 0,
               ...(namedDocuments.length > 0 && askedPage != null ? { page: askedPage } : {}),
             },
@@ -312,7 +318,7 @@ export async function POST(req: Request) {
               graphRagQuery({
                 question: lastContent,
                 workspaceId: retrievalCtx.workspaceId,
-                documentIds: retrievalCtx.allowedDocumentIds,
+                documentIds: retrievalDocIds,
               }),
               GRAPH_RAG_TIMEOUT_MS,
             );
@@ -336,7 +342,7 @@ export async function POST(req: Request) {
             retrievalCtx.workspaceId,
             {
               corpus,
-              documentIds: retrievalCtx.allowedDocumentIds,
+              documentIds: retrievalDocIds,
             },
           );
         }
