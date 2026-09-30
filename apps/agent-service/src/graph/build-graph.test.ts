@@ -1,5 +1,5 @@
 /**
- * buildAgentGraph 单测：compile、闲聊短路、recursionLimit、checkpointer（无 live LLM）。
+ * buildSupervisorGraph 单测：compile、闲聊路由、recursionLimit、checkpointer（无 live LLM）。
  */
 import { HumanMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
@@ -7,7 +7,7 @@ import { MemorySaver } from "@langchain/langgraph";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  buildAgentGraph,
+  buildSupervisorGraph,
   createSingleSpecialistWorkflow,
   ensureCheckpointerSetup,
   getAgentRunConfig,
@@ -203,13 +203,13 @@ describe("resolveCheckpointer", () => {
   });
 });
 
-describe("buildAgentGraph", () => {
+describe("buildSupervisorGraph", () => {
   afterEach(() => {
     resetCheckpointerSingletonsForTests();
   });
 
   it("compiles with a mock ChatModel (createSupervisor + checkpointer)", async () => {
-    const graph = await buildAgentGraph({
+    const graph = await buildSupervisorGraph({
       model: mockChatModel(),
       checkpointer: new MemorySaver(),
     });
@@ -229,7 +229,7 @@ describe("buildAgentGraph", () => {
     process.env.AGENT_CHECKPOINTER_SQLITE_PATH = join(dir, "t.sqlite");
     try {
       resetCheckpointerSingletonsForTests();
-      const graph = await buildAgentGraph({ model: mockChatModel() });
+      const graph = await buildSupervisorGraph({ model: mockChatModel() });
       expect(graph).toBeTruthy();
       expect(typeof graph.stream).toBe("function");
     } finally {
@@ -241,26 +241,8 @@ describe("buildAgentGraph", () => {
     }
   });
 
-  it("short-circuits chitchat without entering supervisor workers", async () => {
-    const graph = await buildAgentGraph({
-      model: mockChatModel(),
-      checkpointer: new MemorySaver(),
-    });
-    const run = getAgentRunConfig("chitchat-thread");
-    const result = await graph.invoke({ messages: [new HumanMessage("你好")] }, run);
-    const texts = (result.messages ?? []).map((m) =>
-      typeof m.content === "string" ? m.content : "",
-    );
-    expect(texts.some((t) => /你好|助手|帮你/.test(t))).toBe(true);
-    // 短路路径不应出现 tool / handoff 痕迹
-    const hasToolish = (result.messages ?? []).some((m) => {
-      const tc = (m as { tool_calls?: unknown[] }).tool_calls;
-      return Array.isArray(tc) && tc.length > 0;
-    });
-    expect(hasToolish).toBe(false);
-  });
-
-  it("marks non-chitchat as supervisor route before subgraph invoke", () => {
+  it("routes chitchat to short and non-chitchat to supervisor", () => {
+    expect(resolveAgentRoute("你好")).toBe("short");
     expect(resolveAgentRoute("对比三家供应商报价并输出结构化分析报告")).toBe("supervisor");
   });
 });

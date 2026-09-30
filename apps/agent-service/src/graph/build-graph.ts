@@ -41,7 +41,7 @@ import { raceExternalCall, raceValue } from "../agent/race-external-call";
 import { extractKbSearchQuery } from "../tools/extract-kb-query";
 import { invokeGraphSearch } from "../tools/graph-search.tool";
 import { invokeKbSearch } from "../tools/kb-search.tool";
-import { buildShortReplyMessages, isAgentChitchat } from "./short-circuit";
+import { isAgentChitchat } from "./short-circuit";
 import { AgentState, type AgentStateType } from "./state";
 
 export type AgentRoute = "short" | "supervisor";
@@ -256,16 +256,6 @@ export function plantPostgresSaverForTests(
   postgresSaverSingleton = saver;
   postgresSetupDone = false;
   postgresSetupPromise = null;
-}
-
-function routerNode(state: AgentStateType) {
-  const text = lastUserText(state.messages);
-  return { route: resolveAgentRoute(text) };
-}
-
-function shortReplyNode(state: AgentStateType) {
-  const text = lastUserText(state.messages);
-  return { messages: buildShortReplyMessages(text) };
 }
 
 type SpecialistBundle = {
@@ -568,34 +558,6 @@ export async function buildExecutionGraph(options: BuildExecutionGraphOptions) {
 }
 
 /**
- * 编译外层短路图 + 内层 Supervisor。默认 PostgresSaver（D-21）；可注入 override。
- */
-export async function buildAgentGraph(options: BuildAgentGraphOptions = {}) {
-  const model = options.model ?? createChatModel();
-  const checkpointer = await resolveCheckpointer(options.checkpointer);
-  const userText = options.userText ?? "";
-  const memoryContextBlock = options.memoryContextBlock;
-  const required = inferRequiredSpecialists(userText);
-  const collab = shouldUseSequentialPipeline(required)
-    ? createSequentialPipelineWorkflow(model, required)
-    : createSupervisorWorkflow(model, userText, memoryContextBlock);
-  const supervisorSubgraph = collab.compile({ checkpointer });
-
-  return new StateGraph(AgentState)
-    .addNode("router", routerNode)
-    .addNode("short_reply", shortReplyNode)
-    .addNode("supervisor_subgraph", supervisorSubgraph)
-    .addEdge(START, "router")
-    .addConditionalEdges("router", (state) => state.route, {
-      short: "short_reply",
-      supervisor: "supervisor_subgraph",
-    })
-    .addEdge("short_reply", END)
-    .addEdge("supervisor_subgraph", END)
-    .compile({ checkpointer });
-}
-
-/**
  * 构建可 stream 的协作子图（绕过外层嵌套，便于 toUIMessageStream）。
  * - 多步强制清单 → Sequential 确定性边（LangGraph multi-agent 显式工作流）
  * - 否则 → createSupervisor hub-and-spoke
@@ -613,6 +575,3 @@ export async function buildSupervisorGraph(options: BuildAgentGraphOptions = {})
     checkpointer,
   });
 }
-
-/** @deprecated 使用 buildAgentGraph；保留别名避免旧 smoke 误导 */
-export const buildGraph = buildAgentGraph;
