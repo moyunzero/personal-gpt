@@ -73,7 +73,8 @@ function normalizeMilvusCosineScore(score: number): number {
   return (score + 1) / 2;
 }
 
-function mapMilvusHit(hit: Record<string, unknown> & { score?: number }): RetrievedChunk {
+export function mapMilvusHit(hit: Record<string, unknown> & { score?: number }): RetrievedChunk {
+  const page = hit.page;
   return {
     text: String(hit.content ?? hit.text ?? ""),
     similarity: normalizeMilvusCosineScore(Number(hit.score ?? 0)),
@@ -82,6 +83,7 @@ function mapMilvusHit(hit: Record<string, unknown> & { score?: number }): Retrie
     category: hit.category as string | undefined,
     documentId: hit.documentId as string | undefined,
     chunkIndex: hit.chunkIndex as number | undefined,
+    ...(typeof page === "number" && Number.isFinite(page) ? { page } : {}),
   };
 }
 
@@ -132,6 +134,7 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
             { name: "title", data_type: DataType.VarChar, max_length: 512 },
             { name: "source", data_type: DataType.VarChar, max_length: 1024 },
             { name: "category", data_type: DataType.VarChar, max_length: 256 },
+            { name: "page", data_type: DataType.Int64 },
           ],
         });
         await client.createIndex({
@@ -169,17 +172,23 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
       }
 
       for (const [documentId, docChunks] of byDocument) {
-        const data = docChunks.map((chunk) => ({
-          id: chunkPrimaryKey(chunk.documentId, chunk.chunkIndex),
-          vector: chunk.vector,
-          content: chunk.text,
-          workspaceId: chunk.workspaceId,
-          documentId: chunk.documentId,
-          chunkIndex: chunk.chunkIndex,
-          title: chunk.title ?? "",
-          source: chunk.source ?? "",
-          category: chunk.category ?? "",
-        }));
+        const data = docChunks.map((chunk) => {
+          const metaPage = chunk.metadata?.page;
+          const page =
+            typeof metaPage === "number" && Number.isFinite(metaPage) ? Math.trunc(metaPage) : 0;
+          return {
+            id: chunkPrimaryKey(chunk.documentId, chunk.chunkIndex),
+            vector: chunk.vector,
+            content: chunk.text,
+            workspaceId: chunk.workspaceId,
+            documentId: chunk.documentId,
+            chunkIndex: chunk.chunkIndex,
+            title: chunk.title ?? "",
+            source: chunk.source ?? "",
+            category: chunk.category ?? "",
+            page,
+          };
+        });
         const write = client.upsert ?? client.insert;
         await write({ collection_name: collectionName, data });
 
@@ -229,11 +238,28 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
           "documentId",
           "chunkIndex",
           "workspaceId",
+          "page",
         ],
       });
 
       const threshold = params.similarityThreshold ?? 0;
-      return (result.results ?? []).map(mapMilvusHit).filter((doc) => doc.similarity >= threshold);
+      let hits = (result.results ?? [])
+        .map(mapMilvusHit)
+        .filter((doc) => doc.similarity >= threshold);
+
+      const pageFilter = params.filter?.page;
+      const pageEq =
+        pageFilter &&
+        typeof pageFilter === "object" &&
+        pageFilter !== null &&
+        "$eq" in pageFilter
+          ? (pageFilter as { $eq: unknown }).$eq
+          : undefined;
+      if (typeof pageEq === "number" && Number.isFinite(pageEq)) {
+        hits = hits.filter((hit) => hit.page === pageEq);
+      }
+
+      return hits;
     },
   };
 }
