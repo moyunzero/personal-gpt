@@ -5,7 +5,6 @@
 
 import { Injectable } from "@nestjs/common";
 import { toBaseMessages, toUIMessageStream } from "@ai-sdk/langchain";
-import type { UIMessage } from "ai";
 import { createUIMessageStream, pipeUIMessageStreamToResponse } from "ai";
 import type { Response } from "express";
 import { randomUUID } from "node:crypto";
