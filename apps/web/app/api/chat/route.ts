@@ -16,6 +16,7 @@ import { graphPathsToDisplay } from "@/lib/chat/graph-path-display";
 import { type VectorSearchResult } from "@/lib/chat/context";
 import { parseCorpus } from "@/lib/chat/corpus-filters";
 import { guestRetrievalDocumentIds } from "@/lib/chat/guest-retrieval-ids";
+import { isOriginAllowed } from "@/lib/chat/origin-allowlist";
 import {
   loadMemoryContextBlock,
   persistTurnMemory,
@@ -90,19 +91,8 @@ function buildCorsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
-function isOriginAllowed(req: Request): boolean {
-  const origin = req.headers.get("origin");
-  if (origin && ALLOWED_ORIGINS.has(origin)) return true;
-
-  const referer = req.headers.get("referer");
-  if (referer) {
-    try {
-      if (ALLOWED_ORIGINS.has(new URL(referer).origin)) return true;
-    } catch {
-      // invalid referer URL
-    }
-  }
-  return false;
+function isChatOriginAllowed(req: Request): boolean {
+  return isOriginAllowed(req.headers, ALLOWED_ORIGINS);
 }
 
 // CORS 预检：所有浏览器在跨域 POST 之前都会先发 OPTIONS。
@@ -136,7 +126,7 @@ export async function POST(req: Request) {
 
   // ====================== Origin 硬校验（防盗刷） ======================
   // CORS 拦不住 curl / 爬虫，必须在路由开头做服务端校验，非白名单直接 403。
-  if (!isTrustedInternalProxy(req) && !isOriginAllowed(req)) {
+  if (!isTrustedInternalProxy(req) && !isChatOriginAllowed(req)) {
     log.metric("origin.rejected", {
       origin: req.headers.get("origin") ?? "<none>",
       referer: req.headers.get("referer") ?? "<none>",

@@ -15,7 +15,13 @@ vi.hoisted(() => {
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
 });
 
-import { buildLimiter, checkUserRateLimit, getClientIp, rateLimitJsonResponse } from "./ratelimit";
+import {
+  buildLimiter,
+  checkUserRateLimit,
+  getClientIp,
+  guestRateLimitUnavailable,
+  rateLimitJsonResponse,
+} from "./ratelimit";
 
 describe("buildLimiter (fail-open 入口)", () => {
   it("url 缺失 → 返回 null", () => {
@@ -89,5 +95,25 @@ describe("checkUserRateLimit 429 shape", () => {
     delete process.env.REDIS_URL;
     const result = await checkUserRateLimit("user-1", "req-1");
     expect(result.success).toBe(true);
+  });
+});
+
+describe("guestRateLimitUnavailable", () => {
+  it("fail-closed when no Upstash guest limiter and no REDIS_URL", () => {
+    expect(
+      guestRateLimitUnavailable({ hasGuestUpstashLimiter: false, hasRedisUrl: false }),
+    ).toBe(true);
+  });
+
+  it("available when Redis URL is set", () => {
+    expect(
+      guestRateLimitUnavailable({ hasGuestUpstashLimiter: false, hasRedisUrl: true }),
+    ).toBe(false);
+  });
+
+  it("available when Upstash guest limiter exists", () => {
+    expect(
+      guestRateLimitUnavailable({ hasGuestUpstashLimiter: true, hasRedisUrl: false }),
+    ).toBe(false);
   });
 });
