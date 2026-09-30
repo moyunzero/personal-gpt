@@ -292,20 +292,30 @@ async function defaultExecutor(
   }
 }
 
-function pathAllowed(path: GraphPathTrace, documentIds?: string[]): boolean {
+function collectNodeDocumentIds(node: GraphPathNode): string[] {
+  const ids: string[] = [];
+  const prop = node.properties.documentId;
+  if (typeof prop === "string" && prop.trim()) ids.push(prop.trim());
+  if (node.labels.includes("Document") && typeof node.id === "string" && node.id.trim()) {
+    ids.push(node.id.trim());
+  }
+  return ids;
+}
+
+/** Exported for unit tests — document ACL on graph paths. */
+export function pathAllowed(path: GraphPathTrace, documentIds?: string[]): boolean {
   if (documentIds === undefined) return true;
   if (documentIds.length === 0) return false;
   const allowed = new Set(documentIds);
   for (const node of path.nodes) {
-    const docId = node.properties.documentId;
-    if (typeof docId === "string" && docId.trim() && !allowed.has(docId.trim())) {
-      return false;
+    for (const docId of collectNodeDocumentIds(node)) {
+      if (!allowed.has(docId)) return false;
     }
   }
   return true;
 }
 
-function filterPaths(paths: GraphPathTrace[], documentIds?: string[]): GraphPathTrace[] {
+export function filterPaths(paths: GraphPathTrace[], documentIds?: string[]): GraphPathTrace[] {
   if (documentIds === undefined) return paths;
   if (documentIds.length === 0) return [];
   return paths.filter((path) => pathAllowed(path, documentIds));
