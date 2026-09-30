@@ -186,16 +186,10 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
       }
 
       // Phase 1 多租户隔离：先按 workspaceId（+ 可选 filter）过滤
-      let docs = (await collection!.find(filter, searchOptions).toArray()) as Record<
+      const docs = (await collection!.find(filter, searchOptions).toArray()) as Record<
         string,
         unknown
       >[];
-
-      // v0.1 写入的 chunk 无 workspaceId 字段；仅 ASTRA_LEGACY_FALLBACK=true 时回退
-      const legacyFallback = process.env.ASTRA_LEGACY_FALLBACK === "true";
-      if (docs.length === 0 && !params.filter && legacyFallback) {
-        docs = (await collection!.find({}, searchOptions).toArray()) as Record<string, unknown>[];
-      }
 
       const threshold = params.similarityThreshold ?? 0;
 

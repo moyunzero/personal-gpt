@@ -112,14 +112,11 @@ describe("VectorStore workspace isolation", () => {
     );
   });
 
-  it("search falls back to unscoped query when legacy fallback enabled", async () => {
+  it("never issues unscoped find({}) even when ASTRA_LEGACY_FALLBACK=true", async () => {
     const prev = process.env.ASTRA_LEGACY_FALLBACK;
     process.env.ASTRA_LEGACY_FALLBACK = "true";
 
-    const toArray = vi
-      .fn()
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ content: "legacy", $similarity: 0.8 }]);
+    const toArray = vi.fn().mockResolvedValueOnce([]);
     const find = vi.fn().mockReturnValue({ toArray });
     const collection: AstraCollectionHandle = {
       find,
@@ -135,8 +132,11 @@ describe("VectorStore workspace isolation", () => {
       limit: 3,
     });
 
-    expect(find).toHaveBeenCalledTimes(2);
-    expect(hits).toHaveLength(1);
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(find.mock.calls[0]?.[0]).toEqual({
+      workspaceId: { $eq: "00000000-0000-4000-8000-000000000001" },
+    });
+    expect(hits).toHaveLength(0);
 
     if (prev === undefined) delete process.env.ASTRA_LEGACY_FALLBACK;
     else process.env.ASTRA_LEGACY_FALLBACK = prev;
