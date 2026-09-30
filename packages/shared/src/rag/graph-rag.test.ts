@@ -5,8 +5,53 @@ import {
   resolveProductName,
   createSeededMilkTeaFixtureExecutor,
   createCatalogEntityFixtureExecutor,
+  pathAllowed,
+  type GraphPathTrace,
 } from "./graph-rag";
 import type { ResolvedGraphEntity } from "../routing/entity-resolve";
+
+describe("pathAllowed", () => {
+  it("allows path when Entity lacks documentId but Document id is in allowlist", () => {
+    const path: GraphPathTrace = {
+      nodes: [
+        {
+          id: "doc-allowed",
+          labels: ["Document"],
+          properties: { workspaceId: "ws-1" },
+        },
+        {
+          id: "entity:ws-1:alice:person",
+          labels: ["Entity"],
+          properties: { name: "Alice", workspaceId: "ws-1" },
+        },
+      ],
+      relationships: [],
+    };
+    expect(pathAllowed(path, ["doc-allowed"])).toBe(true);
+  });
+
+  it("rejects path when Entity.documentId is not in allowlist", () => {
+    const path: GraphPathTrace = {
+      nodes: [
+        {
+          id: "entity:ws-1:secret:concept",
+          labels: ["Entity"],
+          properties: { documentId: "doc-restricted", name: "Secret" },
+        },
+      ],
+      relationships: [],
+    };
+    expect(pathAllowed(path, ["doc-allowed"])).toBe(false);
+  });
+
+  it("denies all when allowlist is empty", () => {
+    const path: GraphPathTrace = {
+      nodes: [{ id: "doc-1", labels: ["Document"], properties: {} }],
+      relationships: [],
+    };
+    expect(pathAllowed(path, [])).toBe(false);
+  });
+});
 
 describe("resolveProductName", () => {
   it("matches pearl milk tea entities only", () => {

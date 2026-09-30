@@ -8,6 +8,10 @@ export function authorizeMetricsScrape(
     return process.env.NODE_ENV !== "production";
   }
   const bearer = authorization?.replace(/^Bearer\s+/i, "").trim();
+  // Production: Bearer only — queryToken leaks into access logs / Referer.
+  if (process.env.NODE_ENV === "production") {
+    return Boolean(bearer) && bearer === expected;
+  }
   const provided = bearer || queryToken?.trim() || "";
   return provided === expected;
 }

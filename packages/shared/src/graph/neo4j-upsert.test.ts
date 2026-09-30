@@ -82,6 +82,8 @@ describe("upsertDocumentGraph", () => {
     const entityMergeCall = mockRun.mock.calls.find((call) =>
       String(call[0]).includes("UNWIND $entities AS ent"),
     );
+    expect(String(entityMergeCall?.[0])).toMatch(/e\.documentId = \$documentId/);
+    expect(entityMergeCall?.[1]?.documentId).toBe("doc-1");
     expect(entityMergeCall?.[1]?.entities).toEqual([
       {
         name: "Alice",

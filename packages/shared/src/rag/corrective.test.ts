@@ -32,6 +32,28 @@ describe("needsCorrectiveRewrite", () => {
   it("is true when hits are empty", () => {
     expect(needsCorrectiveRewrite([], 0.35)).toBe(true);
   });
+
+  it("is false for BM25-only top hit with content despite similarity 0", () => {
+    const bm25Hit: RetrievedChunk = {
+      text: "relevant BM25 passage",
+      similarity: 0,
+      bm25Score: 12.5,
+      documentId: "d-bm25",
+      chunkIndex: 0,
+    };
+    expect(needsCorrectiveRewrite([bm25Hit], 0.35)).toBe(false);
+  });
+
+  it("is false when rerankScore meets threshold even if similarity is low", () => {
+    const reranked: RetrievedChunk = {
+      text: "reranked",
+      similarity: 0.1,
+      rerankScore: 0.8,
+      documentId: "d-rr",
+      chunkIndex: 0,
+    };
+    expect(needsCorrectiveRewrite([reranked], 0.35)).toBe(false);
+  });
 });
 
 describe("maybeCorrective", () => {

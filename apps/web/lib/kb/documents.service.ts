@@ -21,7 +21,11 @@ import { createMilvusVectorStore } from "@personal-gpt/shared/stores/vector-stor
 
 import { DocumentEntity, type DocumentVisibility } from "@/lib/db/entities/document.entity";
 import { IngestJobEntity } from "@/lib/db/entities/ingest-job.entity";
-import { canReadDocument, defaultDocumentVisibility } from "@/lib/auth/document-acl";
+import {
+  canReadDocument,
+  canWriteDocument,
+  defaultDocumentVisibility,
+} from "@/lib/auth/document-acl";
 import { resolveDocumentAccessContext } from "@/lib/auth/workspace.service";
 import { createEntityCatalogStore } from "@/lib/db/entity-catalog-store";
 import { getDataSource } from "@/lib/db/get-data-source";
@@ -452,7 +456,7 @@ export async function updateDocumentMetadata(
   if (!document) return null;
 
   const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
-  if (!accessCtx || !canReadDocument(document, accessCtx)) return null;
+  if (!accessCtx || !canWriteDocument(document, accessCtx)) return null;
 
   const next: {
     title?: string;
@@ -502,7 +506,7 @@ export async function deleteDocument(documentId: string, ctx: DocumentsContext):
   if (!document) return false;
 
   const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
-  if (!accessCtx || !canReadDocument(document, accessCtx)) return false;
+  if (!accessCtx || !canWriteDocument(document, accessCtx)) return false;
 
   const errors: Error[] = [];
   const tasks: Promise<void>[] = [];
@@ -580,7 +584,7 @@ export async function reindexDocument(
   if (!document?.filePath || !document.mimeType) return null;
 
   const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
-  if (!accessCtx || !canReadDocument(document, accessCtx)) return null;
+  if (!accessCtx || !canWriteDocument(document, accessCtx)) return null;
   if (document.status === "processing") {
     throw new ReindexBusyError();
   }

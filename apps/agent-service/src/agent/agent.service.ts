@@ -5,7 +5,6 @@
 
 import { Injectable } from "@nestjs/common";
 import { toBaseMessages, toUIMessageStream } from "@ai-sdk/langchain";
-import type { UIMessage } from "ai";
 import { createUIMessageStream, pipeUIMessageStreamToResponse } from "ai";
 import type { Response } from "express";
 import { randomUUID } from "node:crypto";
@@ -17,9 +16,18 @@ import {
   persistTurnMemory,
   stripSourceMarkers,
 } from "@personal-gpt/shared";
-import { z } from "zod";
 
-import { raceExternalCall } from "./race-external-call";
+import { raceExternalCall, raceValue } from "./race-external-call";
+import { deduplicateTextDeltas } from "./stream-progress-transform";
+export { deduplicateTextDeltas };
+import {
+  InvalidAgentBodyError,
+  parseAgentChatBody,
+  type AgentChatBody,
+  type ParsedAgentChat,
+} from "./agent-chat-body";
+export { InvalidAgentBodyError, parseAgentChatBody };
+export type { AgentChatBody, ParsedAgentChat };
 import {
   buildExecutionGraph,
   buildSupervisorGraph,
@@ -266,35 +274,8 @@ function memoryHintForShortReply(userText: string, memoryBlock: string): string 
 }
 
 /**
- * 合并流可能重复 enqueue 同一 text-delta 事件。
- * - 有 seq：按 id 单调序号去重；同 seq 丢弃，seq 前进则保留（含合法重复正文）
- * - 无 seq：连续相同 id+delta 视为合并伪影丢弃；不相邻的相同正文仍保留
+ * 合并流可能重复 enqueue 同一 text-delta 事件 — see stream-progress-transform.ts
  */
-export function deduplicateTextDeltas(): TransformStream<any, any> {
-  const lastSeqById = new Map<string, number>();
-  let lastContentKey = "";
-  return new TransformStream({
-    transform(chunk, controller) {
-      const obj = chunk as { type?: string; id?: string; delta?: string; seq?: number };
-      if (obj?.type === "text-delta") {
-        const id = obj.id ?? "_";
-        if (typeof obj.seq === "number" && Number.isFinite(obj.seq)) {
-          const prev = lastSeqById.get(id);
-          if (prev !== undefined && obj.seq <= prev) return;
-          lastSeqById.set(id, obj.seq);
-          lastContentKey = "";
-        } else {
-          const key = `${id}:${obj.delta ?? ""}`;
-          if (key === lastContentKey) return;
-          lastContentKey = key;
-        }
-      } else {
-        lastContentKey = "";
-      }
-      controller.enqueue(chunk);
-    },
-  });
-}
 
 /** 外层已手动 write start 时，丢弃 merge 流里的重复 start，避免两条助手气泡 */
 function stripMergedStart(): TransformStream<any, any> {
@@ -353,80 +334,6 @@ export class ModelConfigError extends Error {
     super(message);
     this.name = "ModelConfigError";
   }
-}
-
-export class InvalidAgentBodyError extends Error {
-  readonly statusCode = 400;
-  constructor(message: string) {
-    super(message);
-    this.name = "InvalidAgentBodyError";
-  }
-}
-
-export type AgentChatBody = {
-  messages?: unknown;
-  thread_id?: unknown;
-  workspaceId?: unknown;
-  userKey?: unknown;
-};
-
-export type ParsedAgentChat = {
-  messages: UIMessage[];
-  threadId: string;
-  workspaceId: string;
-  userKey: string;
-  model?: string;
-  llmApiKey?: string;
-  llmBaseUrl?: string;
-};
-
-const AgentUiMessageSchema = z
-  .object({
-    role: z.string().min(1),
-  })
-  .passthrough();
-
-const AgentChatBodySchema = z.object({
-  messages: z.array(AgentUiMessageSchema),
-  thread_id: z.string().optional().nullable(),
-  workspaceId: z.string().optional().nullable(),
-  userKey: z.string().optional().nullable(),
-  model: z.string().max(128).optional(),
-  llmApiKey: z.string().max(512).optional(),
-  llmBaseUrl: z.string().max(256).optional(),
-});
-
-const SAFE_THREAD_ID = /^[A-Za-z0-9_.:-]{1,128}$/;
-
-/** 校验 POST /agent/chat body；非法抛 InvalidAgentBodyError（→ 400） */
-export function parseAgentChatBody(body: unknown): ParsedAgentChat {
-  const result = AgentChatBodySchema.safeParse(body ?? {});
-  if (!result.success) {
-    throw new InvalidAgentBodyError("Invalid body: messages must be an array of message objects");
-  }
-
-  const { messages, thread_id, workspaceId, userKey, model, llmApiKey, llmBaseUrl } = result.data;
-  const trimmedThread = typeof thread_id === "string" ? thread_id.trim() : "";
-  if (trimmedThread && !SAFE_THREAD_ID.test(trimmedThread)) {
-    throw new InvalidAgentBodyError(
-      "Invalid body: thread_id must be a safe id (letters, digits, _.:-; max 128)",
-    );
-  }
-  const threadRaw = trimmedThread || randomUUID();
-  const workspaceRaw =
-    typeof workspaceId === "string" && workspaceId.trim() ? workspaceId.trim() : "default";
-  const userKeyRaw =
-    typeof userKey === "string" && userKey.trim() ? userKey.trim().slice(0, 128) : "anonymous";
-
-  return {
-    messages: messages as unknown as UIMessage[],
-    threadId: threadRaw,
-    workspaceId: resolveWorkspaceId(workspaceRaw),
-    userKey: userKeyRaw,
-    ...(model?.trim() ? { model: model.trim() } : {}),
-    ...(llmApiKey ? { llmApiKey } : {}),
-    ...(llmBaseUrl && isKnownProviderBaseURL(llmBaseUrl) ? { llmBaseUrl } : {}),
-  };
 }
 
 function assertModelConfigured(): void {
@@ -551,13 +458,15 @@ async function prefetchForSingleSpecialist(input: {
   const documentIds = input.allowedDocumentIds;
   let kbSearchExecuted = input.kbSearchPrefetched ?? false;
   if (input.plan.retrieverTools.includes("graph_search")) {
-    const graphOut = await raceExternalCall(
-      invokeGraphSearch({
-        question: input.userText,
-        workspaceId: input.workspaceId,
-        documentIds,
-      }),
-      { signal: input.abortSignal },
+    const graphOut = raceValue(
+      await raceExternalCall(
+        invokeGraphSearch({
+          question: input.userText,
+          workspaceId: input.workspaceId,
+          documentIds,
+        }),
+        { signal: input.abortSignal },
+      ),
     );
     if (input.abortSignal?.aborted) return seeds;
     const graphHit = Boolean(graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut));
@@ -586,14 +495,16 @@ async function prefetchForSingleSpecialist(input: {
     }
     if (!graphHit && input.plan.fallbackChain.includes("kb_search")) {
       kbSearchExecuted = true;
-      const kbOut = await raceExternalCall(
-        invokeKbSearch({
-          query: extractKbSearchQuery(input.userText),
-          userText: input.userText,
-          workspaceId: input.workspaceId,
-          documentIds,
-        }),
-        { signal: input.abortSignal },
+      const kbOut = raceValue(
+        await raceExternalCall(
+          invokeKbSearch({
+            query: extractKbSearchQuery(input.userText),
+            userText: input.userText,
+            workspaceId: input.workspaceId,
+            documentIds,
+          }),
+          { signal: input.abortSignal },
+        ),
       );
       if (input.abortSignal?.aborted) return seeds;
       if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
@@ -625,14 +536,16 @@ async function prefetchForSingleSpecialist(input: {
   }
   if (input.plan.retrieverTools.includes("kb_search") && !kbSearchExecuted) {
     kbSearchExecuted = true;
-    const kbOut = await raceExternalCall(
-      invokeKbSearch({
-        query: extractKbSearchQuery(input.userText),
-        userText: input.userText,
-        workspaceId: input.workspaceId,
-        documentIds,
-      }),
-      { signal: input.abortSignal },
+    const kbOut = raceValue(
+      await raceExternalCall(
+        invokeKbSearch({
+          query: extractKbSearchQuery(input.userText),
+          userText: input.userText,
+          workspaceId: input.workspaceId,
+          documentIds,
+        }),
+        { signal: input.abortSignal },
+      ),
     );
     if (input.abortSignal?.aborted) return seeds;
     if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
@@ -1575,15 +1488,17 @@ export class AgentService {
                       shouldGraphFallbackAfterKbMiss(intentPlan, routerConfig.enableKbGraphFallback)
                     ) {
                       try {
-                        const graphOut = await raceExternalCall(
-                          invokeGraphSearch(
-                            graphFallbackInvokeArgs({
-                              question: userText,
-                              workspaceId,
-                              documentIds,
-                            }),
+                        const graphOut = raceValue(
+                          await raceExternalCall(
+                            invokeGraphSearch(
+                              graphFallbackInvokeArgs({
+                                question: userText,
+                                workspaceId,
+                                documentIds,
+                              }),
+                            ),
+                            { signal: abortSignal },
                           ),
-                          { signal: abortSignal },
                         );
                         if (graphOut) {
                           trace.recordTool({

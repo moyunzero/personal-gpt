@@ -203,22 +203,60 @@ export async function checkKbRateLimit(
   return checkUserRateLimit(identifier, requestId, "kb");
 }
 
+/** True when guest chat has no usable limiter backend (must fail-closed). */
+export function guestRateLimitUnavailable(opts: {
+  hasGuestUpstashLimiter: boolean;
+  hasRedisUrl: boolean;
+}): boolean {
+  return !opts.hasGuestUpstashLimiter && !opts.hasRedisUrl;
+}
+
 /** 游客试用聊天：5 req / 1h，按 IP（或传入的 guest key） */
 export async function checkGuestChatRateLimit(
   identifier: string,
   requestId: string,
 ): Promise<RateLimitResult> {
-  if (!guestChatLimiter) {
-    // Upstash 未配时退回通用 chat 桶，仍 fail-open/限流逻辑一致
-    return checkUserRateLimit(`guest:${identifier}`, requestId, "chat");
+  if (guestChatLimiter) {
+    return checkWithLimiter(
+      guestChatLimiter,
+      identifier,
+      requestId,
+      "ratelimit.guest-chat",
+      GUEST_CHAT_LIMIT,
+    );
   }
-  return checkWithLimiter(
-    guestChatLimiter,
-    identifier,
-    requestId,
-    "ratelimit.guest-chat",
-    GUEST_CHAT_LIMIT,
-  );
+
+  const hasRedisUrl = Boolean(process.env.REDIS_URL?.trim());
+  const redisResult = hasRedisUrl
+    ? await checkWithIoRedis(`guest:${identifier}`, "chat", GUEST_CHAT_LIMIT)
+    : null;
+  if (redisResult) return redisResult;
+
+  if (
+    guestRateLimitUnavailable({
+      hasGuestUpstashLimiter: false,
+      hasRedisUrl,
+    })
+  ) {
+    const log = logger.child({ scope: "ratelimit.guest-chat", requestId });
+    log.warn("guest ratelimit fail-closed (no Upstash guest limiter and no REDIS_URL)");
+    return {
+      success: false,
+      limit: GUEST_CHAT_LIMIT,
+      remaining: 0,
+      reset: Date.now() + 3_600_000,
+      retryAfterSeconds: 3600,
+    };
+  }
+
+  // Redis URL set but client failed → fail-closed for guests
+  return {
+    success: false,
+    limit: GUEST_CHAT_LIMIT,
+    remaining: 0,
+    reset: Date.now() + 3_600_000,
+    retryAfterSeconds: 3600,
+  };
 }
 
 export function rateLimitJsonResponse(result: RateLimitResult): Response {

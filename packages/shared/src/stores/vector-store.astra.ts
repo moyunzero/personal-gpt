@@ -55,6 +55,7 @@ export function resolveAstraCollectionName(
 
 export function mapAstraDoc(doc: Record<string, unknown>): RetrievedChunk {
   const page = doc.page;
+  const tags = doc.tags ?? doc.keywords;
   return {
     text: String(doc.content ?? doc.text ?? ""),
     similarity: Number(doc.$similarity ?? 0),
@@ -64,7 +65,7 @@ export function mapAstraDoc(doc: Record<string, unknown>): RetrievedChunk {
     documentId: doc.documentId as string | undefined,
     chunkIndex: doc.chunkIndex as number | undefined,
     ...(typeof page === "number" && Number.isFinite(page) ? { page } : {}),
-    keywords: doc.keywords as string[] | undefined,
+    keywords: Array.isArray(tags) ? (tags as string[]) : undefined,
   };
 }
 
@@ -164,6 +165,7 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
           source: 1,
           category: 1,
           title: 1,
+          tags: 1,
           keywords: 1,
           documentId: 1,
           chunkIndex: 1,
@@ -184,16 +186,10 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
       }
 
       // Phase 1 多租户隔离：先按 workspaceId（+ 可选 filter）过滤
-      let docs = (await collection!.find(filter, searchOptions).toArray()) as Record<
+      const docs = (await collection!.find(filter, searchOptions).toArray()) as Record<
         string,
         unknown
       >[];
-
-      // v0.1 写入的 chunk 无 workspaceId 字段；仅 ASTRA_LEGACY_FALLBACK=true 时回退
-      const legacyFallback = process.env.ASTRA_LEGACY_FALLBACK === "true";
-      if (docs.length === 0 && !params.filter && legacyFallback) {
-        docs = (await collection!.find({}, searchOptions).toArray()) as Record<string, unknown>[];
-      }
 
       const threshold = params.similarityThreshold ?? 0;
 
