@@ -33,7 +33,7 @@ describe("needsCorrectiveRewrite", () => {
     expect(needsCorrectiveRewrite([], 0.35)).toBe(true);
   });
 
-  it("is false for BM25-only top hit with content despite similarity 0", () => {
+  it("is false for strong BM25-only top hit with content despite similarity 0", () => {
     const bm25Hit: RetrievedChunk = {
       text: "relevant BM25 passage",
       similarity: 0,
@@ -42,6 +42,17 @@ describe("needsCorrectiveRewrite", () => {
       chunkIndex: 0,
     };
     expect(needsCorrectiveRewrite([bm25Hit], 0.35)).toBe(false);
+  });
+
+  it("still rewrites weak BM25 (score below threshold) with similarity 0", () => {
+    const weakBm25: RetrievedChunk = {
+      text: "barely matching token",
+      similarity: 0,
+      bm25Score: 0.01,
+      documentId: "d-weak",
+      chunkIndex: 0,
+    };
+    expect(needsCorrectiveRewrite([weakBm25], 0.35)).toBe(true);
   });
 
   it("is false when rerankScore meets threshold even if similarity is low", () => {

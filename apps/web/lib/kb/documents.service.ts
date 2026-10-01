@@ -589,8 +589,7 @@ export async function reindexDocument(
     throw new ReindexBusyError();
   }
 
-  await purgeGraphAndCatalog(ctx.workspaceId, documentId);
-
+  // Do not purge vectors/graph before upsert — parse/embed failure must keep prior ready index.
   await docRepo.update(
     { id: documentId, workspaceId: ctx.workspaceId },
     { status: "processing", chunkCount: 0 },
@@ -606,6 +605,7 @@ export async function reindexDocument(
     title: document.title,
     category: document.category ?? undefined,
     tags: document.tags,
+    preserveExistingVectors: true,
   };
 
   const job = await enqueueIngestJob(document, payload, ctx.workspaceId);

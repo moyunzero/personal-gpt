@@ -217,6 +217,15 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
       await ensureCollection();
 
       const limit = params.limit ?? 5;
+      const pageFilter = params.filter?.page;
+      const pageEq =
+        pageFilter && typeof pageFilter === "object" && pageFilter !== null && "$eq" in pageFilter
+          ? (pageFilter as { $eq: unknown }).$eq
+          : undefined;
+      const hasPageEq = typeof pageEq === "number" && Number.isFinite(pageEq);
+      // Local page filter shrinks the set — over-fetch candidates first.
+      const fetchLimit = hasPageEq ? Math.max(limit * 5, 50) : limit;
+
       let filter = `workspaceId == "${escapeMilvusString(params.workspaceId)}"`;
       if (params.documentIds?.length) {
         const ids = params.documentIds.map((id) => `"${escapeMilvusString(id)}"`).join(", ");
@@ -226,7 +235,7 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
       const result = await client.search({
         collection_name: collectionName,
         data: [params.vector],
-        limit,
+        limit: fetchLimit,
         filter,
         metric_type: MetricType.COSINE,
         consistency_level: "Strong",
@@ -247,13 +256,8 @@ export function createMilvusVectorStore(options: MilvusVectorStoreOptions = {}):
         .map(mapMilvusHit)
         .filter((doc) => doc.similarity >= threshold);
 
-      const pageFilter = params.filter?.page;
-      const pageEq =
-        pageFilter && typeof pageFilter === "object" && pageFilter !== null && "$eq" in pageFilter
-          ? (pageFilter as { $eq: unknown }).$eq
-          : undefined;
-      if (typeof pageEq === "number" && Number.isFinite(pageEq)) {
-        hits = hits.filter((hit) => hit.page === pageEq);
+      if (hasPageEq) {
+        hits = hits.filter((hit) => hit.page === pageEq).slice(0, limit);
       }
 
       return hits;

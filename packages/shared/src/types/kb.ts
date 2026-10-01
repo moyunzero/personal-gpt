@@ -49,4 +49,6 @@ export interface IngestJobPayload {
   title?: string;
   category?: string;
   tags?: string[];
+  /** Reindex: keep prior vectors/graph until new upsert succeeds. */
+  preserveExistingVectors?: boolean;
 }

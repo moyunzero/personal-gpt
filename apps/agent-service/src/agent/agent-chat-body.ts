@@ -43,7 +43,16 @@ const AgentUiMessageSchema = z
     role: z.enum(["user", "assistant", "tool"]),
     parts: z.array(AgentUiMessagePartSchema).optional(),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((val, ctx) => {
+    if (!Array.isArray(val.parts) || val.parts.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "parts must be a non-empty array",
+        path: ["parts"],
+      });
+    }
+  });
 
 const AgentChatBodySchema = z.object({
   messages: z.array(AgentUiMessageSchema).min(1),

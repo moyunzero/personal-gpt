@@ -157,7 +157,12 @@ export class IngestProcessor extends WorkerHost {
       ingestFailuresTotal.inc({ step: "ingest" });
       this.logger.error(`Ingest failed for document ${documentId}: ${message}`);
 
-      if (shouldCleanupVectorsAfterFailure({ vectorsCommitted })) {
+      if (
+        shouldCleanupVectorsAfterFailure({
+          vectorsCommitted,
+          preserveExistingVectors: Boolean(job.data.preserveExistingVectors),
+        })
+      ) {
         try {
           await deleteDocument(workspaceId, documentId, "user", { dataSource: this.dataSource });
         } catch (cleanupErr) {

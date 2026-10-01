@@ -9,6 +9,7 @@ import type { RetrievedChunk } from "../stores/vector-store";
 import type { HybridSearchParams } from "./hybrid-search";
 
 const DEFAULT_CORRECTIVE_MIN_SCORE = 0.35;
+const DEFAULT_CORRECTIVE_BM25_MIN_SCORE = 1;
 
 export function correctiveMinScore(): number {
   const raw = process.env.CORRECTIVE_MIN_SCORE;
@@ -17,9 +18,17 @@ export function correctiveMinScore(): number {
   return Number.isFinite(n) && n >= 0 && n <= 1 ? n : DEFAULT_CORRECTIVE_MIN_SCORE;
 }
 
+/** BM25-only hits must meet this score to skip rewrite (weak similarity===0 + tiny bm25 still rewrite). */
+export function correctiveBm25MinScore(): number {
+  const raw = process.env.CORRECTIVE_BM25_MIN_SCORE;
+  if (!raw) return DEFAULT_CORRECTIVE_BM25_MIN_SCORE;
+  const n = Number.parseFloat(raw);
+  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_CORRECTIVE_BM25_MIN_SCORE;
+}
+
 /** D-34: 「不够相关」= top1 effective score 低于阈值；空结果亦触发改写。
- * Effective score = max(similarity, rerankScore??0). BM25-only hits often have
- * similarity 0 but non-empty text + bm25Score — treat those as relevant enough. */
+ * Effective score = max(similarity, rerankScore??0). Strong BM25-only hits
+ * (bm25Score >= threshold, non-empty text, similarity 0) skip rewrite. */
 export function needsCorrectiveRewrite(
   hits: RetrievedChunk[],
   minScore: number = correctiveMinScore(),
@@ -28,11 +37,12 @@ export function needsCorrectiveRewrite(
   const top = hits[0]!;
   const effective = Math.max(top.similarity, top.rerankScore ?? 0);
   if (effective >= minScore) return false;
-  const bm25Signal =
+  const bm25Ok =
     typeof top.bm25Score === "number" &&
     Number.isFinite(top.bm25Score) &&
+    top.bm25Score >= correctiveBm25MinScore() &&
     top.text.trim().length > 0;
-  if (bm25Signal && top.similarity === 0 && (top.rerankScore == null || top.rerankScore === 0)) {
+  if (bm25Ok && top.similarity === 0 && (top.rerankScore == null || top.rerankScore === 0)) {
     return false;
   }
   return effective < minScore;

@@ -18,6 +18,7 @@ import {
 } from "@personal-gpt/shared";
 
 import { raceExternalCall, raceValue } from "./race-external-call";
+import { pushRetrievalErrorIfFailed } from "./prefetch-retrieval-error";
 import { deduplicateTextDeltas } from "./stream-progress-transform";
 export { deduplicateTextDeltas };
 import {
@@ -458,17 +459,19 @@ async function prefetchForSingleSpecialist(input: {
   const documentIds = input.allowedDocumentIds;
   let kbSearchExecuted = input.kbSearchPrefetched ?? false;
   if (input.plan.retrieverTools.includes("graph_search")) {
-    const graphOut = raceValue(
-      await raceExternalCall(
-        invokeGraphSearch({
-          question: input.userText,
-          workspaceId: input.workspaceId,
-          documentIds,
-        }),
-        { signal: input.abortSignal },
-      ),
+    const graphRace = await raceExternalCall(
+      invokeGraphSearch({
+        question: input.userText,
+        workspaceId: input.workspaceId,
+        documentIds,
+      }),
+      { signal: input.abortSignal },
     );
     if (input.abortSignal?.aborted) return seeds;
+    if (pushRetrievalErrorIfFailed(seeds, graphRace)) {
+      // keep going for kb fallback below when configured
+    }
+    const graphOut = raceValue(graphRace);
     const graphHit = Boolean(graphOut && /GRAPH_SEARCH_STATUS:\s*HIT/i.test(graphOut));
     if (graphOut) {
       input.trace.recordTool({
@@ -495,18 +498,18 @@ async function prefetchForSingleSpecialist(input: {
     }
     if (!graphHit && input.plan.fallbackChain.includes("kb_search")) {
       kbSearchExecuted = true;
-      const kbOut = raceValue(
-        await raceExternalCall(
-          invokeKbSearch({
-            query: extractKbSearchQuery(input.userText),
-            userText: input.userText,
-            workspaceId: input.workspaceId,
-            documentIds,
-          }),
-          { signal: input.abortSignal },
-        ),
+      const kbRace = await raceExternalCall(
+        invokeKbSearch({
+          query: extractKbSearchQuery(input.userText),
+          userText: input.userText,
+          workspaceId: input.workspaceId,
+          documentIds,
+        }),
+        { signal: input.abortSignal },
       );
       if (input.abortSignal?.aborted) return seeds;
+      pushRetrievalErrorIfFailed(seeds, kbRace);
+      const kbOut = raceValue(kbRace);
       if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
         input.trace.recordTool({
           name: "kb_search",
@@ -536,18 +539,18 @@ async function prefetchForSingleSpecialist(input: {
   }
   if (input.plan.retrieverTools.includes("kb_search") && !kbSearchExecuted) {
     kbSearchExecuted = true;
-    const kbOut = raceValue(
-      await raceExternalCall(
-        invokeKbSearch({
-          query: extractKbSearchQuery(input.userText),
-          userText: input.userText,
-          workspaceId: input.workspaceId,
-          documentIds,
-        }),
-        { signal: input.abortSignal },
-      ),
+    const kbRace = await raceExternalCall(
+      invokeKbSearch({
+        query: extractKbSearchQuery(input.userText),
+        userText: input.userText,
+        workspaceId: input.workspaceId,
+        documentIds,
+      }),
+      { signal: input.abortSignal },
     );
     if (input.abortSignal?.aborted) return seeds;
+    pushRetrievalErrorIfFailed(seeds, kbRace);
+    const kbOut = raceValue(kbRace);
     if (kbOut && !/KB_SEARCH_STATUS:\s*NO_RELEVANT_HIT/i.test(kbOut)) {
       input.trace.recordTool({
         name: "kb_search",
