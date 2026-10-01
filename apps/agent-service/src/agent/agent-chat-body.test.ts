@@ -34,4 +34,19 @@ describe("parseAgentChatBody", () => {
     expect(parsed.messages).toHaveLength(1);
     expect(parsed.messages[0]!.role).toBe("user");
   });
+
+  it("rejects user/assistant messages without parts", () => {
+    expect(() => parseAgentChatBody({ messages: [{ role: "user" }] })).toThrow(
+      InvalidAgentBodyError,
+    );
+    expect(() => parseAgentChatBody({ messages: [{ role: "assistant" }] })).toThrow(
+      InvalidAgentBodyError,
+    );
+  });
+
+  it("rejects empty parts array", () => {
+    expect(() => parseAgentChatBody({ messages: [{ role: "user", parts: [] }] })).toThrow(
+      InvalidAgentBodyError,
+    );
+  });
 });

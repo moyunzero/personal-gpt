@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { openModelKey, sealModelKey } from "./model-key";
+import { openModelKey, resetModelKeyCacheForTests, sealModelKey, secretKey } from "./model-key";
 
 const SECRET_KEYS = ["WORKSPACE_MODEL_SECRET", "AUTH_SECRET", "NEXTAUTH_SECRET"] as const;
 
@@ -8,10 +8,12 @@ describe("model key sealing", () => {
   const previous = Object.fromEntries(SECRET_KEYS.map((key) => [key, process.env[key]]));
 
   afterEach(() => {
+    resetModelKeyCacheForTests();
+    const env = process.env as Record<string, string | undefined>;
     for (const key of SECRET_KEYS) {
       const value = previous[key];
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
+      if (value === undefined) delete env[key];
+      else env[key] = value;
     }
   });
 
@@ -24,5 +26,16 @@ describe("model key sealing", () => {
 
   it("reads an older plaintext row unchanged", () => {
     expect(openModelKey("legacy-plain-row")).toBe("legacy-plain-row");
+  });
+
+  it("caches scrypt derivation across decrypts with the same secret", () => {
+    process.env.AUTH_SECRET = "unit-test-secret-for-cache";
+    resetModelKeyCacheForTests();
+    const sealed = sealModelKey("sk-test");
+    const first = secretKey();
+    const second = secretKey();
+    expect(first).toBe(second);
+    expect(openModelKey(sealed)).toBe("sk-test");
+    expect(secretKey()).toBe(first);
   });
 });

@@ -8,12 +8,16 @@ import { createAgent } from "langchain";
 
 import { buildSynthesizerSystemPrompt } from "../agent/agent-synthesis";
 
-export function createSynthesizerAgent(model: LanguageModelLike, plan: IntentPlan) {
+export function createSynthesizerAgent(
+  model: LanguageModelLike,
+  plan: IntentPlan,
+  opts?: { retrievalError?: boolean },
+) {
   return createAgent({
     name: "synthesizer",
     description: "基于 retrieve 结果撰写用户可见的最终答案（rag_generate）。",
     model,
     tools: [],
-    systemPrompt: buildSynthesizerSystemPrompt(plan),
+    systemPrompt: buildSynthesizerSystemPrompt(plan, opts),
   });
 }

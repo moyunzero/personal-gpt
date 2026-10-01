@@ -30,14 +30,16 @@ import { resolveDocumentAccessContext } from "@/lib/auth/workspace.service";
 import { createEntityCatalogStore } from "@/lib/db/entity-catalog-store";
 import { getDataSource } from "@/lib/db/get-data-source";
 import { env } from "@/lib/env";
-import { isMinioConfigured, uploadToMinio } from "@/lib/storage/minio";
+import { deleteStoredObject, isMinioConfigured, uploadToMinio } from "@/lib/storage/minio";
 import {
   isTrustedVercelBlobUrl,
   isVercelBlobConfigured,
   uploadToVercelBlob,
 } from "@/lib/storage/vercel-blob";
 
+import { documentVisibilitySql } from "./list-documents-acl";
 import { getIngestQueue } from "./queue";
+import { assertRemoteUploadWithinLimits } from "./remote-upload-assert";
 
 function isServerlessRuntime(): boolean {
   return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
@@ -346,6 +348,15 @@ export async function uploadDocumentFromRemote(
     throw new UploadValidationError("untrusted_url", "仅允许 Vercel Blob 文件 URL");
   }
 
+  const remoteCheck = await assertRemoteUploadWithinLimits({
+    url: input.fileUrl,
+    maxBytes: env.UPLOAD_MAX_BYTES,
+    allowedMimeTypes: env.ALLOWED_MIME_TYPES,
+  });
+  if (!remoteCheck.ok) {
+    throw new UploadValidationError(remoteCheck.code, remoteCheck.message);
+  }
+
   return createPendingDocumentAndEnqueue(
     ctx,
     { name: input.fileName, mimeType, filePath: input.fileUrl },
@@ -371,6 +382,8 @@ export async function listDocuments(ctx: DocumentsContext, params: ListDocuments
   const qb = docRepo.createQueryBuilder("doc").where("doc.workspace_id = :workspaceId", {
     workspaceId: ctx.workspaceId,
   });
+  const visibility = documentVisibilitySql(accessCtx);
+  qb.andWhere(visibility.clause, visibility.params);
 
   if (params.category) {
     qb.andWhere("doc.category = :category", { category: params.category });
@@ -389,11 +402,11 @@ export async function listDocuments(ctx: DocumentsContext, params: ListDocuments
 
   qb.orderBy("doc.created_at", "DESC").skip(skip).take(limit);
 
-  const [allDocs, totalBeforeAcl] = await qb.getManyAndCount();
-  const documents = allDocs.filter((doc) => canReadDocument(doc, accessCtx));
-  const total = documents.length < allDocs.length ? documents.length : totalBeforeAcl;
+  const [documents, total] = await qb.getManyAndCount();
+  // Defense in depth — SQL filter should already match canReadDocument.
+  const visible = documents.filter((doc) => canReadDocument(doc, accessCtx));
 
-  const docIds = documents.map((d) => d.id);
+  const docIds = visible.map((d) => d.id);
   const jobs =
     docIds.length > 0
       ? await jobRepo
@@ -411,7 +424,7 @@ export async function listDocuments(ctx: DocumentsContext, params: ListDocuments
   }
 
   return {
-    items: documents.map((doc) => serializeDocumentRow(doc, latestJobByDoc.get(doc.id) ?? null)),
+    items: visible.map((doc) => serializeDocumentRow(doc, latestJobByDoc.get(doc.id) ?? null)),
     page,
     limit,
     total,
@@ -546,6 +559,14 @@ export async function deleteDocument(documentId: string, ctx: DocumentsContext):
     }
   }
 
+  if (document.filePath) {
+    try {
+      await deleteDocumentStorage(document.filePath);
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
+  }
+
   if (errors.length > 0) {
     // 未入库 / 入库失败且无向量：次级存储可能为空或不可达，不阻断删除
     const allowDropWithoutChunks =
@@ -558,16 +579,26 @@ export async function deleteDocument(documentId: string, ctx: DocumentsContext):
     }
   }
 
-  if (document.filePath) {
-    try {
-      await fs.unlink(document.filePath);
-    } catch {
-      // 文件可能已不存在，不阻塞 PG 删除
-    }
-  }
-
   await docRepo.delete({ id: documentId, workspaceId: ctx.workspaceId });
   return true;
+}
+
+/** Delete local / Blob / MinIO object for a document filePath. */
+export async function deleteDocumentStorage(filePath: string): Promise<void> {
+  if (filePath.startsWith("s3://")) {
+    await deleteStoredObject(filePath);
+    return;
+  }
+  if (isTrustedVercelBlobUrl(filePath) && isVercelBlobConfigured()) {
+    const { del } = await import("@vercel/blob");
+    await del(filePath, { token: process.env.BLOB_READ_WRITE_TOKEN });
+    return;
+  }
+  try {
+    await fs.unlink(filePath);
+  } catch {
+    // missing local file is fine
+  }
 }
 
 /** 重新索引（INGEST-05 / D-21）：processing + 新 job + 同路径入队，无确认 */
@@ -589,8 +620,7 @@ export async function reindexDocument(
     throw new ReindexBusyError();
   }
 
-  await purgeGraphAndCatalog(ctx.workspaceId, documentId);
-
+  // Do not purge vectors/graph before upsert — parse/embed failure must keep prior ready index.
   await docRepo.update(
     { id: documentId, workspaceId: ctx.workspaceId },
     { status: "processing", chunkCount: 0 },
@@ -606,6 +636,7 @@ export async function reindexDocument(
     title: document.title,
     category: document.category ?? undefined,
     tags: document.tags,
+    preserveExistingVectors: true,
   };
 
   const job = await enqueueIngestJob(document, payload, ctx.workspaceId);

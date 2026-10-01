@@ -10,4 +10,13 @@ describe("shouldCleanupVectorsAfterFailure", () => {
   it("keeps vectors when already committed (late status failure)", () => {
     expect(shouldCleanupVectorsAfterFailure({ vectorsCommitted: true })).toBe(false);
   });
+
+  it("keeps prior vectors on reindex parse/embed failure", () => {
+    expect(
+      shouldCleanupVectorsAfterFailure({
+        vectorsCommitted: false,
+        preserveExistingVectors: true,
+      }),
+    ).toBe(false);
+  });
 });

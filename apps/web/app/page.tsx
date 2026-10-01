@@ -103,23 +103,25 @@ export default function Home() {
 
   useEffect(() => {
     if (isAuthenticated !== true) return;
-    let cancelled = false;
+    const ac = new AbortController();
     void (async () => {
-      const res = await fetch("/api/models");
-      if (!res.ok || cancelled) return;
-      const data = (await res.json()) as {
-        models?: { id: string; modelId: string }[];
-        chatModelId?: string;
-        agentModelId?: string;
-      };
-      if (cancelled) return;
-      setSavedModels(data.models ?? []);
-      setChatModelId(data.chatModelId ?? "");
-      setAgentModelId(data.agentModelId ?? "");
+      try {
+        const res = await fetch("/api/models", { signal: ac.signal });
+        if (!res.ok || ac.signal.aborted) return;
+        const data = (await res.json()) as {
+          models?: { id: string; modelId: string }[];
+          chatModelId?: string;
+          agentModelId?: string;
+        };
+        if (ac.signal.aborted) return;
+        setSavedModels(data.models ?? []);
+        setChatModelId(data.chatModelId ?? "");
+        setAgentModelId(data.agentModelId ?? "");
+      } catch {
+        /* abort / network */
+      }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => ac.abort();
   }, [isAuthenticated]);
 
   const selectedModelId = mode === "agent" ? agentModelId : chatModelId;

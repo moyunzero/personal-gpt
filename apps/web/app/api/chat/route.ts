@@ -28,6 +28,7 @@ import { decideQueryRoute, type QueryRouteDecision } from "@/lib/chat/query-rout
 import { findNamedReadyDocuments, pageAsked } from "@/lib/chat/named-document";
 import { getRelevantContext } from "@/lib/chat/retrieve";
 import { createChatStream } from "@/lib/chat/stream";
+import { isTrustedInternalProxy } from "@/lib/internal-proxy-auth";
 import "@/lib/env";
 import { logger } from "@/lib/logger";
 import { lookupWorkspaceModelKey } from "@/lib/models/workspace-models";
@@ -57,12 +58,6 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): P
 
 async function withGraphRagTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return withTimeout(promise, ms, "graph_rag");
-}
-
-function isTrustedInternalProxy(req: Request): boolean {
-  const expected = process.env.INTERNAL_PROXY_KEY;
-  if (!expected) return false;
-  return req.headers.get("x-internal-proxy-key") === expected;
 }
 
 // ====================== CORS 白名单（跨域作品集集成）======================

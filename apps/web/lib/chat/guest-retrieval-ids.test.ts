@@ -13,7 +13,17 @@ describe("guestRetrievalDocumentIds", () => {
     ).toBeUndefined();
   });
 
-  it("returns empty array for authenticated user with empty allowlist (deny-all)", () => {
+  it("returns undefined for authenticated user on seed corpus", () => {
+    expect(
+      guestRetrievalDocumentIds({
+        isGuest: false,
+        corpus: "seed",
+        allowedDocumentIds: ["user-doc-1"],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("returns empty array for authenticated user with empty allowlist on user corpus", () => {
     expect(
       guestRetrievalDocumentIds({
         isGuest: false,
@@ -23,7 +33,7 @@ describe("guestRetrievalDocumentIds", () => {
     ).toEqual([]);
   });
 
-  it("passes through allowlist for authenticated users", () => {
+  it("passes through allowlist for authenticated users on user corpus", () => {
     expect(
       guestRetrievalDocumentIds({
         isGuest: false,

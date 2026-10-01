@@ -144,6 +144,40 @@ describe("tapAgentStreamForPersistence", () => {
     const text = await drainStream(out);
     expect(text).toContain('"delta":"x"');
   });
+
+  it("persists on cancel (abort) when partial assistant text exists", async () => {
+    let pullCount = 0;
+    const upstream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pullCount += 1;
+        if (pullCount === 1) {
+          controller.enqueue(
+            new TextEncoder().encode(
+              `data: ${JSON.stringify({ type: "text-delta", delta: "partial" })}\n\n`,
+            ),
+          );
+          return;
+        }
+        // hang until cancel
+      },
+    });
+
+    const out = tapAgentStreamForPersistence(upstream, {
+      session: SESSION,
+      userContent: "q",
+      upstreamStatus: 200,
+    });
+    const reader = out.getReader();
+    await reader.read();
+    await reader.cancel("abort");
+    await new Promise((r) => setTimeout(r, 10));
+    expect(persistChatTurnMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assistantContent: "partial",
+        userContent: "q",
+      }),
+    );
+  });
 });
 
 describe("extractLastUserContentFromMessages", () => {

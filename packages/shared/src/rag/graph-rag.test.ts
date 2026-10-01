@@ -51,6 +51,48 @@ describe("pathAllowed", () => {
     };
     expect(pathAllowed(path, [])).toBe(false);
   });
+
+  it("fail-closed when allowlist set but path has no document identity", () => {
+    const path: GraphPathTrace = {
+      nodes: [
+        {
+          id: "entity:ws-1:alice:person",
+          labels: ["Entity"],
+          properties: { name: "Alice", workspaceId: "ws-1" },
+        },
+      ],
+      relationships: [],
+    };
+    expect(pathAllowed(path, ["doc-allowed"])).toBe(false);
+  });
+
+  it("allows Entity when all documentIds are in allowlist", () => {
+    const path: GraphPathTrace = {
+      nodes: [
+        {
+          id: "entity:ws-1:alice:person",
+          labels: ["Entity"],
+          properties: { documentIds: ["doc-allowed", "doc-also"], name: "Alice" },
+        },
+      ],
+      relationships: [],
+    };
+    expect(pathAllowed(path, ["doc-allowed", "doc-also"])).toBe(true);
+  });
+
+  it("denies Entity when documentIds list has any disallowed id", () => {
+    const path: GraphPathTrace = {
+      nodes: [
+        {
+          id: "entity:ws-1:alice:person",
+          labels: ["Entity"],
+          properties: { documentIds: ["doc-allowed", "doc-secret"], name: "Alice" },
+        },
+      ],
+      relationships: [],
+    };
+    expect(pathAllowed(path, ["doc-allowed"])).toBe(false);
+  });
 });
 
 describe("resolveProductName", () => {

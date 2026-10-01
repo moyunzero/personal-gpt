@@ -13,6 +13,13 @@ describe("mapAstraDoc page", () => {
     expect(mapAstraDoc({ content: "正文", $similarity: 0.5, page: 3 }).page).toBe(3);
   });
 
+  it("keeps page 0 (boundary) and omits non-finite", () => {
+    expect(mapAstraDoc({ content: "正文", $similarity: 0.5, page: 0 }).page).toBe(0);
+    expect(mapAstraDoc({ content: "正文", $similarity: 0.5, page: Number.NaN })).not.toHaveProperty(
+      "page",
+    );
+  });
+
   it("maps tags into keywords (prefer tags over legacy keywords)", () => {
     expect(
       mapAstraDoc({ content: "正文", $similarity: 0.5, tags: ["a"], keywords: ["legacy"] })

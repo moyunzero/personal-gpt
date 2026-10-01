@@ -17,6 +17,7 @@ import { WorkspaceEntity } from "@/lib/db/entities/workspace.entity";
 import { getDataSource } from "@/lib/db/get-data-source";
 
 import { canReadDocument, type DocumentAccessContext } from "./document-acl";
+import { assertRestrictedAllowlist } from "./restricted-visibility";
 
 export type WorkspaceSummary = {
   id: string;
@@ -239,7 +240,9 @@ export async function updateDocumentVisibility(
 
   document.visibility = patch.visibility;
   if (patch.visibility === "restricted") {
-    document.restrictedUserIds = patch.restrictedUserIds ?? document.restrictedUserIds;
+    document.restrictedUserIds = assertRestrictedAllowlist(
+      patch.restrictedUserIds ?? document.restrictedUserIds,
+    );
   } else {
     document.restrictedUserIds = [];
   }

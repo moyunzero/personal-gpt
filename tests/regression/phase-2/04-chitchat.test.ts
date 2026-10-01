@@ -1,78 +1,34 @@
 /**
  * Phase 2 regression #4 — 闲聊不启全图（D-03 / D-17）。
- * 期望：Agent 模式下「今天天气怎么样」走图内轻量短路，不全量 Supervisor+Workers。
+ * 生产路径：streamChat 用 resolveAgentRoute === "short" + buildShortReplyMessages，
+ * 不再编译已删除的 buildAgentGraph 外层短路图。
  * 禁止 live LLM。
  */
-import { HumanMessage } from "@langchain/core/messages";
-import { ChatOpenAI } from "@langchain/openai";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
+import { resolveAgentRoute } from "../../../apps/agent-service/src/graph/build-graph";
 import {
-  buildAgentGraph,
-  getAgentRunConfig,
-  resetCheckpointerSingletonsForTests,
-  resolveAgentRoute,
-} from "../../../apps/agent-service/src/graph/build-graph";
-import { isAgentChitchat } from "../../../apps/agent-service/src/graph/short-circuit";
+  buildShortReplyMessages,
+  isAgentChitchat,
+} from "../../../apps/agent-service/src/graph/short-circuit";
 
 describe("Phase 2 regression #4: chitchat skips full multi-agent graph (D-03/D-17)", () => {
-  let prevCheckpointer: string | undefined;
-
-  beforeEach(() => {
-    prevCheckpointer = process.env.AGENT_CHECKPOINTER;
-    process.env.AGENT_CHECKPOINTER = "memory";
-    resetCheckpointerSingletonsForTests();
-  });
-
-  afterEach(() => {
-    if (prevCheckpointer === undefined) delete process.env.AGENT_CHECKPOINTER;
-    else process.env.AGENT_CHECKPOINTER = prevCheckpointer;
-    resetCheckpointerSingletonsForTests();
-  });
-
-  it("placeholder harness (no live LLM)", () => {
-    expect(true).toBe(true);
-  });
-
-  it("short-circuits 今天天气怎么样 without full Supervisor hub-and-spoke", async () => {
+  it("routes 今天天气怎么样 to short (production gate)", () => {
     expect(isAgentChitchat("今天天气怎么样")).toBe(true);
     expect(resolveAgentRoute("今天天气怎么样")).toBe("short");
-
-    const model = new ChatOpenAI({
-      model: "mock-model",
-      apiKey: "sk-test-mock",
-      configuration: { baseURL: "http://127.0.0.1:9" },
-    });
-    // compile 阶段 Supervisor 可能 bindTools；短路 invoke 不得 model.invoke
-    const invokeSpy = vi.spyOn(model, "invoke");
-
-    const graph = await buildAgentGraph({ model });
-    const result = await graph.invoke(
-      { messages: [new HumanMessage("今天天气怎么样")] },
-      getAgentRunConfig("regression-04"),
-    );
-
-    expect(invokeSpy).not.toHaveBeenCalled();
-    const last = result.messages?.at(-1);
-    const content = typeof last?.content === "string" ? last.content : String(last?.content ?? "");
-    expect(content.length).toBeGreaterThan(0);
-    expect(content).toMatch(/闲聊|短路|调研|知识库|助手/);
   });
 
-  it("does not invoke web_search or multi-worker tools on chitchat", async () => {
-    expect(isAgentChitchat("今天天气怎么样")).toBe(true);
-    const model = new ChatOpenAI({
-      model: "mock-model",
-      apiKey: "sk-test-mock",
-      configuration: { baseURL: "http://127.0.0.1:9" },
-    });
-    const invokeSpy = vi.spyOn(model, "invoke");
-    const graph = await buildAgentGraph({ model });
-    await graph.invoke(
-      { messages: [new HumanMessage("今天天气怎么样")] },
-      getAgentRunConfig("regression-04b"),
-    );
-    // 短路节点不调用 LLM；Supervisor/worker 才会 model.invoke
-    expect(invokeSpy).not.toHaveBeenCalled();
+  it("short-circuit reply has content without invoking Supervisor/LLM", () => {
+    const msgs = buildShortReplyMessages("今天天气怎么样");
+    expect(msgs.length).toBeGreaterThan(0);
+    const last = msgs.at(-1);
+    const content = typeof last?.content === "string" ? last.content : String(last?.content ?? "");
+    expect(content.length).toBeGreaterThan(0);
+    expect(content).toMatch(/闲聊|短路|调研|知识库|助手|天气/);
+  });
+
+  it("non-chitchat stays on supervisor route (full graph path)", () => {
+    expect(isAgentChitchat("请根据知识库总结差旅报销政策并列出条款出处")).toBe(false);
+    expect(resolveAgentRoute("请根据知识库总结差旅报销政策并列出条款出处")).toBe("supervisor");
   });
 });

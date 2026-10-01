@@ -1,6 +1,8 @@
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from "node:crypto";
 
 const PREFIX = "enc1:";
+
+let cachedKey: { fingerprint: string; key: Buffer } | undefined;
 
 function appSecret(): string | undefined {
   const value =
@@ -11,10 +13,27 @@ function appSecret(): string | undefined {
   return value;
 }
 
-function secretKey(): Buffer | undefined {
+function secretFingerprint(secret: string): string {
+  return createHash("sha256").update(secret).digest("hex");
+}
+
+/** Derive AES key; cache by AUTH_SECRET fingerprint so repeated decrypts skip scrypt. */
+export function secretKey(): Buffer | undefined {
   const secret = appSecret();
-  if (!secret) return undefined;
-  return scryptSync(secret, "workspace-llm-model", 32);
+  if (!secret) {
+    cachedKey = undefined;
+    return undefined;
+  }
+  const fingerprint = secretFingerprint(secret);
+  if (cachedKey?.fingerprint === fingerprint) return cachedKey.key;
+  const key = scryptSync(secret, "workspace-llm-model", 32);
+  cachedKey = { fingerprint, key };
+  return key;
+}
+
+/** Test helper — clear scrypt cache between cases. */
+export function resetModelKeyCacheForTests(): void {
+  cachedKey = undefined;
 }
 
 /** Encrypt with the application secret. Refuses to return plaintext when none is set. */

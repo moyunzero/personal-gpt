@@ -1,4 +1,5 @@
 import { createThreadId, SAFE_THREAD_ID_PATTERN } from "@/lib/chat/thread-id";
+import { isDuplicateChatTurn } from "@/lib/chat/persist-dedupe";
 import { getDataSource } from "@/lib/db/get-data-source";
 import { ChatMessageEntity } from "@/lib/db/entities/chat-message.entity";
 import { ChatSessionEntity, type ChatSessionMode } from "@/lib/db/entities/chat-session.entity";
@@ -155,11 +156,13 @@ export async function persistChatTurn(params: {
   const recent = await messageRepo.find({
     where: { sessionId: params.session.id },
     order: { createdAt: "DESC" },
-    take: 2,
+    take: 6,
   });
-  const hasUser =
-    recent.some((m) => m.role === "user" && m.content === trimmedUser) ||
-    (recent[0]?.role === "user" && recent[0].content === trimmedUser);
+  if (isDuplicateChatTurn(recent, trimmedUser, trimmedAssistant)) {
+    return;
+  }
+
+  const hasUser = recent.some((m) => m.role === "user" && m.content === trimmedUser);
 
   if (trimmedUser && !hasUser) {
     await messageRepo.insert({
@@ -169,14 +172,11 @@ export async function persistChatTurn(params: {
     });
   }
 
-  const last = recent[0];
-  if (!(last?.role === "assistant" && last.content === trimmedAssistant)) {
-    await messageRepo.insert({
-      sessionId: params.session.id,
-      role: "assistant",
-      content: trimmedAssistant,
-    });
-  }
+  await messageRepo.insert({
+    sessionId: params.session.id,
+    role: "assistant",
+    content: trimmedAssistant,
+  });
 
   const title =
     !params.session.title || params.session.title === "New chat"

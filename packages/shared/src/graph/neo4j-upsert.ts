@@ -78,7 +78,14 @@ export async function upsertDocumentGraph(
           MATCH (d:Document {id: $documentId, workspaceId: $workspaceId})
           UNWIND $entities AS ent
           MERGE (e:Entity {workspaceId: ent.workspaceId, normalizedName: ent.normalizedName, entityType: ent.entityType})
-          SET e.name = ent.name, e.id = ent.id, e.documentId = $documentId
+          SET e.name = ent.name,
+              e.id = ent.id,
+              e.documentId = $documentId,
+              e.documentIds = CASE
+                WHEN e.documentIds IS NULL THEN [$documentId]
+                WHEN $documentId IN e.documentIds THEN e.documentIds
+                ELSE e.documentIds + [$documentId]
+              END
           MERGE (d)-[:MENTIONS]->(e)
           `,
           {

@@ -296,23 +296,35 @@ function collectNodeDocumentIds(node: GraphPathNode): string[] {
   const ids: string[] = [];
   const prop = node.properties.documentId;
   if (typeof prop === "string" && prop.trim()) ids.push(prop.trim());
+  const list = node.properties.documentIds;
+  if (Array.isArray(list)) {
+    for (const item of list) {
+      if (typeof item === "string" && item.trim()) ids.push(item.trim());
+    }
+  }
   if (node.labels.includes("Document") && typeof node.id === "string" && node.id.trim()) {
     ids.push(node.id.trim());
   }
   return ids;
 }
 
-/** Exported for unit tests — document ACL on graph paths. */
+/**
+ * Exported for unit tests — document ACL on graph paths.
+ * Deny if any node document id is outside the allowlist.
+ * Fail closed when allowlist is set but the path has no document identity.
+ */
 export function pathAllowed(path: GraphPathTrace, documentIds?: string[]): boolean {
   if (documentIds === undefined) return true;
   if (documentIds.length === 0) return false;
   const allowed = new Set(documentIds);
+  let found = 0;
   for (const node of path.nodes) {
     for (const docId of collectNodeDocumentIds(node)) {
+      found += 1;
       if (!allowed.has(docId)) return false;
     }
   }
-  return true;
+  return found > 0;
 }
 
 export function filterPaths(paths: GraphPathTrace[], documentIds?: string[]): GraphPathTrace[] {
