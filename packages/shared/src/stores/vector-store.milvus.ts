@@ -66,18 +66,14 @@ function chunkPrimaryKey(documentId: string, chunkIndex: number): string {
   return `${documentId}#${chunkIndex}`;
 }
 
-function normalizeMilvusCosineScore(score: number): number {
-  if (!Number.isFinite(score)) return 0;
-  if (score <= -1) return 0;
-  if (score >= 1) return 1;
-  return (score + 1) / 2;
-}
-
 export function mapMilvusHit(hit: Record<string, unknown> & { score?: number }): RetrievedChunk {
   const page = hit.page;
+  const raw = Number(hit.score ?? 0);
+  // MetricType.COSINE already returns raw cosine in [-1, 1] — do not remap.
+  const similarity = Number.isFinite(raw) ? raw : 0;
   return {
     text: String(hit.content ?? hit.text ?? ""),
-    similarity: normalizeMilvusCosineScore(Number(hit.score ?? 0)),
+    similarity,
     title: hit.title as string | undefined,
     source: hit.source as string | undefined,
     category: hit.category as string | undefined,

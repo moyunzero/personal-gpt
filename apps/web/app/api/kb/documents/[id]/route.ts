@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireSession } from "@/lib/auth/session";
 import { updateDocumentVisibility } from "@/lib/auth/workspace.service";
+import { RestrictedVisibilityError } from "@/lib/auth/restricted-visibility";
 import type { DocumentVisibility } from "@/lib/db/entities/document.entity";
 import { drainAstraRelayBestEffort } from "@/lib/kb/astra-relay-drain";
 import {
@@ -83,6 +84,9 @@ export async function PATCH(req: Request, context: RouteContext) {
         document: serializeDocumentRow(row!.document, row!.job),
       });
     } catch (error) {
+      if (error instanceof RestrictedVisibilityError) {
+        return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+      }
       const message = error instanceof Error ? error.message : String(error);
       return NextResponse.json({ error: message }, { status: 500 });
     }

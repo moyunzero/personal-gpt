@@ -41,10 +41,6 @@ describe("Phase 2 regression #2: KB summary triggers Retriever + KB citation", (
     ]);
   });
 
-  it("placeholder harness (no live LLM)", () => {
-    expect(true).toBe(true);
-  });
-
   it("invokes Retriever / kb_search for knowledge-base summary prompt", async () => {
     const { invokeKbSearch, kbSearchTool } =
       await import("../../../apps/agent-service/src/tools/kb-search.tool");

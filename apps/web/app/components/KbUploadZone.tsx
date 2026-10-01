@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 
 import type { KbDocumentItem } from "./KbDocumentList";
 import PaperMenu from "./PaperMenu";
+import RestrictedMemberPicker from "./RestrictedMemberPicker";
 
 type KbUploadZoneProps = {
   onUploaded: (item: KbDocumentItem) => void;
@@ -15,6 +16,7 @@ type UploadMeta = {
   tags: string;
   title: string;
   visibility: "workspace" | "private" | "restricted";
+  restrictedUserIds: string[];
 };
 
 const ACCEPT_TYPES = [
@@ -29,6 +31,7 @@ const EMPTY_META: UploadMeta = {
   tags: "",
   title: "",
   visibility: "workspace",
+  restrictedUserIds: [],
 };
 
 const SERVERLESS_MULTIPART_LIMIT = 4.5 * 1024 * 1024;
@@ -130,6 +133,9 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
       mimeType: file.type,
       size: file.size,
       visibility: uploadMeta.visibility,
+      ...(uploadMeta.visibility === "restricted"
+        ? { restrictedUserIds: uploadMeta.restrictedUserIds }
+        : {}),
       ...(category ? { category } : {}),
       ...(tags ? { tags } : {}),
       ...(title ? { title } : {}),
@@ -147,11 +153,18 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
     if (tags) formData.append("tags", tags);
     if (title) formData.append("title", title);
     formData.append("visibility", uploadMeta.visibility);
+    if (uploadMeta.visibility === "restricted") {
+      formData.append("restrictedUserIds", uploadMeta.restrictedUserIds.join(","));
+    }
 
     return registerDocument(formData);
   };
 
   const uploadFile = async (file: File, uploadMeta: UploadMeta) => {
+    if (uploadMeta.visibility === "restricted" && uploadMeta.restrictedUserIds.length === 0) {
+      setError("指定成员可见时请至少选择一名成员");
+      return;
+    }
     setError(null);
     setUploading(true);
     try {
@@ -159,7 +172,12 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
       try {
         document = await uploadViaBlobThenRegister(file, uploadMeta);
       } catch (blobErr) {
-        const maxMultipart = multipartLimitAfterBlobFailure(blobErr, SERVERLESS_MULTIPART_LIMIT);
+        const host = typeof window !== "undefined" ? window.location.hostname : "";
+        const localDev = host === "localhost" || host === "127.0.0.1";
+        const maxMultipart = multipartLimitAfterBlobFailure(
+          blobErr,
+          localDev ? LOCAL_MULTIPART_LIMIT : SERVERLESS_MULTIPART_LIMIT,
+        );
         if (file.size > maxMultipart) {
           throw blobErr;
         }
@@ -287,6 +305,7 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
                   setMeta((m) => ({
                     ...m,
                     visibility: visibility as UploadMeta["visibility"],
+                    restrictedUserIds: visibility === "restricted" ? m.restrictedUserIds : [],
                   }))
                 }
                 options={[
@@ -296,6 +315,13 @@ export default function KbUploadZone({ onUploaded }: KbUploadZoneProps) {
                 ]}
               />
             </label>
+            {meta.visibility === "restricted" ? (
+              <RestrictedMemberPicker
+                selectedIds={meta.restrictedUserIds}
+                onChange={(restrictedUserIds) => setMeta((m) => ({ ...m, restrictedUserIds }))}
+                disabled={uploading}
+              />
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import KbCategoryCombobox from "./KbCategoryCombobox";
 import KbDeleteConfirm from "./KbDeleteConfirm";
 import PaperMenu from "./PaperMenu";
+import RestrictedMemberPicker from "./RestrictedMemberPicker";
 
 export type KbDocumentItem = {
   id: string;
@@ -12,6 +13,7 @@ export type KbDocumentItem = {
   category: string | null;
   tags: string[];
   visibility?: "workspace" | "private" | "restricted";
+  restrictedUserIds?: string[];
   status: "pending" | "processing" | "ready" | "failed";
   chunkCount: number;
   mimeType: string | null;
@@ -70,6 +72,10 @@ function KbDocumentRow({
   const [editVisibility, setEditVisibility] = useState<"workspace" | "private" | "restricted">(
     item.visibility ?? "workspace",
   );
+  const [editRestrictedUserIds, setEditRestrictedUserIds] = useState<string[]>(
+    item.restrictedUserIds ?? [],
+  );
+  const [editError, setEditError] = useState<string | null>(null);
 
   const parseTags = (raw: string) =>
     raw
@@ -82,6 +88,8 @@ function KbDocumentRow({
     setEditCategory(item.category ?? "");
     setEditTags(item.tags.join(", "));
     setEditVisibility(item.visibility ?? "workspace");
+    setEditRestrictedUserIds(item.restrictedUserIds ?? []);
+    setEditError(null);
   };
 
   const startEditing = () => {
@@ -188,13 +196,20 @@ function KbDocumentRow({
       trimmedTitle === item.title &&
       nextCategory === item.category &&
       JSON.stringify(nextTags) === JSON.stringify(item.tags) &&
-      editVisibility === (item.visibility ?? "workspace");
+      editVisibility === (item.visibility ?? "workspace") &&
+      JSON.stringify(editRestrictedUserIds) === JSON.stringify(item.restrictedUserIds ?? []);
 
     if (unchanged) {
       setEditing(false);
       return;
     }
 
+    if (editVisibility === "restricted" && editRestrictedUserIds.length === 0) {
+      setEditError("指定成员可见时请至少选择一名成员");
+      return;
+    }
+
+    setEditError(null);
     const res = await fetch(`/api/kb/documents/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -203,9 +218,14 @@ function KbDocumentRow({
         category: nextCategory,
         tags: nextTags,
         visibility: editVisibility,
+        ...(editVisibility === "restricted" ? { restrictedUserIds: editRestrictedUserIds } : {}),
       }),
     });
-    const data = (await res.json()) as { document?: KbDocumentItem };
+    const data = (await res.json()) as { document?: KbDocumentItem; error?: string };
+    if (!res.ok) {
+      setEditError(data.error ?? "保存失败");
+      return;
+    }
     if (data.document) onUpdate(data.document);
     setEditing(false);
   };
@@ -276,7 +296,11 @@ function KbDocumentRow({
                   <PaperMenu
                     ariaLabel="可见性"
                     value={editVisibility}
-                    onChange={(value) => setEditVisibility(value as typeof editVisibility)}
+                    onChange={(value) => {
+                      const next = value as typeof editVisibility;
+                      setEditVisibility(next);
+                      if (next !== "restricted") setEditRestrictedUserIds([]);
+                    }}
                     options={[
                       { value: "workspace", title: "工作区全员" },
                       { value: "private", title: "仅自己" },
@@ -285,6 +309,13 @@ function KbDocumentRow({
                   />
                 </label>
               </div>
+              {editVisibility === "restricted" ? (
+                <RestrictedMemberPicker
+                  selectedIds={editRestrictedUserIds}
+                  onChange={setEditRestrictedUserIds}
+                />
+              ) : null}
+              {editError ? <p className="kb-field-hint kb-field-hint-error">{editError}</p> : null}
               <div className="kb-doc-edit-actions">
                 <button
                   type="button"

@@ -84,6 +84,28 @@ export async function createTeamWorkspace(
   return workspace;
 }
 
+export async function listWorkspaceMembers(
+  workspaceId: string,
+): Promise<
+  Array<{ userId: string; email: string | null; name: string | null; role: WorkspaceRole }>
+> {
+  const ds = await getDataSource();
+  const rows = await ds
+    .getRepository(WorkspaceMemberEntity)
+    .createQueryBuilder("m")
+    .innerJoinAndSelect("m.user", "u")
+    .where("m.workspace_id = :workspaceId", { workspaceId })
+    .orderBy("m.created_at", "ASC")
+    .getMany();
+
+  return rows.map((row) => ({
+    userId: row.userId,
+    email: row.user?.email ?? null,
+    name: row.user?.name ?? null,
+    role: row.role,
+  }));
+}
+
 export async function getMemberRole(
   userId: string,
   workspaceId: string,

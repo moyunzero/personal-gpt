@@ -24,6 +24,7 @@ export async function probeKbRelevance(
   workspaceId: string = DEFAULT_WORKSPACE_ID,
   requestId?: string,
   corpus: Corpus = "user",
+  documentIds?: string[],
 ): Promise<EmbeddingPrecheckResult> {
   const log = logger.child({ scope: "chat.embedding-precheck", requestId });
 
@@ -41,6 +42,7 @@ export async function probeKbRelevance(
       limit: 1,
       similarityThreshold: 0,
       filter: routePrecheckFilter(corpus),
+      ...(documentIds !== undefined ? { documentIds } : {}),
     });
 
     const top = hits[0];

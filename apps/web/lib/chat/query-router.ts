@@ -164,6 +164,7 @@ async function routeWithEmbeddingPrecheck(
       options.workspaceId ?? DEFAULT_WORKSPACE_ID,
       options.requestId,
       options.corpus ?? "user",
+      options.allowedDocumentIds,
     );
   } catch {
     return { kind: "skip" };
@@ -249,6 +250,7 @@ async function decideWithSharedRouter(
         options.workspaceId ?? DEFAULT_WORKSPACE_ID,
         options.requestId,
         options.corpus ?? "user",
+        options.allowedDocumentIds,
       ),
     neo4jAvailable: () => neo4jOk,
   });

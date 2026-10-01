@@ -15,6 +15,12 @@ describe("mapMilvusHit", () => {
     expect(mapMilvusHit({ content: "x", score: 1 })).not.toHaveProperty("page");
     expect(mapMilvusHit({ content: "x", score: 1, page: Number.NaN })).not.toHaveProperty("page");
   });
+
+  it("keeps raw COSINE score without (score+1)/2 remapping", () => {
+    expect(mapMilvusHit({ content: "x", score: 0.3 }).similarity).toBe(0.3);
+    expect(mapMilvusHit({ content: "x", score: -0.2 }).similarity).toBe(-0.2);
+    expect(mapMilvusHit({ content: "x", score: 1 }).similarity).toBe(1);
+  });
 });
 
 describe("milvus page filter over-fetch", () => {

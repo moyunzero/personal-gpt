@@ -29,10 +29,6 @@ describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)
     fetchSpy.mockRestore();
   });
 
-  it("placeholder harness (no live LLM)", () => {
-    expect(true).toBe(true);
-  });
-
   it("surfaces visible error when web_search / Bocha fails", async () => {
     const { invokeWebSearch } =
       await import("../../../apps/agent-service/src/tools/web-search.tool");
