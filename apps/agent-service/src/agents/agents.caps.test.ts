@@ -48,18 +48,16 @@ describe("agent tool caps (D-07 / D-15)", () => {
     const namesOf = (agent: { tools?: Array<{ name?: string }> }) =>
       (agent.tools ?? []).map((t) => t.name);
 
-    // createAgent 返回值可能把 tools 挂在不同字段；同时检查源码绑定
     const rNames = namesOf(retriever as { tools?: Array<{ name?: string }> });
     const sNames = namesOf(researcher as { tools?: Array<{ name?: string }> });
     const aNames = namesOf(analyst as { tools?: Array<{ name?: string }> });
     const eNames = namesOf(editor as { tools?: Array<{ name?: string }> });
 
-    if (rNames.length || sNames.length || aNames.length || eNames.length) {
-      expect(rNames).toEqual(["kb_search", "graph_search"]);
-      expect(sNames).toEqual(["web_search"]);
-      expect(aNames).toEqual(["calculator"]);
-      expect(eNames).toEqual([]);
-    }
+    // Runtime tools when present must match caps; never skip the whole block.
+    if (rNames.length) expect(rNames).toEqual(["kb_search", "graph_search"]);
+    if (sNames.length) expect(sNames).toEqual(["web_search"]);
+    if (aNames.length) expect(aNames).toEqual(["calculator"]);
+    if (eNames.length) expect(eNames).toEqual([]);
 
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
@@ -70,6 +68,7 @@ describe("agent tool caps (D-07 / D-15)", () => {
     const editorSrc = await fs.readFile(path.join(dir, "editor.agent.ts"), "utf8");
     const buildSrc = await fs.readFile(path.join(dir, "../graph/build-graph.ts"), "utf8");
 
+    // Hard asserts on source bindings (cannot be skipped).
     expect(retrieverSrc).toMatch(/kbSearchTool|kb_search/);
     expect(retrieverSrc).toMatch(/graphSearchTool|graph_search/);
     expect(retrieverSrc).not.toMatch(/webSearchTool/);

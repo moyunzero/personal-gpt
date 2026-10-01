@@ -40,16 +40,25 @@ export class CypherAllowlistError extends Error {
   }
 }
 
-function extractMatchSegment(stmtBody: string): string {
-  const upper = stmtBody.toUpperCase();
-  const matchStart = upper.indexOf("MATCH");
-  if (matchStart < 0) return "";
-  let end = stmtBody.length;
-  for (const keyword of [" WHERE ", " WITH ", " UNWIND ", " CALL ", " RETURN "]) {
-    const idx = upper.indexOf(keyword, matchStart + 5);
-    if (idx >= 0) end = Math.min(end, idx);
+function extractAllMatchSegments(stmtBody: string): string[] {
+  const unionParts = stmtBody.split(/\bUNION(?:\s+ALL)?\b/i);
+  const segments: string[] = [];
+  for (const part of unionParts) {
+    const upper = part.toUpperCase();
+    let searchFrom = 0;
+    while (true) {
+      const matchStart = upper.indexOf("MATCH", searchFrom);
+      if (matchStart < 0) break;
+      let end = part.length;
+      for (const keyword of [" WHERE ", " WITH ", " UNWIND ", " CALL ", " RETURN "]) {
+        const idx = upper.indexOf(keyword, matchStart + 5);
+        if (idx >= 0) end = Math.min(end, idx);
+      }
+      segments.push(part.slice(matchStart, end));
+      searchFrom = matchStart + 5;
+    }
   }
-  return stmtBody.slice(matchStart, end);
+  return segments;
 }
 
 function extractNodePatterns(segment: string): string[] {
@@ -105,14 +114,19 @@ export function assertAllowlistedCypher(cypher: string): void {
   const allowedLabels = new Set<string>(ALLOWED_LABELS);
   const allowedRels = new Set<string>(ALLOWED_REL_TYPES);
 
-  const matchSegment = extractMatchSegment(stmtBody);
+  const matchSegments = extractAllMatchSegments(stmtBody);
+  if (matchSegments.length === 0) {
+    throw new CypherAllowlistError("Cypher rejected: no MATCH segment");
+  }
   const nodeLabels: string[] = [];
-  for (const pattern of extractNodePatterns(matchSegment)) {
-    const labels = [...pattern.matchAll(/:([A-Za-z]\w*)/g)].map((m) => m[1]!);
-    if (labels.length === 0) {
-      throw new CypherAllowlistError("Cypher rejected: unlabeled node pattern in MATCH");
+  for (const matchSegment of matchSegments) {
+    for (const pattern of extractNodePatterns(matchSegment)) {
+      const labels = [...pattern.matchAll(/:([A-Za-z]\w*)/g)].map((m) => m[1]!);
+      if (labels.length === 0) {
+        throw new CypherAllowlistError("Cypher rejected: unlabeled node pattern in MATCH");
+      }
+      nodeLabels.push(...labels);
     }
-    nodeLabels.push(...labels);
   }
   if (nodeLabels.length === 0) {
     throw new CypherAllowlistError("Cypher rejected: no allowlisted node labels in MATCH");

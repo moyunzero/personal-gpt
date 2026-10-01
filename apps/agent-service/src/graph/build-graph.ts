@@ -116,7 +116,8 @@ export function resolveAgentRoute(text: string): AgentRoute {
 
 /**
  * D-04/D-16: IntentPlan → execution mode.
- * chitchat → short; ambiguous → supervisor; ≥2 specialists → sequential; 1 → single_specialist.
+ * Default production path is deterministic: chitchat→short; ≥2 specialists→sequential DAG;
+ * 1 specialist→single_specialist (+prefetch). Supervisor hub-and-spoke only when plan is ambiguous.
  */
 export function resolveExecutionMode(plan: IntentPlan): ExecutionMode {
   if (plan.primary === "chitchat") return "short";

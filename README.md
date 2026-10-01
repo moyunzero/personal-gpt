@@ -432,9 +432,9 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 | 模块           | 状态                                                     |
 | -------------- | -------------------------------------------------------- |
-| Agent 多 Agent | ⚠️ LangGraph Supervisor + SSE + 步骤面板（v2.0 **MVP**） |
+| Agent 多 Agent | ⚠️ IntentPlan 预路由 + sequential/single DAG（ambiguous 才走 Supervisor）；Skills 为 prompt 注入 |
 
-Nest.js Agent + Supervisor / 子 Agent、Skills、前端步骤可视化。简单聊天仍走 `/api/chat`。  
+Nest.js Agent：默认 IntentPlan → short / sequential / single_specialist；仅 plan 歧义时走 Supervisor hub-and-spoke。Skills 拼进 system prompt。简单聊天仍走 `/api/chat`。
 证据：人工截图 + `yarn acceptance:phase-2-smoke`（KB 命中 live citation）→ `tests/acceptance/phase-2-agent/`。
 
 **验收口径**：主链路可演示、可回归；v2.x blocker 已在加固轮次收口（见 [`CLOSEOUT.md`](./tests/acceptance/phase-2-agent/CLOSEOUT.md)）。仍 **≠ 生产就绪**（无鉴权多租户、无 agent Docker）。

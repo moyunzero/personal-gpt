@@ -64,7 +64,7 @@ export function parseSkillMarkdown(raw: string): LoadedSkill {
 
 /**
  * 按 ENABLED_SKILLS 加载技能；缺失目录 fail-open（跳过 + warn），不抛垮进程。
- * 路径限制在 skillsRoot 下 join(name, SKILL.md)，不接受用户路径参数（T-02-03-01）。
+ * Skills 仅解析为 prose 注入 system prompt（无工具注册/校验）；路径限制在 skillsRoot。
  */
 export function loadEnabledSkills(options: LoadSkillsOptions = {}): LoadedSkill[] {
   const root = options.skillsRoot ?? defaultSkillsRoot();

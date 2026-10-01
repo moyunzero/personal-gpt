@@ -39,6 +39,15 @@ describe("assertAllowlistedCypher", () => {
     ).toThrow(/relationship type not allowlisted/);
   });
 
+  it("rejects non-allowlisted labels after WITH or UNION (all MATCH segments)", () => {
+    expect(() =>
+      assertAllowlistedCypher("MATCH (a:Entity) WITH a MATCH (b:SecretLabel) RETURN b"),
+    ).toThrow(/not allowlisted/);
+    expect(() =>
+      assertAllowlistedCypher("MATCH (a:Entity) RETURN a UNION MATCH (b:SecretLabel) RETURN b"),
+    ).toThrow(/not allowlisted/);
+  });
+
   it("rejects untyped and non-allowlisted multi-type relationship patterns", () => {
     expect(() => assertAllowlistedCypher("MATCH (a:Product)-[]->(b:Ingredient) RETURN a")).toThrow(
       /untyped relationship/i,
