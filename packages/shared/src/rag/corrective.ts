@@ -9,7 +9,8 @@ import type { RetrievedChunk } from "../stores/vector-store";
 import type { HybridSearchParams } from "./hybrid-search";
 
 const DEFAULT_CORRECTIVE_MIN_SCORE = 0.35;
-const DEFAULT_CORRECTIVE_BM25_MIN_SCORE = 1;
+/** ES returns raw BM25 (_score typically ~5–30 for real hits); 1 was effectively no gate. */
+const DEFAULT_CORRECTIVE_BM25_MIN_SCORE = 5;
 
 export function correctiveMinScore(): number {
   const raw = process.env.CORRECTIVE_MIN_SCORE;

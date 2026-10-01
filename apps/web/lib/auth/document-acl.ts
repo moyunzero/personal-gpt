@@ -28,14 +28,6 @@ export function canWriteDocument(doc: DocumentEntity, ctx: DocumentAccessContext
   return ctx.memberRole === "owner" || ctx.memberRole === "editor";
 }
 
-export function canManageDocumentAcl(
-  doc: DocumentEntity,
-  ctx: DocumentAccessContext & { workspaceOwner: boolean },
-): boolean {
-  if (doc.ownerId === ctx.userId) return true;
-  return ctx.workspaceOwner;
-}
-
 export function defaultDocumentVisibility(): DocumentVisibility {
   return "workspace";
 }

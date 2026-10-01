@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { shouldCleanupVectorsAfterFailure } from "./ingest-cleanup-policy";
+import {
+  shouldCleanupVectorsAfterFailure,
+  shouldPurgeGraphBeforeReextract,
+} from "./ingest-cleanup-policy";
 
 describe("shouldCleanupVectorsAfterFailure", () => {
   it("cleans up when vectors were not committed", () => {
@@ -18,5 +21,16 @@ describe("shouldCleanupVectorsAfterFailure", () => {
         preserveExistingVectors: true,
       }),
     ).toBe(false);
+  });
+});
+
+describe("shouldPurgeGraphBeforeReextract", () => {
+  it("purges prior graph on reindex before re-extract", () => {
+    expect(shouldPurgeGraphBeforeReextract({ preserveExistingVectors: true })).toBe(true);
+  });
+
+  it("skips purge on first-time ingest", () => {
+    expect(shouldPurgeGraphBeforeReextract({ preserveExistingVectors: false })).toBe(false);
+    expect(shouldPurgeGraphBeforeReextract({})).toBe(false);
   });
 });

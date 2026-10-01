@@ -63,8 +63,13 @@ export const SharedEnvSchema = z
     RERANK_API_KEY: z.string().min(1).optional(),
     RERANK_MODEL: z.string().min(1).optional(),
 
-    /** Corrective 阈值（plan 03-03）；schema 先接受，本 plan 不接线 */
+    /** Corrective 向量相关度阈值（0–1，cosine/rerank） */
     CORRECTIVE_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.35),
+    /**
+     * Corrective BM25 门控：ES 原始 _score（未归一化，真实命中通常 ~5–30）。
+     * 仅当 top1 仅有 BM25 信号且 score ≥ 该阈值时跳过改写；默认 5。
+     */
+    CORRECTIVE_BM25_MIN_SCORE: z.coerce.number().min(0).default(5),
 
     /** Google AI Studio API Key（可选；国内不可用时可省略，RAG 辅助已改 Groq） */
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),

@@ -4,7 +4,6 @@
  * For corpus=user, pass the caller's allowlist as-is (empty = deny-all).
  */
 export function guestRetrievalDocumentIds(input: {
-  isGuest: boolean;
   corpus: string;
   allowedDocumentIds: string[];
 }): string[] | undefined {
