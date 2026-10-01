@@ -1,6 +1,8 @@
 /**
- * Narrow Graph RAG over a seeded milk-tea subgraph (A5 / RAG-06).
- * Uses neo4j-driver read transactions only; Cypher must pass allowlist.
+ * Narrow Graph RAG over a **seed milk-tea demo subgraph** (+ optional catalog entity templates).
+ * Production user-doc graph coverage is incomplete — treat seed/demo as the supported path;
+ * catalog entity_rel_path works when Neo4j+catalog are populated, not a full workspace KG.
+ * Uses neo4j-driver read transactions only; Cypher must pass allowlist (template-only, not a security boundary).
  * No @langchain/community Neo4jGraph.
  */
 

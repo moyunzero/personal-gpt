@@ -89,10 +89,6 @@ describe("Phase 2 regression #1: framework compare report", () => {
     });
   });
 
-  it("placeholder harness (no live LLM)", () => {
-    expect(true).toBe(true);
-  });
-
   it("emits todo steps for LangGraph vs AutoGen compare task", async () => {
     const { AgentService } = await import("../../../apps/agent-service/src/agent/agent.service");
     const service = new AgentService();

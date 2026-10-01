@@ -12,6 +12,23 @@ import {
 import { documentsContextFromSession } from "@/lib/kb/request-context";
 import { runKbGuards } from "@/lib/kb/route-guards";
 import type { DocumentVisibility } from "@/lib/db/entities/document.entity";
+import { RestrictedVisibilityError } from "@/lib/auth/restricted-visibility";
+
+function parseRestrictedUserIds(raw: unknown): string[] | undefined {
+  if (Array.isArray(raw)) {
+    return raw
+      .map(String)
+      .map((id) => id.trim())
+      .filter(Boolean);
+  }
+  if (typeof raw === "string" && raw.trim()) {
+    return raw
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+  }
+  return undefined;
+}
 
 function parseVisibility(raw: unknown): DocumentVisibility | undefined {
   if (
@@ -90,6 +107,7 @@ export async function POST(req: Request) {
           category?: string;
           tags?: string | string[];
           visibility?: string;
+          restrictedUserIds?: string | string[];
         };
 
         if (!body.fileUrl || !body.fileName || typeof body.size !== "number") {
@@ -109,6 +127,7 @@ export async function POST(req: Request) {
             category: body.category,
             tags: parseTagsField(body.tags),
             visibility: parseVisibility(body.visibility),
+            restrictedUserIds: parseRestrictedUserIds(body.restrictedUserIds),
           },
         );
 
@@ -143,12 +162,14 @@ export async function POST(req: Request) {
       const title =
         typeof formData.get("title") === "string" ? (formData.get("title") as string) : undefined;
       const visibility = parseVisibility(formData.get("visibility"));
+      const restrictedUserIds = parseRestrictedUserIds(formData.get("restrictedUserIds"));
 
       const { document, job } = await uploadDocument(file, ctx, {
         title,
         category,
         tags,
         visibility,
+        restrictedUserIds,
       });
 
       return NextResponse.json(
@@ -166,6 +187,9 @@ export async function POST(req: Request) {
         { status: 201 },
       );
     } catch (error) {
+      if (error instanceof RestrictedVisibilityError) {
+        return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+      }
       if (error instanceof UploadValidationError) {
         const status = error.code === "queue_unavailable" ? 503 : 400;
         return NextResponse.json({ error: error.message, code: error.code }, { status });

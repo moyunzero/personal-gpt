@@ -1,6 +1,9 @@
 /**
- * Cypher allowlist for narrow Graph RAG (Pitfall 8 / T-03-cypher).
- * Only MATCH/RETURN-style reads; reject write / admin keywords.
+ * Cypher structural guard for narrow Graph RAG templates (Pitfall 8 / T-03-cypher).
+ *
+ * NOT a security boundary: known bypasses remain (bare `-->`, WHERE label probes).
+ * Safe today only because callers use fixed templates — no LLM-generated Cypher path.
+ * Tighten before any dynamic/user Cypher is introduced.
  */
 
 const WRITE_OR_ADMIN =

@@ -116,10 +116,6 @@ describe("Phase 2 regression #3: visible todo and agent-step events", () => {
     });
   });
 
-  it("placeholder harness (no live LLM)", () => {
-    expect(true).toBe(true);
-  });
-
   it("emits todo-update parts during multi-agent research task", async () => {
     const writes = await runAgentChat("调研 LangGraph 生态并生成对比报告");
     const types = writes.map((w) => (w as { type?: string }).type);

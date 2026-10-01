@@ -44,6 +44,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - workspace: "@personal-gpt/shared"
+            command: validate
           - workspace: web
             command: validate
           - workspace: ingest-worker

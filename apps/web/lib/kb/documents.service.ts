@@ -27,6 +27,7 @@ import {
   defaultDocumentVisibility,
 } from "@/lib/auth/document-acl";
 import { resolveDocumentAccessContext } from "@/lib/auth/workspace.service";
+import { assertRestrictedAllowlist } from "@/lib/auth/restricted-visibility";
 import { createEntityCatalogStore } from "@/lib/db/entity-catalog-store";
 import { getDataSource } from "@/lib/db/get-data-source";
 import { env } from "@/lib/env";
@@ -164,6 +165,7 @@ export function serializeDocumentRow(document: DocumentEntity, job: IngestJobEnt
     mimeType: document.mimeType,
     visibility: document.visibility,
     ownerId: document.ownerId,
+    restrictedUserIds: document.restrictedUserIds ?? [],
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
     latestJob: job
@@ -270,6 +272,7 @@ type UploadMetaInput = {
   category?: string;
   tags?: string[];
   visibility?: DocumentVisibility;
+  restrictedUserIds?: string[];
 };
 
 async function createPendingDocumentAndEnqueue(
@@ -285,6 +288,8 @@ async function createPendingDocumentAndEnqueue(
   // insert（非 save）：同 chat 消息修复，避免 DocumentEntity relation 拓扑环
   const id = randomUUID();
   const visibility = meta.visibility ?? defaultDocumentVisibility();
+  const restrictedUserIds =
+    visibility === "restricted" ? assertRestrictedAllowlist(meta.restrictedUserIds) : [];
   const tags = meta.tags ?? [];
   const category = meta.category ?? null;
   await docRepo.insert({
@@ -292,7 +297,7 @@ async function createPendingDocumentAndEnqueue(
     workspaceId: ctx.workspaceId,
     ownerId: ctx.userId,
     visibility,
-    restrictedUserIds: [],
+    restrictedUserIds,
     title,
     source: file.name,
     category,
