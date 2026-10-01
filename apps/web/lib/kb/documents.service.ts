@@ -30,7 +30,7 @@ import { resolveDocumentAccessContext } from "@/lib/auth/workspace.service";
 import { createEntityCatalogStore } from "@/lib/db/entity-catalog-store";
 import { getDataSource } from "@/lib/db/get-data-source";
 import { env } from "@/lib/env";
-import { isMinioConfigured, uploadToMinio } from "@/lib/storage/minio";
+import { deleteStoredObject, isMinioConfigured, uploadToMinio } from "@/lib/storage/minio";
 import {
   isTrustedVercelBlobUrl,
   isVercelBlobConfigured,
@@ -38,6 +38,7 @@ import {
 } from "@/lib/storage/vercel-blob";
 
 import { getIngestQueue } from "./queue";
+import { assertRemoteUploadWithinLimits } from "./remote-upload-assert";
 
 function isServerlessRuntime(): boolean {
   return Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
@@ -346,6 +347,15 @@ export async function uploadDocumentFromRemote(
     throw new UploadValidationError("untrusted_url", "仅允许 Vercel Blob 文件 URL");
   }
 
+  const remoteCheck = await assertRemoteUploadWithinLimits({
+    url: input.fileUrl,
+    maxBytes: env.UPLOAD_MAX_BYTES,
+    allowedMimeTypes: env.ALLOWED_MIME_TYPES,
+  });
+  if (!remoteCheck.ok) {
+    throw new UploadValidationError(remoteCheck.code, remoteCheck.message);
+  }
+
   return createPendingDocumentAndEnqueue(
     ctx,
     { name: input.fileName, mimeType, filePath: input.fileUrl },
@@ -546,6 +556,14 @@ export async function deleteDocument(documentId: string, ctx: DocumentsContext):
     }
   }
 
+  if (document.filePath) {
+    try {
+      await deleteDocumentStorage(document.filePath);
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
+  }
+
   if (errors.length > 0) {
     // 未入库 / 入库失败且无向量：次级存储可能为空或不可达，不阻断删除
     const allowDropWithoutChunks =
@@ -558,16 +576,26 @@ export async function deleteDocument(documentId: string, ctx: DocumentsContext):
     }
   }
 
-  if (document.filePath) {
-    try {
-      await fs.unlink(document.filePath);
-    } catch {
-      // 文件可能已不存在，不阻塞 PG 删除
-    }
-  }
-
   await docRepo.delete({ id: documentId, workspaceId: ctx.workspaceId });
   return true;
+}
+
+/** Delete local / Blob / MinIO object for a document filePath. */
+export async function deleteDocumentStorage(filePath: string): Promise<void> {
+  if (filePath.startsWith("s3://")) {
+    await deleteStoredObject(filePath);
+    return;
+  }
+  if (isTrustedVercelBlobUrl(filePath) && isVercelBlobConfigured()) {
+    const { del } = await import("@vercel/blob");
+    await del(filePath, { token: process.env.BLOB_READ_WRITE_TOKEN });
+    return;
+  }
+  try {
+    await fs.unlink(filePath);
+  } catch {
+    // missing local file is fine
+  }
 }
 
 /** 重新索引（INGEST-05 / D-21）：processing + 新 job + 同路径入队，无确认 */

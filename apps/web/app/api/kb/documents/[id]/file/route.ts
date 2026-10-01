@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/auth/session";
 import { getDocumentById } from "@/lib/kb/documents.service";
 import { documentsContextFromSession } from "@/lib/kb/request-context";
 import { runKbGuards } from "@/lib/kb/route-guards";
+import { getStoredObjectStream, isMinioConfigured, parseS3Uri } from "@/lib/storage/minio";
 import { isTrustedVercelBlobUrl, isVercelBlobConfigured } from "@/lib/storage/vercel-blob";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -40,6 +41,19 @@ export async function GET(req: Request, context: RouteContext) {
       return new Response(blob.stream, {
         headers: {
           "Content-Type": mimeType,
+          "Content-Disposition": "inline",
+        },
+      });
+    }
+
+    if (parseS3Uri(filePath) && isMinioConfigured()) {
+      const obj = await getStoredObjectStream(filePath);
+      if (!obj) {
+        return new Response("文件不存在", { status: 404 });
+      }
+      return new Response(obj.body, {
+        headers: {
+          "Content-Type": obj.contentType || mimeType,
           "Content-Disposition": "inline",
         },
       });

@@ -37,8 +37,46 @@ function resolveSafeFilePath(filePath: string): string {
   return resolved;
 }
 
+/** Stream-read a body with a hard byte cap (remote ingest DoS guard). */
+export async function readBodyWithByteLimit(
+  stream: ReadableStream<Uint8Array>,
+  maxBytes: number,
+): Promise<Uint8Array> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value?.byteLength) continue;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        throw new Error(`Remote file exceeds upload limit: ${total} bytes`);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out;
+}
+
+function resolveUploadMaxBytes(): number {
+  const raw = process.env.UPLOAD_MAX_BYTES;
+  const n = raw ? Number.parseInt(raw, 10) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : 20_971_520;
+}
+
 async function materializeHttpUrlToTempFile(uri: string): Promise<string> {
   let bytes: Uint8Array;
+  const maxBytes = resolveUploadMaxBytes();
   const isVercelBlob = /blob\.vercel-storage\.com/i.test(uri);
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
 
@@ -48,13 +86,16 @@ async function materializeHttpUrlToTempFile(uri: string): Promise<string> {
     if (!result?.stream) {
       throw new Error(`Empty Vercel Blob: ${uri}`);
     }
-    bytes = new Uint8Array(await new Response(result.stream).arrayBuffer());
+    bytes = await readBodyWithByteLimit(result.stream as ReadableStream<Uint8Array>, maxBytes);
   } else {
     const res = await fetch(uri);
     if (!res.ok) {
       throw new Error(`Failed to download ${uri}: HTTP ${res.status}`);
     }
-    bytes = new Uint8Array(await res.arrayBuffer());
+    if (!res.body) {
+      throw new Error(`Empty body: ${uri}`);
+    }
+    bytes = await readBodyWithByteLimit(res.body, maxBytes);
   }
 
   const ext = path.extname(new URL(uri).pathname) || ".bin";

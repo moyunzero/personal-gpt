@@ -115,6 +115,7 @@ export function tapAgentStreamForPersistence(
       }
     },
     cancel(reason) {
+      flushPersist();
       void reader.cancel(reason);
     },
   });

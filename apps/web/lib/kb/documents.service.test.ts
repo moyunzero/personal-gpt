@@ -77,6 +77,10 @@ vi.mock("@/lib/db/entity-catalog-store", () => ({
   createEntityCatalogStore: () => ({}),
 }));
 
+vi.mock("@/lib/kb/remote-upload-assert", () => ({
+  assertRemoteUploadWithinLimits: vi.fn(async () => ({ ok: true as const })),
+}));
+
 import { DocumentEntity } from "@/lib/db/entities/document.entity";
 import { IngestJobEntity } from "@/lib/db/entities/ingest-job.entity";
 import { getDataSource } from "@/lib/db/get-data-source";
