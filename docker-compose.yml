@@ -172,6 +172,21 @@ services:
       timeout: 10s
       retries: 5
 
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/migrate/Dockerfile
+    container_name: personal_gpt_migrate
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      <<: *app-env
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   web:
     build:
       context: .
@@ -190,6 +205,8 @@ services:
       AGENT_SERVICE_URL: http://agent-service:3002
       MONOREPO_ROOT: /app
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -241,6 +258,8 @@ services:
       NODE_ENV: production
       INGEST_WORKER_PORT: "3001"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

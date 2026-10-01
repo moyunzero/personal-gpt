@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   shouldCleanupVectorsAfterFailure,
+  shouldFailJobOnGraphExtractError,
   shouldPurgeGraphBeforeReextract,
 } from "./ingest-cleanup-policy";
 
@@ -32,5 +33,25 @@ describe("shouldPurgeGraphBeforeReextract", () => {
   it("skips purge on first-time ingest", () => {
     expect(shouldPurgeGraphBeforeReextract({ preserveExistingVectors: false })).toBe(false);
     expect(shouldPurgeGraphBeforeReextract({})).toBe(false);
+  });
+});
+
+describe("shouldFailJobOnGraphExtractError", () => {
+  it("fails job when reindex purged graph then extract errors", () => {
+    expect(
+      shouldFailJobOnGraphExtractError({
+        preserveExistingVectors: true,
+        graphWasPurged: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not fail job on first-time ingest graph skip", () => {
+    expect(
+      shouldFailJobOnGraphExtractError({
+        preserveExistingVectors: false,
+        graphWasPurged: false,
+      }),
+    ).toBe(false);
   });
 });

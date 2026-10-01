@@ -18,3 +18,15 @@ export function shouldPurgeGraphBeforeReextract(input: {
 }): boolean {
   return Boolean(input.preserveExistingVectors);
 }
+
+/**
+ * After purge-before-reextract, graph extract failure must fail the job —
+ * otherwise we mark ready with an empty graph (data loss).
+ * First-time ingest may keep vectors ready when graph extract fails.
+ */
+export function shouldFailJobOnGraphExtractError(input: {
+  preserveExistingVectors?: boolean;
+  graphWasPurged: boolean;
+}): boolean {
+  return Boolean(input.preserveExistingVectors && input.graphWasPurged);
+}

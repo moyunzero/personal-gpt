@@ -1,153 +1,41 @@
 /**
- * 在 Vercel build 中执行 KB schema 迁移（Sensitive DATABASE_URL 无法本地 pull）。
- * 幂等：已有 documents 表则跳过；并写入 TypeORM migrations 记录。
+ * Vercel / local build: run real TypeORM migrations (not a partial hand-SQL bootstrap).
+ * Skips in GitHub Actions CI without Vercel (no Postgres). Docker runtime uses compose migrate.
  */
-import pg from "pg";
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const DEFAULT_WORKSPACE_ID = "00000000-0000-4000-8000-000000000001";
-const MIGRATION_NAME = "InitWorkspaceKb1730000000000";
-const MIGRATION_TIMESTAMP = "1730000000000";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const webRoot = path.resolve(__dirname, "..");
 
-function requireDatabaseUrl() {
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) {
-    throw new Error("[migrate] DATABASE_URL 未设置");
-  }
-  if (url === "[SENSITIVE]" || !url.startsWith("postgres")) {
-    throw new Error("[migrate] DATABASE_URL 无效（可能被 redact）");
-  }
-  return url;
-}
-
-function formatError(error) {
-  if (!(error instanceof Error)) return String(error);
-  const parts = [error.message || error.name || "unknown error"];
-  if ("code" in error && error.code) parts.push(`code=${error.code}`);
-  if (error.cause) parts.push(`cause=${formatError(error.cause)}`);
-  return parts.join(" | ");
-}
-
-async function main() {
-  // GitHub Actions 设 CI=true 且无 Postgres；Vercel 同时设 VERCEL=1 与真实 DATABASE_URL
+function main() {
   if (process.env.CI && !process.env.VERCEL) {
-    console.log("[migrate] CI（非 Vercel）跳过 KB schema 迁移");
+    console.log("[migrate] CI（非 Vercel）跳过 TypeORM migration:run");
     return;
   }
 
-  const connectionString = requireDatabaseUrl();
-  const client = new pg.Client({
-    connectionString,
-    connectionTimeoutMillis: 20_000,
-    ssl: connectionString.includes("localhost") ? false : { rejectUnauthorized: false },
-  });
-
-  await client.connect();
-  try {
-    const exists = await client.query(`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'documents'
-      ) AS ok
-    `);
-
-    if (exists.rows[0]?.ok) {
-      console.log("[migrate] documents 已存在，跳过建表");
-    } else {
-      console.log("[migrate] 创建 workspaces / documents / ingest_jobs …");
-      await client.query("BEGIN");
-      await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
-      await client.query(`
-        CREATE TABLE "workspaces" (
-          "id" uuid NOT NULL,
-          "slug" character varying NOT NULL,
-          "name" character varying NOT NULL,
-          "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-          CONSTRAINT "PK_workspaces_id" PRIMARY KEY ("id"),
-          CONSTRAINT "UQ_workspaces_slug" UNIQUE ("slug")
-        )
-      `);
-      await client.query(`
-        CREATE TABLE "documents" (
-          "id" uuid NOT NULL DEFAULT gen_random_uuid(),
-          "workspace_id" uuid NOT NULL,
-          "title" character varying NOT NULL,
-          "source" character varying,
-          "category" character varying,
-          "tags" jsonb NOT NULL DEFAULT '[]',
-          "status" character varying NOT NULL DEFAULT 'pending',
-          "chunk_count" integer NOT NULL DEFAULT 0,
-          "file_path" text,
-          "mime_type" character varying,
-          "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-          "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-          CONSTRAINT "PK_documents_id" PRIMARY KEY ("id"),
-          CONSTRAINT "FK_documents_workspace_id" FOREIGN KEY ("workspace_id")
-            REFERENCES "workspaces"("id") ON DELETE CASCADE
-        )
-      `);
-      await client.query(`
-        CREATE TABLE "ingest_jobs" (
-          "id" uuid NOT NULL DEFAULT gen_random_uuid(),
-          "workspace_id" uuid NOT NULL,
-          "document_id" uuid NOT NULL,
-          "status" character varying NOT NULL DEFAULT 'queued',
-          "progress" integer NOT NULL DEFAULT 0,
-          "error" text,
-          "bull_job_id" character varying,
-          "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-          "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-          CONSTRAINT "PK_ingest_jobs_id" PRIMARY KEY ("id"),
-          CONSTRAINT "FK_ingest_jobs_workspace_id" FOREIGN KEY ("workspace_id")
-            REFERENCES "workspaces"("id") ON DELETE CASCADE,
-          CONSTRAINT "FK_ingest_jobs_document_id" FOREIGN KEY ("document_id")
-            REFERENCES "documents"("id") ON DELETE CASCADE
-        )
-      `);
-      await client.query(
-        `
-        INSERT INTO "workspaces" ("id", "slug", "name")
-        VALUES ($1, 'default', 'Default Workspace')
-        ON CONFLICT ("slug") DO NOTHING
-      `,
-        [DEFAULT_WORKSPACE_ID],
-      );
-      await client.query("COMMIT");
-      console.log("[migrate] 建表完成");
-    }
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS "migrations" (
-        "id" SERIAL NOT NULL,
-        "timestamp" bigint NOT NULL,
-        "name" character varying NOT NULL,
-        CONSTRAINT "PK_migrations_id" PRIMARY KEY ("id")
-      )
-    `);
-    const recorded = await client.query(`SELECT 1 FROM "migrations" WHERE "name" = $1 LIMIT 1`, [
-      MIGRATION_NAME,
-    ]);
-    if (recorded.rowCount === 0) {
-      await client.query(`INSERT INTO "migrations" ("timestamp", "name") VALUES ($1, $2)`, [
-        MIGRATION_TIMESTAMP,
-        MIGRATION_NAME,
-      ]);
-      console.log(`[migrate] 已记录 ${MIGRATION_NAME}`);
-    } else {
-      console.log(`[migrate] ${MIGRATION_NAME} 已在 migrations 表中`);
-    }
-  } catch (error) {
-    try {
-      await client.query("ROLLBACK");
-    } catch {
-      // ignore
-    }
-    throw error;
-  } finally {
-    await client.end();
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url || url === "[SENSITIVE]" || !url.startsWith("postgres")) {
+    console.log("[migrate] DATABASE_URL 不可用，跳过 migration:run");
+    return;
   }
+
+  console.log("[migrate] running TypeORM migration:run …");
+  const result = spawnSync(
+    "yarn",
+    ["typeorm-ts-node-commonjs", "migration:run", "-d", "lib/db/data-source.ts"],
+    {
+      cwd: webRoot,
+      stdio: "inherit",
+      env: process.env,
+      shell: process.platform === "win32",
+    },
+  );
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
+  console.log("[migrate] TypeORM migrations applied");
 }
 
-main().catch((error) => {
-  console.error("[migrate] 失败:", formatError(error));
-  process.exit(1);
-});
+main();
