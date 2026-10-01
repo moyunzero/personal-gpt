@@ -49,4 +49,50 @@ describe("milvus page filter over-fetch", () => {
     expect(hits.every((h) => h.page === 2)).toBe(true);
     expect(hits.length).toBeLessThanOrEqual(3);
   });
+
+  it("recovers page hits that fall outside the original limit window", async () => {
+    // Ranks 0–9: page 1; ranks 10–14: page 2. Without over-fetch (limit=5),
+    // local page filter would see only page-1 rows and return [].
+    const ranked = [
+      ...Array.from({ length: 10 }, (_, i) => ({
+        content: `p1-${i}`,
+        score: 1 - i * 0.001,
+        page: 1,
+        documentId: `d1-${i}`,
+        chunkIndex: i,
+        workspaceId: "ws-1",
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        content: `p2-${i}`,
+        score: 0.5 - i * 0.001,
+        page: 2,
+        documentId: `d2-${i}`,
+        chunkIndex: i,
+        workspaceId: "ws-1",
+      })),
+    ];
+    const search = vi.fn(async (params: { limit?: number }) => ({
+      results: ranked.slice(0, params.limit ?? ranked.length),
+    }));
+    const client: MilvusClientLike = {
+      hasCollection: async () => true,
+      createCollection: async () => ({}),
+      createIndex: async () => ({}),
+      loadCollection: async () => ({}),
+      insert: async () => ({}),
+      delete: async () => ({}),
+      search,
+    };
+    const store = createMilvusVectorStore({ client, skipEnsure: true, collectionName: "t" });
+    const hits = await store.search({
+      vector: [0.1],
+      workspaceId: "ws-1",
+      limit: 5,
+      filter: { page: { $eq: 2 } },
+    });
+    expect(search.mock.calls[0]![0].limit).toBe(50);
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.every((h) => h.page === 2)).toBe(true);
+    expect(hits.length).toBeLessThanOrEqual(5);
+  });
 });

@@ -44,7 +44,7 @@ describe("needsCorrectiveRewrite", () => {
     expect(needsCorrectiveRewrite([bm25Hit], 0.35)).toBe(false);
   });
 
-  it("still rewrites weak BM25 (score below threshold) with similarity 0", () => {
+  it("still rewrites weak BM25 (score below raw-ES threshold) with similarity 0", () => {
     const weakBm25: RetrievedChunk = {
       text: "barely matching token",
       similarity: 0,
@@ -53,6 +53,28 @@ describe("needsCorrectiveRewrite", () => {
       chunkIndex: 0,
     };
     expect(needsCorrectiveRewrite([weakBm25], 0.35)).toBe(true);
+  });
+
+  it("rewrites mid-tier BM25 below default raw threshold (5)", () => {
+    const midBm25: RetrievedChunk = {
+      text: "partial lexical match",
+      similarity: 0,
+      bm25Score: 3.2,
+      documentId: "d-mid",
+      chunkIndex: 0,
+    };
+    expect(needsCorrectiveRewrite([midBm25], 0.35)).toBe(true);
+  });
+
+  it("skips rewrite for BM25 at or above default raw threshold", () => {
+    const okBm25: RetrievedChunk = {
+      text: "strong lexical match",
+      similarity: 0,
+      bm25Score: 5,
+      documentId: "d-ok",
+      chunkIndex: 0,
+    };
+    expect(needsCorrectiveRewrite([okBm25], 0.35)).toBe(false);
   });
 
   it("is false when rerankScore meets threshold even if similarity is low", () => {

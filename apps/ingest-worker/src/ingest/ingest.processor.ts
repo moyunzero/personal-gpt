@@ -7,6 +7,7 @@ import { DataSource, Repository } from "typeorm";
 
 import { INGEST_QUEUE_NAME } from "@personal-gpt/shared";
 import type { IngestJobPayload } from "@personal-gpt/shared";
+import { deleteCatalogForDocument, deleteGraphForDocument } from "@personal-gpt/shared";
 import { getEnv } from "@personal-gpt/shared/schemas/env";
 import { isS3Uri } from "@personal-gpt/shared/storage/s3-uri";
 import { DocumentEntity } from "../../../web/lib/db/entities/document.entity";
@@ -14,8 +15,12 @@ import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity"
 
 import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
-import { shouldCleanupVectorsAfterFailure } from "./ingest-cleanup-policy";
+import {
+  shouldCleanupVectorsAfterFailure,
+  shouldPurgeGraphBeforeReextract,
+} from "./ingest-cleanup-policy";
 import { extractAndUpsertGraph } from "./pipeline/graph-extract";
+import { createEntityCatalogStore } from "./entity-catalog-store";
 
 import { resolvePdfChunks } from "./pipeline/mineru-parse";
 import { parseDocument } from "./pipeline/parse";
@@ -124,6 +129,15 @@ export class IngestProcessor extends WorkerHost {
 
       if (isGraphIngestEnabled()) {
         try {
+          if (
+            shouldPurgeGraphBeforeReextract({
+              preserveExistingVectors: job.data.preserveExistingVectors,
+            })
+          ) {
+            await deleteGraphForDocument(workspaceId, documentId);
+            const store = createEntityCatalogStore(this.dataSource);
+            await deleteCatalogForDocument(workspaceId, documentId, store);
+          }
           await traceIngestStep("graph-extract", traceCtx, () =>
             extractAndUpsertGraph(
               { workspaceId, documentId, chunks },
