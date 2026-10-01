@@ -16,6 +16,7 @@ import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity"
 import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
 import {
+  purgeGraphThenCatalog,
   shouldCleanupVectorsAfterFailure,
   shouldFailJobOnGraphExtractError,
   shouldPurgeGraphBeforeReextract,
@@ -136,10 +137,14 @@ export class IngestProcessor extends WorkerHost {
               preserveExistingVectors: job.data.preserveExistingVectors,
             })
           ) {
-            await deleteGraphForDocument(workspaceId, documentId);
             const store = createEntityCatalogStore(this.dataSource);
-            await deleteCatalogForDocument(workspaceId, documentId, store);
-            graphWasPurged = true;
+            await purgeGraphThenCatalog({
+              deleteGraph: () => deleteGraphForDocument(workspaceId, documentId),
+              deleteCatalog: () => deleteCatalogForDocument(workspaceId, documentId, store),
+              onGraphDeleted: () => {
+                graphWasPurged = true;
+              },
+            });
           }
           await traceIngestStep("graph-extract", traceCtx, () =>
             extractAndUpsertGraph(

@@ -108,6 +108,34 @@ describe("getRelevantContext", () => {
     expect(result.blocks).toContain("BM25 强命中段落");
   });
 
+  it("accepts a qualifying BM25 hit even when a weaker cosine hit ranks first", async () => {
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "中等余弦无 BM25",
+        similarity: 0.4,
+        source: "legacy",
+        title: "弱余弦",
+        documentId: "doc-cos",
+        chunkIndex: 0,
+      },
+      {
+        text: "BM25 强命中排第二",
+        similarity: 0.1,
+        bm25Score: 12,
+        source: "legacy",
+        title: "BM25第二",
+        documentId: "doc-bm25",
+        chunkIndex: 0,
+      },
+    ]);
+
+    const result = await getRelevantContext("介绍一下某个项目背景", "req-4c");
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.blocks).toContain("BM25 强命中排第二");
+  });
+
   it("drops a second hit below 0.55 from the numbered list", async () => {
     hybridSearchMock.mockResolvedValueOnce([
       {

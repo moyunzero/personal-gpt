@@ -70,14 +70,13 @@ function passesBm25Gate(hit: RetrievedChunk): boolean {
   );
 }
 
-function passesTop1PreCheck(hits: RetrievedChunk[]): boolean {
-  if (hits.length === 0) return false;
-  const top = hits[0]!;
-  return top.similarity >= TOP1_SIMILARITY_THRESHOLD || passesBm25Gate(top);
-}
-
 function passesHitGate(hit: RetrievedChunk): boolean {
   return hit.similarity >= TOP1_SIMILARITY_THRESHOLD || passesBm25Gate(hit);
+}
+
+function passesTop1PreCheck(hits: RetrievedChunk[]): boolean {
+  if (hits.length === 0) return false;
+  return hits.some(passesHitGate);
 }
 
 async function buildSearchQueries(query: string): Promise<string[]> {

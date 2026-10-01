@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  purgeGraphThenCatalog,
   shouldCleanupVectorsAfterFailure,
   shouldFailJobOnGraphExtractError,
   shouldPurgeGraphBeforeReextract,
@@ -46,6 +47,16 @@ describe("shouldFailJobOnGraphExtractError", () => {
     ).toBe(true);
   });
 
+  it("fails job when Neo4j purged but catalog delete is what threw", () => {
+    // Processor sets graphWasPurged immediately after deleteGraph succeeds.
+    expect(
+      shouldFailJobOnGraphExtractError({
+        preserveExistingVectors: true,
+        graphWasPurged: true,
+      }),
+    ).toBe(true);
+  });
+
   it("does not fail job on first-time ingest graph skip", () => {
     expect(
       shouldFailJobOnGraphExtractError({
@@ -53,5 +64,26 @@ describe("shouldFailJobOnGraphExtractError", () => {
         graphWasPurged: false,
       }),
     ).toBe(false);
+  });
+});
+
+describe("purgeGraphThenCatalog", () => {
+  it("marks graph deleted before catalog failure", async () => {
+    const order: string[] = [];
+    await expect(
+      purgeGraphThenCatalog({
+        deleteGraph: async () => {
+          order.push("graph");
+        },
+        onGraphDeleted: () => {
+          order.push("flag");
+        },
+        deleteCatalog: async () => {
+          order.push("catalog");
+          throw new Error("catalog boom");
+        },
+      }),
+    ).rejects.toThrow(/catalog boom/);
+    expect(order).toEqual(["graph", "flag", "catalog"]);
   });
 });

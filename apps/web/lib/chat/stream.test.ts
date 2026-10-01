@@ -257,6 +257,27 @@ describe("createChatStream citations", () => {
     expect(types).toContain("text-end");
     expect(types).not.toContain("error");
   });
+
+  it("does not call onComplete when the model stream emits abort", async () => {
+    const onComplete = vi.fn();
+    streamTextMock.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: "text-delta", text: "半截回答" };
+        yield { type: "abort" };
+      })(),
+    });
+
+    const stream = createChatStream({
+      systemPrompt: "system",
+      messages: [{ role: "user", content: "hi" }],
+      requestId: "req-abort",
+      citations: [],
+      onComplete,
+    });
+
+    await collectStreamParts(stream);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
 });
 
 describe("createChatStream graph paths (D-07)", () => {

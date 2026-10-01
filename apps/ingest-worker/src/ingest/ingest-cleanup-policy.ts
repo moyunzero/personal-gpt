@@ -30,3 +30,17 @@ export function shouldFailJobOnGraphExtractError(input: {
 }): boolean {
   return Boolean(input.preserveExistingVectors && input.graphWasPurged);
 }
+
+/**
+ * Reindex purge: Neo4j first, then PG catalog.
+ * Invokes onGraphDeleted as soon as Neo4j succeeds so catalog failures still fail-closed.
+ */
+export async function purgeGraphThenCatalog(ops: {
+  deleteGraph: () => Promise<void>;
+  deleteCatalog: () => Promise<void>;
+  onGraphDeleted: () => void;
+}): Promise<void> {
+  await ops.deleteGraph();
+  ops.onGraphDeleted();
+  await ops.deleteCatalog();
+}

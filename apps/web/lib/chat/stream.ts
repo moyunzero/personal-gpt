@@ -81,6 +81,9 @@ export function createChatStream({
           const markerStrip = new SourceMarkerStripper();
 
           for await (const part of result.fullStream) {
+            if (part.type === "abort" || abortSignal?.aborted) {
+              throw new Error("chat stream aborted");
+            }
             if (part.type === "text-delta") {
               const visible = thinkFilter.feed(part.text);
               if (!visible) continue;
@@ -118,6 +121,10 @@ export function createChatStream({
             }
           }
 
+          if (abortSignal?.aborted) {
+            throw new Error("chat stream aborted");
+          }
+
           const usedCitations = filterCitationsBySourceMarkers(assistantText, citations);
           if (usedCitations.length > 0) {
             writer.write({
@@ -145,6 +152,10 @@ export function createChatStream({
           return;
         } catch (error) {
           if (abortSignal?.aborted) {
+            throw error;
+          }
+          const aborted = error instanceof Error && /chat stream aborted/i.test(error.message);
+          if (aborted) {
             throw error;
           }
           log.warn("model failed, falling back", { modelName, err: error });
