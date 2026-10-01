@@ -100,7 +100,7 @@ describe("Phase 3 regression #3: memory recall session A→B (MEM-02)", () => {
     expect(parseUserKey("bad key!")).toBeNull();
 
     const parsed = parseAgentChatBody({
-      messages: [{ role: "user", content: "hi" }],
+      messages: [{ role: "user", parts: [{ type: "text", text: "hi" }] }],
       userKey: "uk-1",
     });
     expect(parsed.userKey).toBe("uk-1");
