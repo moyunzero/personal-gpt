@@ -48,7 +48,6 @@
     "@langchain/community": "1.1.28",
     "@langchain/core": "1.1.45",
     "@nestjs/typeorm": "11.0.3",
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
@@ -59,7 +58,6 @@
     "eslint-config-next": "16.2.6",
     "eslint-config-prettier": "^10.1.8",
     "playwright": "1.59.1",
-    "tailwindcss": "^4",
     "ts-node": "10.9.2",
     "typescript": "^5",
     "vitest": "^4.1.6"

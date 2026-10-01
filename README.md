@@ -430,8 +430,8 @@ yarn workspace web migrate:kb    # Vercel build 用的幂等建表脚本
 
 ### v2.0 — LangGraph 多 Agent ⚠️ MVP 关账（非生产就绪）
 
-| 模块           | 状态                                                     |
-| -------------- | -------------------------------------------------------- |
+| 模块           | 状态                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------ |
 | Agent 多 Agent | ⚠️ IntentPlan 预路由 + sequential/single DAG（ambiguous 才走 Supervisor）；Skills 为 prompt 注入 |
 
 Nest.js Agent：默认 IntentPlan → short / sequential / single_specialist；仅 plan 歧义时走 Supervisor hub-and-spoke。Skills 拼进 system prompt。简单聊天仍走 `/api/chat`。

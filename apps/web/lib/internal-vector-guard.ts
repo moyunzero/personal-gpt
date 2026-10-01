@@ -4,8 +4,7 @@ export const INTERNAL_VECTOR_MAX_BODY_BYTES = 1_000_000;
 export const INTERNAL_VECTOR_MAX_CHUNKS = 200;
 export const INTERNAL_VECTOR_MAX_CHUNK_CHARS = 32_000;
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function isUuid(value: string | undefined | null): value is string {
   return typeof value === "string" && UUID_RE.test(value.trim());

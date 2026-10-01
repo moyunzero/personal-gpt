@@ -408,6 +408,7 @@ export async function POST(req: Request) {
           graphPaths: graphPathsForUi,
           modelIds,
           credentialSource,
+          abortSignal: req.signal,
           onComplete: async (assistantText) => {
             if (chatSession) {
               await persistChatTurn({

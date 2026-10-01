@@ -5,6 +5,24 @@ import { resolveCorpusTargets } from "../rag/corpus";
 import type { ChunkRecord, RetrievedChunk, VectorSearchParams, VectorStore } from "./vector-store";
 import { createAstraRelayVectorStore, isAstraRelayConfigured } from "./vector-store.astra-relay";
 
+/** Cache DataAPIClient by endpoint+token to avoid reconnect churn. */
+const astraClientCache = new Map<string, DataAPIClient>();
+
+function getSharedAstraClient(endpoint: string, token: string): DataAPIClient {
+  const key = `${endpoint}\0${token}`;
+  let client = astraClientCache.get(key);
+  if (!client) {
+    client = new DataAPIClient(token);
+    astraClientCache.set(key, client);
+  }
+  return client;
+}
+
+/** Test hook — clear process-local Astra client cache. */
+export function resetAstraClientCacheForTests(): void {
+  astraClientCache.clear();
+}
+
 export interface AstraCollectionHandle {
   find: (
     filter: Record<string, unknown>,
@@ -89,7 +107,7 @@ export function createAstraVectorStore(options: AstraVectorStoreOptions = {}): V
       throw new Error("Astra VectorStore requires collection, endpoint, and token");
     }
 
-    const client = new DataAPIClient(token);
+    const client = getSharedAstraClient(endpoint, token);
     const keyspace = process.env.ASTRA_DB_NAMESPACE?.trim() || undefined;
     const db = client.db(endpoint, {
       token,

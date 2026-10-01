@@ -49,6 +49,7 @@ export {
   maybeCorrective,
   needsCorrectiveRewrite,
   correctiveMinScore,
+  correctiveBm25MinScore,
   type MaybeCorrectiveDeps,
 } from "./rag/corrective";
 export { esBm25Search, ensureEsIndexes, indexChunks, deleteByDocumentId } from "./rag/es-bm25";

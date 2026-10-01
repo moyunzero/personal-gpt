@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 import { drainAstraRelayJobs, type AstraRelayJob } from "@personal-gpt/shared";
 import { createAstraVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 
@@ -23,15 +25,24 @@ async function handleJob(job: AstraRelayJob) {
   return { ok: true as const, chunks };
 }
 
+function isCronAuthorized(req: Request): boolean {
+  const cronSecret = process.env.CRON_SECRET?.trim();
+  if (!cronSecret) return false;
+  const auth = req.headers.get("authorization");
+  if (!auth?.startsWith("Bearer ")) return false;
+  const provided = auth.slice("Bearer ".length).trim();
+  const a = Buffer.from(provided);
+  const b = Buffer.from(cronSecret);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
 /**
  * Drain Redis Astra relay queue (CloudBase → Redis → Vercel → Astra).
  * Auth: Vercel Cron `Authorization: Bearer CRON_SECRET` or x-internal-proxy-key.
  */
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET?.trim();
-  const auth = req.headers.get("authorization");
-  const cronOk = Boolean(cronSecret && auth === `Bearer ${cronSecret}`);
-  if (!cronOk && !isTrustedInternalProxy(req)) {
+  if (!isCronAuthorized(req) && !isTrustedInternalProxy(req)) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 

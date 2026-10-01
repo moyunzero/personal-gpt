@@ -87,6 +87,27 @@ describe("getRelevantContext", () => {
     expect(result.kind).toBe("no-docs");
   });
 
+  it("accepts strong BM25-only hits below cosine threshold", async () => {
+    hybridSearchMock.mockResolvedValueOnce([
+      {
+        text: "BM25 强命中段落",
+        similarity: 0.1,
+        bm25Score: 12,
+        source: "legacy",
+        title: "BM25命中",
+        documentId: "doc-bm25",
+        chunkIndex: 0,
+      },
+    ]);
+
+    const result = await getRelevantContext("介绍一下某个项目背景", "req-4b");
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.docCount).toBe(1);
+    expect(result.blocks).toContain("BM25 强命中段落");
+  });
+
   it("drops a second hit below 0.55 from the numbered list", async () => {
     hybridSearchMock.mockResolvedValueOnce([
       {

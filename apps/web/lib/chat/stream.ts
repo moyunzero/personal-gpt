@@ -24,6 +24,8 @@ export interface ChatStreamOptions {
   /** When set, skip the env fallback list and use this model id once. */
   modelIds?: string[];
   credentialSource?: NodeJS.ProcessEnv;
+  /** 客户端断开 / 上游取消 */
+  abortSignal?: AbortSignal;
   /** 流成功结束后回调（用于短期记忆 / Mem0 持久化）；失败不调用 */
   onComplete?: (assistantText: string) => void | Promise<void>;
 }
@@ -42,6 +44,7 @@ export function createChatStream({
   graphPaths = [],
   modelIds,
   credentialSource,
+  abortSignal,
   onComplete,
 }: ChatStreamOptions) {
   const log = logger.child({ scope: "chat.stream", requestId });
@@ -71,6 +74,7 @@ export function createChatStream({
             messages,
             temperature: 0.7,
             maxRetries: 0,
+            ...(abortSignal ? { abortSignal } : {}),
           });
 
           const thinkFilter = new ThinkStripFilter();
@@ -140,6 +144,9 @@ export function createChatStream({
 
           return;
         } catch (error) {
+          if (abortSignal?.aborted) {
+            throw error;
+          }
           log.warn("model failed, falling back", { modelName, err: error });
           lastError = error instanceof Error ? error : new Error(String(error));
           if (hasStarted) {

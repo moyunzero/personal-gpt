@@ -1,6 +1,7 @@
 import { getDataSource } from "@/lib/db/get-data-source";
 import { AuditLogEntity } from "@/lib/db/entities/audit-log.entity";
 import { logger } from "@/lib/logger";
+import { httpRequestsTotal } from "@/lib/metrics";
 
 export type AuditLogInput = {
   method: string;
@@ -52,6 +53,11 @@ export async function finalizeApiAudit(
   startedAt: number,
   input: Omit<AuditLogInput, "latencyMs" | "statusCode"> & { statusCode: number },
 ): Promise<void> {
+  httpRequestsTotal.inc({
+    method: input.method.toUpperCase(),
+    path: sanitizeAuditResource(input.path),
+    status: String(input.statusCode),
+  });
   await writeAuditLog({
     ...input,
     latencyMs: Math.max(0, Date.now() - startedAt),

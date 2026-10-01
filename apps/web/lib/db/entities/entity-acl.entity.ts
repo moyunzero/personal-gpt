@@ -6,6 +6,10 @@ import { WorkspaceEntity } from "./workspace.entity";
 export type EntityAclPrincipalType = "user" | "workspace";
 export type EntityAclPermission = "read" | "none";
 
+/**
+ * entity_acl — mirrored at ingest/sync only (syncEntityAclForDocument).
+ * Retrieval ACL uses document visibility + resolveAllowedDocumentIds; this table is not read at query time.
+ */
 @Entity("entity_acl")
 export class EntityAclEntity {
   @PrimaryGeneratedColumn("uuid")
