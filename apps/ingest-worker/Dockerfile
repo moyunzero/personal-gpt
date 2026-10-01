@@ -15,6 +15,7 @@ FROM base AS builder
 COPY package.json yarn.lock ./
 COPY apps/ingest-worker ./apps/ingest-worker
 COPY apps/web/lib/db ./apps/web/lib/db
+COPY apps/web/lib/models ./apps/web/lib/models
 COPY packages/shared ./packages/shared
 COPY .npmrc ./
 COPY --from=deps /app/node_modules ./node_modules

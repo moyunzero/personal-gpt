@@ -27,6 +27,8 @@ export type KbSearchInput = {
   hybridDeps?: HybridSearchDeps;
   /** Security trim: only these documentIds (D-07). */
   documentIds?: string[];
+  /** Trusted / tests: allow workspace-wide search when documentIds omitted. */
+  allowUnscopedDocumentIds?: boolean;
   /** 与本轮 citationBag 共用的序号键；缺省走当前 turn 或 default。 */
   sourceTurnId?: string;
 };
@@ -106,6 +108,7 @@ export async function invokeKbSearch(input: KbSearchInput): Promise<string> {
     minSimilarity,
     hybridDeps: input.hybridDeps,
     documentIds: input.documentIds,
+    allowUnscopedDocumentIds: input.allowUnscopedDocumentIds,
   };
 
   try {

@@ -7,8 +7,8 @@ vi.mock("@personal-gpt/shared/ai/embeddings", () => ({
   embedText: (...args: unknown[]) => embedTextMock(...args),
 }));
 
-vi.mock("@personal-gpt/shared/stores/vector-store.astra", () => ({
-  createVectorStore: () => ({ search: searchMock }),
+vi.mock("@personal-gpt/shared/stores/vector-store.factory", () => ({
+  createVectorStoreFromEnv: () => ({ search: searchMock }),
 }));
 
 vi.mock("@/lib/env", () => ({
@@ -48,7 +48,9 @@ describe("embedding fail-open", () => {
     embedTextMock.mockResolvedValueOnce([0.1, 0.2, 0.3]);
     searchMock.mockRejectedValueOnce(new Error("other side closed"));
     const { probeKbRelevance } = await import("./embedding-precheck");
-    await expect(probeKbRelevance("介绍一下 MoCode")).resolves.toEqual({
+    await expect(
+      probeKbRelevance("介绍一下 MoCode", undefined, undefined, "user", ["doc-1"]),
+    ).resolves.toEqual({
       topSimilarity: 0,
       probed: false,
     });

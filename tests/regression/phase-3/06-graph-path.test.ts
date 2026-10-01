@@ -10,6 +10,7 @@ describe("Phase 3 regression #6: graph path Neo4j (RAG-06 Graph)", () => {
   it("returns a traceable Neo4j path for graph-backed RAG queries (no live LLM)", async () => {
     const result = await graphRagQuery({
       question: "珍珠奶茶的珍珠用了什么工艺？",
+      allowUnscopedDocumentIds: true,
       executor: createSeededMilkTeaFixtureExecutor(),
     });
 

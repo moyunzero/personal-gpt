@@ -61,7 +61,12 @@ describe("Phase 2 regression #2: KB summary triggers Retriever + KB citation", (
     expect(kbSearchTool.name).toBe("kb_search");
     expect(agent).toBeTruthy();
 
-    const out = await invokeKbSearch({ query: prompt, topK: 3, hybridDeps: hybridDeps() });
+    const out = await invokeKbSearch({
+      allowUnscopedDocumentIds: true,
+      query: prompt,
+      topK: 3,
+      hybridDeps: hybridDeps(),
+    });
     expect(searchMock).toHaveBeenCalledTimes(1);
     const params = searchMock.mock.calls[0]![0] as { workspaceId: string; limit?: number };
     expect(params.workspaceId).toBeTruthy();
@@ -72,7 +77,11 @@ describe("Phase 2 regression #2: KB summary triggers Retriever + KB citation", (
 
   it("emits citation sourced from KB (not web) under mocked store", async () => {
     const { invokeKbSearch } = await import("../../../apps/agent-service/src/tools/kb-search.tool");
-    const out = await invokeKbSearch({ query: "差旅报销", hybridDeps: hybridDeps() });
+    const out = await invokeKbSearch({
+      allowUnscopedDocumentIds: true,
+      query: "差旅报销",
+      hybridDeps: hybridDeps(),
+    });
     expect(out).toMatch(/来源=知识库|source: kb-policy\.md/);
     expect(out).toMatch(/documentId: kb-doc-1/);
     expect(out).toMatch(/citation/);

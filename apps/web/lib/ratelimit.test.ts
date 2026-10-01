@@ -18,6 +18,7 @@ vi.hoisted(() => {
 import {
   buildLimiter,
   checkUserRateLimit,
+  GUEST_CHAT_WINDOW_SEC,
   getClientIp,
   guestRateLimitShouldFailClosed,
   guestRateLimitUnavailable,
@@ -51,30 +52,86 @@ describe("getClientIp", () => {
     return new Request("http://localhost/api/chat", { headers });
   }
 
-  it("优先取 x-forwarded-for 首项", () => {
-    const ip = getClientIp(makeReq({ "x-forwarded-for": "203.0.113.7, 10.0.0.1, 10.0.0.2" }));
-    expect(ip).toBe("203.0.113.7");
+  it("ignores XFF when proxy headers are untrusted", () => {
+    const prevTrust = process.env.TRUST_PROXY;
+    const prevVercel = process.env.VERCEL;
+    delete process.env.TRUST_PROXY;
+    delete process.env.VERCEL;
+    try {
+      expect(getClientIp(makeReq({ "x-forwarded-for": "203.0.113.7" }))).toBe("local");
+    } finally {
+      if (prevTrust === undefined) delete process.env.TRUST_PROXY;
+      else process.env.TRUST_PROXY = prevTrust;
+      if (prevVercel === undefined) delete process.env.VERCEL;
+      else process.env.VERCEL = prevVercel;
+    }
+  });
+
+  it("优先取 x-forwarded-for 首项 when TRUST_PROXY=1", () => {
+    const prev = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = "1";
+    try {
+      const ip = getClientIp(makeReq({ "x-forwarded-for": "203.0.113.7, 10.0.0.1, 10.0.0.2" }));
+      expect(ip).toBe("203.0.113.7");
+    } finally {
+      if (prev === undefined) delete process.env.TRUST_PROXY;
+      else process.env.TRUST_PROXY = prev;
+    }
   });
 
   it("x-forwarded-for 单值也支持", () => {
-    expect(getClientIp(makeReq({ "x-forwarded-for": "198.51.100.42" }))).toBe("198.51.100.42");
+    const prev = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = "1";
+    try {
+      expect(getClientIp(makeReq({ "x-forwarded-for": "198.51.100.42" }))).toBe("198.51.100.42");
+    } finally {
+      if (prev === undefined) delete process.env.TRUST_PROXY;
+      else process.env.TRUST_PROXY = prev;
+    }
   });
 
   it("x-forwarded-for 缺失时 fallback 到 x-real-ip", () => {
-    expect(getClientIp(makeReq({ "x-real-ip": "192.0.2.5" }))).toBe("192.0.2.5");
+    const prev = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = "1";
+    try {
+      expect(getClientIp(makeReq({ "x-real-ip": "192.0.2.5" }))).toBe("192.0.2.5");
+    } finally {
+      if (prev === undefined) delete process.env.TRUST_PROXY;
+      else process.env.TRUST_PROXY = prev;
+    }
   });
 
   it("两个 header 都没有 → 退化为 'local'", () => {
-    expect(getClientIp(makeReq({}))).toBe("local");
+    const prev = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = "1";
+    try {
+      expect(getClientIp(makeReq({}))).toBe("local");
+    } finally {
+      if (prev === undefined) delete process.env.TRUST_PROXY;
+      else process.env.TRUST_PROXY = prev;
+    }
   });
 
   it("x-forwarded-for 空字符串 → fallback", () => {
-    // 空 xff 落到 first==''，should fallback
-    expect(getClientIp(makeReq({ "x-real-ip": "192.0.2.9" }))).toBe("192.0.2.9");
+    const prev = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = "1";
+    try {
+      expect(getClientIp(makeReq({ "x-real-ip": "192.0.2.9" }))).toBe("192.0.2.9");
+    } finally {
+      if (prev === undefined) delete process.env.TRUST_PROXY;
+      else process.env.TRUST_PROXY = prev;
+    }
   });
 
   it("自动 trim 多余空格", () => {
-    expect(getClientIp(makeReq({ "x-forwarded-for": "  203.0.113.7  " }))).toBe("203.0.113.7");
+    const prev = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = "1";
+    try {
+      expect(getClientIp(makeReq({ "x-forwarded-for": "  203.0.113.7  " }))).toBe("203.0.113.7");
+    } finally {
+      if (prev === undefined) delete process.env.TRUST_PROXY;
+      else process.env.TRUST_PROXY = prev;
+    }
   });
 });
 
@@ -134,5 +191,11 @@ describe("guestRateLimitShouldFailClosed", () => {
     expect(guestRateLimitShouldFailClosed({ unavailable: false, nodeEnv: "production" })).toBe(
       false,
     );
+  });
+});
+
+describe("checkGuestChatRateLimit ioredis window", () => {
+  it("uses 3600s guest window (aligned with Upstash 1 h)", () => {
+    expect(GUEST_CHAT_WINDOW_SEC).toBe(3600);
   });
 });

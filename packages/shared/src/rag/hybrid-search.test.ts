@@ -36,6 +36,7 @@ describe("hybridSearch", () => {
         workspaceId: "ws-1",
         corpus: "user",
         limit: 5,
+        allowUnscopedDocumentIds: true,
       },
       {
         embed: async () => [0.1, 0.2, 0.3],
@@ -61,7 +62,7 @@ describe("hybridSearch", () => {
     process.env.ENABLE_RERANKER = "false";
     await expect(
       hybridSearch(
-        { query: "x", workspaceId: "" },
+        { query: "x", workspaceId: "", allowUnscopedDocumentIds: true },
         {
           embed: async () => [0.1],
           getStore: () => mockStore([]),
@@ -115,6 +116,7 @@ describe("hybridSearch", () => {
         workspaceId: "ws-1",
         corpus: "user",
         limit: 5,
+        allowUnscopedDocumentIds: true,
       },
       {
         embed,
@@ -144,6 +146,7 @@ describe("hybridSearch", () => {
         embedQuery: "假设性 HyDE 段落",
         workspaceId: "ws-1",
         corpus: "user",
+        allowUnscopedDocumentIds: true,
       },
       {
         embed,
@@ -190,5 +193,29 @@ describe("hybridSearch", () => {
     );
 
     expect(result).toEqual([]);
+  });
+
+  it("denies when documentIds omitted without allowUnscopedDocumentIds", async () => {
+    process.env.ENABLE_RERANKER = "false";
+    process.env.CORRECTIVE_MIN_SCORE = "0";
+    const search = vi.fn(async () => vectorHits);
+    const result = await hybridSearch(
+      {
+        query: "secret",
+        workspaceId: "ws-1",
+        corpus: "user",
+      },
+      {
+        embed: async () => [0.1, 0.2, 0.3],
+        getStore: () => ({
+          upsert: vi.fn(),
+          deleteByDocument: vi.fn(),
+          search,
+        }),
+        esSearch: async () => vectorHits,
+      },
+    );
+    expect(result).toEqual([]);
+    expect(search).not.toHaveBeenCalled();
   });
 });

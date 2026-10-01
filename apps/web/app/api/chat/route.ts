@@ -38,6 +38,8 @@ import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import { createHash } from "node:crypto";
 
 const MAX_CHAT_MESSAGES = 50;
+/** Chat body 上限（约 1MB），与 agent BFF 对齐 */
+export const MAX_CHAT_BODY_BYTES = 1_048_576;
 const GRAPH_RAG_TIMEOUT_MS = 12_000;
 const MEMORY_LOAD_TIMEOUT_MS = 1_500;
 
@@ -176,13 +178,54 @@ export async function POST(req: Request) {
         requestId,
       },
       async () => {
-        const body = (await req.json()) as {
+        const contentLength = req.headers.get("content-length");
+        if (contentLength) {
+          const n = Number(contentLength);
+          if (Number.isFinite(n) && n > MAX_CHAT_BODY_BYTES) {
+            return new Response(
+              JSON.stringify({
+                error: `请求体过大（上限 ${MAX_CHAT_BODY_BYTES} 字节）`,
+                requestId,
+              }),
+              { status: 413, headers: { "Content-Type": "application/json", ...corsHeaders } },
+            );
+          }
+        }
+
+        let bodyBuf: ArrayBuffer;
+        try {
+          bodyBuf = await req.arrayBuffer();
+        } catch {
+          return new Response(JSON.stringify({ error: "Invalid request body", requestId }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
+        if (bodyBuf.byteLength > MAX_CHAT_BODY_BYTES) {
+          return new Response(
+            JSON.stringify({
+              error: `请求体过大（上限 ${MAX_CHAT_BODY_BYTES} 字节）`,
+              requestId,
+            }),
+            { status: 413, headers: { "Content-Type": "application/json", ...corsHeaders } },
+          );
+        }
+
+        let body: {
           messages?: unknown;
           corpus?: unknown;
           userKey?: unknown;
           thread_id?: unknown;
           model?: unknown;
         };
+        try {
+          body = JSON.parse(new TextDecoder().decode(bodyBuf)) as typeof body;
+        } catch {
+          return new Response(JSON.stringify({ error: "Invalid JSON body", requestId }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
         const { messages } = body;
         // 游客强制种子库，避免扫私人知识库
         const corpus = isGuest ? "seed" : parseCorpus(body.corpus);

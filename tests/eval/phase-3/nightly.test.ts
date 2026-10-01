@@ -58,6 +58,7 @@ describe("Phase 3 GOLDEN-01 nightly (full set)", () => {
         {
           query: item.query,
           workspaceId: "ws-golden-nightly",
+          allowUnscopedDocumentIds: true,
           corpus: item.corpus,
           limit: 3,
         },

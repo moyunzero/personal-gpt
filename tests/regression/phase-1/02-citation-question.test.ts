@@ -92,7 +92,7 @@ describe("Phase 1 regression #2: citation on relevant question", () => {
       "请介绍一下 Personal GPT 项目的核心功能",
       "reg-2",
       undefined,
-      { hybridDeps: hybridDeps() },
+      { allowUnscopedDocumentIds: true, hybridDeps: hybridDeps() },
     );
 
     expect(result.kind).toBe("ok");

@@ -168,6 +168,8 @@ async function awaitSearchWithGrace(
 export type GetRelevantContextOptions = {
   corpus?: Corpus;
   documentIds?: string[];
+  /** Trusted / tests: allow workspace-wide search when documentIds omitted. */
+  allowUnscopedDocumentIds?: boolean;
   /** Question names a ready document. Keep its opening chunks even below the similarity gate. */
   namedDocument?: boolean;
   /** Restrict named-document hits to this page. */
@@ -230,6 +232,7 @@ export async function getRelevantContext(
                 corpus,
                 limit: options.namedDocument ? 30 : RETRIEVAL_LIMIT,
                 documentIds: options.documentIds,
+                allowUnscopedDocumentIds: options.allowUnscopedDocumentIds,
                 ...(options.page != null ? { page: options.page } : {}),
               },
               options.hybridDeps ?? {},

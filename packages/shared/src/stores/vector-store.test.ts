@@ -103,6 +103,7 @@ describe("VectorStore workspace isolation", () => {
       workspaceId: "00000000-0000-4000-8000-000000000001",
       vector: [0.1, 0.2],
       limit: 3,
+      allowUnscopedDocumentIds: true,
     });
 
     expect(find).toHaveBeenCalledTimes(1);
@@ -127,6 +128,7 @@ describe("VectorStore workspace isolation", () => {
       workspaceId: "00000000-0000-4000-8000-000000000001",
       vector: [0.1, 0.2],
       limit: 3,
+      allowUnscopedDocumentIds: true,
     });
 
     expect(find).toHaveBeenCalledTimes(1);

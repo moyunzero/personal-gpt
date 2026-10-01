@@ -69,6 +69,7 @@ describe("Phase 2 regression #5: search failure graceful degradation (D-14/D-16)
     ]);
     const { retrieveKb } = await import("../../../apps/agent-service/src/rag/retrieve");
     const partial = await retrieveKb({
+      allowUnscopedDocumentIds: true,
       query: "Q1 营收",
       hybridDeps: {
         embed: async () => [0.1, 0.2],

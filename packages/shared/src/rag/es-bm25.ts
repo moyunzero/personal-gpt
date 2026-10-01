@@ -19,6 +19,8 @@ export interface EsBm25SearchParams {
   query: string;
   workspaceId: string;
   documentIds?: string[];
+  /** Trusted scripts/eval only: allow workspace-wide search when documentIds omitted. */
+  allowUnscopedDocumentIds?: boolean;
   corpus?: Corpus;
   limit?: number;
   index?: string;
@@ -140,6 +142,9 @@ function mapHit(hit: {
 
 /** BM25 search via structured client query (no string-concat injection). */
 export async function esBm25Search(params: EsBm25SearchParams): Promise<RetrievedChunk[]> {
+  if (params.documentIds === undefined && !params.allowUnscopedDocumentIds) {
+    return [];
+  }
   if (params.documentIds !== undefined && params.documentIds.length === 0) {
     return [];
   }

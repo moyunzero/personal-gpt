@@ -8,6 +8,8 @@ import { rateLimitExceededTotal } from "./metrics";
 
 const WINDOW_SEC = 60;
 const WINDOW = "60 s" as const;
+/** Guest trial window (ioredis); must match Upstash GUEST_WINDOW. */
+export const GUEST_CHAT_WINDOW_SEC = 3600;
 
 const CHAT_LIMIT = 10;
 const KB_LIMIT = 30;
@@ -95,8 +97,9 @@ function passThrough(limit: number): RateLimitResult {
 
 async function checkWithIoRedis(
   userId: string,
-  scope: "chat" | "kb",
+  scope: "chat" | "kb" | "guest-chat",
   defaultLimit: number,
+  windowSec: number = WINDOW_SEC,
 ): Promise<RateLimitResult | null> {
   const client = getIoRedis();
   if (!client) return null;
@@ -108,13 +111,13 @@ async function checkWithIoRedis(
     }
     const count = await client.incr(key);
     if (count === 1) {
-      await client.expire(key, WINDOW_SEC);
+      await client.expire(key, windowSec);
     }
     const ttl = await client.ttl(key);
     const resetMs = Date.now() + Math.max(ttl, 1) * 1000;
     const success = count <= defaultLimit;
     const remaining = success ? Math.max(0, defaultLimit - count) : 0;
-    const retryAfterSeconds = success ? 0 : Math.max(1, ttl > 0 ? ttl : WINDOW_SEC);
+    const retryAfterSeconds = success ? 0 : Math.max(1, ttl > 0 ? ttl : windowSec);
     return {
       success,
       limit: defaultLimit,
@@ -237,7 +240,7 @@ export async function checkGuestChatRateLimit(
 
   const hasRedisUrl = Boolean(process.env.REDIS_URL?.trim());
   const redisResult = hasRedisUrl
-    ? await checkWithIoRedis(`guest:${identifier}`, "chat", GUEST_CHAT_LIMIT)
+    ? await checkWithIoRedis(identifier, "guest-chat", GUEST_CHAT_LIMIT, GUEST_CHAT_WINDOW_SEC)
     : null;
   if (redisResult) return redisResult;
 
@@ -282,10 +285,17 @@ export function rateLimitJsonResponse(result: RateLimitResult): Response {
   );
 }
 
+/** True when reverse-proxy headers (XFF / X-Real-IP) may be trusted. */
+export function trustProxyHeaders(envSource: NodeJS.ProcessEnv = process.env): boolean {
+  return envSource.TRUST_PROXY === "1" || envSource.VERCEL === "1";
+}
+
 /**
- * 从 Request 提取客户端 IP。Vercel 在边缘把客户端真实 IP 写到 x-forwarded-for 首项。
+ * 从 Request 提取客户端 IP。
+ * 仅在 TRUST_PROXY=1 或 Vercel 上信任 XFF / X-Real-IP，避免自托管伪造绕过游客限流。
  */
 export function getClientIp(req: Request): string {
+  if (!trustProxyHeaders()) return "local";
   const xff = req.headers.get("x-forwarded-for");
   if (xff) {
     const first = xff.split(",")[0]?.trim();

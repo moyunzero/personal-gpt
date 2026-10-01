@@ -28,6 +28,8 @@ export type GraphSearchInput = {
   executor?: GraphQueryExecutor;
   /** Server-injected ACL allowlist; empty = deny-all */
   documentIds?: string[];
+  /** Trusted / tests: allow unscoped graph paths when documentIds omitted. */
+  allowUnscopedDocumentIds?: boolean;
 };
 
 export async function invokeGraphSearch(input: GraphSearchInput): Promise<string> {
@@ -52,6 +54,7 @@ export async function invokeGraphSearch(input: GraphSearchInput): Promise<string
       resolvedEntity,
       executor: input.executor,
       documentIds,
+      allowUnscopedDocumentIds: input.allowUnscopedDocumentIds,
     });
     if (!result.paths.length) {
       graphMissTotal.inc();
@@ -132,6 +135,7 @@ export function invokeGraphSearchWithFixture(question: string): Promise<string> 
   return invokeGraphSearch({
     question,
     executor: createSeededMilkTeaFixtureExecutor(),
+    allowUnscopedDocumentIds: true,
   });
 }
 
@@ -152,5 +156,6 @@ export function invokeGraphSearchWithCatalogFixture(
     workspaceId,
     resolvedEntity: catalogEntity,
     executor: createCatalogEntityFixtureExecutor(),
+    allowUnscopedDocumentIds: true,
   });
 }

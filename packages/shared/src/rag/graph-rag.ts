@@ -233,8 +233,10 @@ export type GraphRagQueryOptions = {
   question: string;
   productName?: string;
   workspaceId?: string;
-  /** Security trim paths to allowed documents (D-07, D-17). */
+  /** Security trim paths to allowed documents (D-07, D-17). Omit = deny unless allowUnscopedDocumentIds. */
   documentIds?: string[];
+  /** Trusted scripts/eval only: allow unscoped graph paths when documentIds omitted. */
+  allowUnscopedDocumentIds?: boolean;
   resolvedEntity?: ResolvedGraphEntity;
   templateId?: GraphCypherTemplateId;
   /** Inject for tests; default uses neo4j-driver read session from env */
@@ -315,8 +317,12 @@ function collectNodeDocumentIds(node: GraphPathNode): string[] {
  * Deny if any node document id is outside the allowlist.
  * Fail closed when allowlist is set but the path has no document identity.
  */
-export function pathAllowed(path: GraphPathTrace, documentIds?: string[]): boolean {
-  if (documentIds === undefined) return true;
+export function pathAllowed(
+  path: GraphPathTrace,
+  documentIds?: string[],
+  allowUnscoped = false,
+): boolean {
+  if (documentIds === undefined) return allowUnscoped;
   if (documentIds.length === 0) return false;
   const allowed = new Set(documentIds);
   let found = 0;
@@ -329,10 +335,14 @@ export function pathAllowed(path: GraphPathTrace, documentIds?: string[]): boole
   return found > 0;
 }
 
-export function filterPaths(paths: GraphPathTrace[], documentIds?: string[]): GraphPathTrace[] {
-  if (documentIds === undefined) return paths;
+export function filterPaths(
+  paths: GraphPathTrace[],
+  documentIds?: string[],
+  allowUnscoped = false,
+): GraphPathTrace[] {
+  if (documentIds === undefined) return allowUnscoped ? paths : [];
   if (documentIds.length === 0) return [];
-  return paths.filter((path) => pathAllowed(path, documentIds));
+  return paths.filter((path) => pathAllowed(path, documentIds, allowUnscoped));
 }
 
 /**
@@ -394,7 +404,11 @@ export async function graphRagQuery(options: GraphRagQueryOptions): Promise<Grap
 
   const executor = options.executor ?? defaultExecutor;
   const rawPaths = await executor(cypher, params);
-  const paths = filterPaths(rawPaths, options.documentIds);
+  const paths = filterPaths(
+    rawPaths,
+    options.documentIds,
+    Boolean(options.allowUnscopedDocumentIds),
+  );
   return {
     cypher,
     params,

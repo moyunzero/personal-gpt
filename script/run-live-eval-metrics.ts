@@ -73,6 +73,7 @@ async function evalRetrieval(items: GoldenItem[]) {
       workspaceId: DEFAULT_WORKSPACE_ID,
       corpus: item.corpus,
       limit: K,
+      allowUnscopedDocumentIds: true,
     });
     const latencyMs = Date.now() - t0;
     const rank = rankOf(hits, item.expectCitationSource);

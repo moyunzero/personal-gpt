@@ -52,6 +52,15 @@ describe("pathAllowed", () => {
     expect(pathAllowed(path, [])).toBe(false);
   });
 
+  it("denies when documentIds omitted without allowUnscoped", () => {
+    const path: GraphPathTrace = {
+      nodes: [{ id: "doc-1", labels: ["Document"], properties: {} }],
+      relationships: [],
+    };
+    expect(pathAllowed(path)).toBe(false);
+    expect(pathAllowed(path, undefined, true)).toBe(true);
+  });
+
   it("fail-closed when allowlist set but path has no document identity", () => {
     const path: GraphPathTrace = {
       nodes: [
@@ -110,7 +119,10 @@ describe("resolveProductName", () => {
 
 describe("graphRagQuery", () => {
   it("returns NO_PATH when question has no seed entity", async () => {
-    const result = await graphRagQuery({ question: "心理学有哪些内容？" });
+    const result = await graphRagQuery({
+      question: "心理学有哪些内容？",
+      allowUnscopedDocumentIds: true,
+    });
     expect(result.paths).toHaveLength(0);
     expect(result.summary).toMatch(/NO_PATH/);
   });
@@ -118,6 +130,7 @@ describe("graphRagQuery", () => {
   it("returns HIT for seed entity via fixture", async () => {
     const result = await graphRagQuery({
       question: "珍珠奶茶用了什么工艺？",
+      allowUnscopedDocumentIds: true,
       executor: createSeededMilkTeaFixtureExecutor(),
     });
     expect(result.paths.length).toBeGreaterThan(0);
@@ -137,6 +150,7 @@ describe("graphRagQuery", () => {
     const result = await graphRagQuery({
       question: "Project Atlas 与谁有关？",
       workspaceId: "ws-1",
+      allowUnscopedDocumentIds: true,
       resolvedEntity: catalogEntity,
       executor: createCatalogEntityFixtureExecutor(),
     });
@@ -159,6 +173,7 @@ describe("graphRagQuery", () => {
     };
     const result = await graphRagQuery({
       question: "珍珠奶茶用了什么工艺？",
+      allowUnscopedDocumentIds: true,
       resolvedEntity: seedEntity,
       executor: createSeededMilkTeaFixtureExecutor(),
     });

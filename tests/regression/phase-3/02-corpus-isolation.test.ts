@@ -54,6 +54,7 @@ describe("Phase 3 regression #2: corpus isolation forbids psychology-qa (CORPUS-
       {
         query: "奥德赛计划书给了什么建议",
         workspaceId: "ws-regression",
+        allowUnscopedDocumentIds: true,
         corpus: "user",
         limit: 5,
       },
@@ -91,6 +92,7 @@ describe("Phase 3 regression #2: corpus isolation forbids psychology-qa (CORPUS-
       {
         query: "泛化问法",
         workspaceId: "ws-regression",
+        allowUnscopedDocumentIds: true,
         // corpus omitted → default user (D-27)
         limit: 3,
       },
