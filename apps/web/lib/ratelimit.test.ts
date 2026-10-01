@@ -19,6 +19,7 @@ import {
   buildLimiter,
   checkUserRateLimit,
   getClientIp,
+  guestRateLimitShouldFailClosed,
   guestRateLimitUnavailable,
   rateLimitJsonResponse,
 } from "./ratelimit";
@@ -99,7 +100,7 @@ describe("checkUserRateLimit 429 shape", () => {
 });
 
 describe("guestRateLimitUnavailable", () => {
-  it("fail-closed when no Upstash guest limiter and no REDIS_URL", () => {
+  it("unavailable when no Upstash guest limiter and no REDIS_URL", () => {
     expect(guestRateLimitUnavailable({ hasGuestUpstashLimiter: false, hasRedisUrl: false })).toBe(
       true,
     );
@@ -113,6 +114,26 @@ describe("guestRateLimitUnavailable", () => {
 
   it("available when Upstash guest limiter exists", () => {
     expect(guestRateLimitUnavailable({ hasGuestUpstashLimiter: true, hasRedisUrl: false })).toBe(
+      false,
+    );
+  });
+});
+
+describe("guestRateLimitShouldFailClosed", () => {
+  it("fail-closed in production when unavailable", () => {
+    expect(guestRateLimitShouldFailClosed({ unavailable: true, nodeEnv: "production" })).toBe(
+      true,
+    );
+  });
+
+  it("fail-open in development when unavailable", () => {
+    expect(guestRateLimitShouldFailClosed({ unavailable: true, nodeEnv: "development" })).toBe(
+      false,
+    );
+  });
+
+  it("not fail-closed when limiter backend exists", () => {
+    expect(guestRateLimitShouldFailClosed({ unavailable: false, nodeEnv: "production" })).toBe(
       false,
     );
   });

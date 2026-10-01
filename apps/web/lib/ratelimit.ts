@@ -203,12 +203,21 @@ export async function checkKbRateLimit(
   return checkUserRateLimit(identifier, requestId, "kb");
 }
 
-/** True when guest chat has no usable limiter backend (must fail-closed). */
+/** True when guest chat has no usable limiter backend. */
 export function guestRateLimitUnavailable(opts: {
   hasGuestUpstashLimiter: boolean;
   hasRedisUrl: boolean;
 }): boolean {
   return !opts.hasGuestUpstashLimiter && !opts.hasRedisUrl;
+}
+
+/** Production: no limiter backend → fail-closed. Development: fail-open for local guest trial. */
+export function guestRateLimitShouldFailClosed(opts: {
+  unavailable: boolean;
+  nodeEnv?: string;
+}): boolean {
+  if (!opts.unavailable) return false;
+  return (opts.nodeEnv ?? process.env.NODE_ENV) === "production";
 }
 
 /** 游客试用聊天：5 req / 1h，按 IP（或传入的 guest key） */
@@ -232,14 +241,14 @@ export async function checkGuestChatRateLimit(
     : null;
   if (redisResult) return redisResult;
 
-  if (
-    guestRateLimitUnavailable({
-      hasGuestUpstashLimiter: false,
-      hasRedisUrl,
-    })
-  ) {
-    const log = logger.child({ scope: "ratelimit.guest-chat", requestId });
-    log.warn("guest ratelimit fail-closed (no Upstash guest limiter and no REDIS_URL)");
+  const unavailable = guestRateLimitUnavailable({
+    hasGuestUpstashLimiter: false,
+    hasRedisUrl,
+  });
+  const log = logger.child({ scope: "ratelimit.guest-chat", requestId });
+
+  if (guestRateLimitShouldFailClosed({ unavailable })) {
+    log.warn("guest ratelimit fail-closed (no Upstash/REDIS in production)");
     return {
       success: false,
       limit: GUEST_CHAT_LIMIT,
@@ -249,14 +258,9 @@ export async function checkGuestChatRateLimit(
     };
   }
 
-  // Redis URL set but client failed → fail-closed for guests
-  return {
-    success: false,
-    limit: GUEST_CHAT_LIMIT,
-    remaining: 0,
-    reset: Date.now() + 3_600_000,
-    retryAfterSeconds: 3600,
-  };
+  // Dev / non-production: fail-open so guest seed trial still works without Upstash.
+  log.debug("guest ratelimit fail-open (non-production, no limiter backend)");
+  return passThrough(GUEST_CHAT_LIMIT);
 }
 
 export function rateLimitJsonResponse(result: RateLimitResult): Response {

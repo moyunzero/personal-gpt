@@ -56,4 +56,25 @@ describe("canWriteDocument", () => {
     const ctx: DocumentAccessContext = { userId: "viewer-1", memberRole: "viewer" };
     expect(canWriteDocument(privateDoc, ctx)).toBe(false);
   });
+
+  it("denies editor write on private docs they cannot read", () => {
+    const privateDoc = doc({ ownerId: "alice", visibility: "private" });
+    const ctx: DocumentAccessContext = { userId: "editor-1", memberRole: "editor" };
+    expect(canReadDocument(privateDoc, ctx)).toBe(false);
+    expect(canWriteDocument(privateDoc, ctx)).toBe(false);
+  });
+
+  it("allows workspace owner role on private docs of others (owner can manage)", () => {
+    const privateDoc = doc({ ownerId: "alice", visibility: "private" });
+    const ctx: DocumentAccessContext = { userId: "ws-owner", memberRole: "owner" };
+    // owner role still cannot read private of others → cannot write either
+    expect(canReadDocument(privateDoc, ctx)).toBe(false);
+    expect(canWriteDocument(privateDoc, ctx)).toBe(false);
+  });
+
+  it("allows owner of private doc to write", () => {
+    const privateDoc = doc({ ownerId: "alice", visibility: "private" });
+    const ctx: DocumentAccessContext = { userId: "alice", memberRole: "viewer" };
+    expect(canWriteDocument(privateDoc, ctx)).toBe(true);
+  });
 });
