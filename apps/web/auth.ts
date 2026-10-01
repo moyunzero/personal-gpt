@@ -42,6 +42,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: TypeORMAdapter({
     type: "postgres",
     url: authEnv("DATABASE_URL") || "postgresql://ci:ci@localhost:5432/ci",
+    // Schema comes from migrations. Dev synchronize drops extra columns
+    // such as users.active_workspace_id and breaks workspace resolution.
+    synchronize: false,
   }),
   providers: [
     Nodemailer({
