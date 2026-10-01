@@ -22,39 +22,15 @@ vi.mock("../routing/intent-plan", () => ({
   resetNeo4jAvailabilityCacheForTests: vi.fn(),
 }));
 
-vi.mock("../graph/build-graph", () => ({
-  buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
-  buildSupervisorGraph: (...args: unknown[]) => buildSupervisorGraphMock(...args),
-  buildExecutionGraph: (...args: unknown[]) => buildExecutionGraphMock(...args),
-  isRetrieverSynthesisPlan: (plan: {
-    specialists: string[];
-    retrieverTools: string[];
-    primary: string;
-  }) =>
-    plan.specialists[0] === "retriever" &&
-    plan.retrieverTools.length > 0 &&
-    (plan.primary === "kb_doc" ||
-      plan.primary === "graph_relation" ||
-      plan.primary === "kb_graph_hybrid"),
-  resolveExecutionMode: (plan: { primary: string; specialists: string[]; ambiguous?: boolean }) => {
-    if (plan.primary === "chitchat") return "short";
-    if (plan.ambiguous) return "supervisor";
-    if (plan.specialists.length >= 2) return "sequential";
-    if (plan.specialists.length === 1) return "single_specialist";
-    return "supervisor";
-  },
-  getAgentRunConfig: (threadId: string) => ({
-    recursionLimit: 40,
-    configurable: { thread_id: threadId },
-  }),
-  resolveAgentRoute: (text: string) => (/你好|天气/.test(text) ? "short" : "supervisor"),
-  lastUserText: (messages: { content?: unknown }[]) => {
-    const last = messages?.at(-1);
-    return typeof last?.content === "string" ? last.content : "";
-  },
-  shouldUseSequentialPipeline: (required: unknown[]) =>
-    Array.isArray(required) && required.length >= 2,
-}));
+vi.mock("../graph/build-graph", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../graph/build-graph")>();
+  return {
+    ...actual,
+    buildAgentGraph: (...args: unknown[]) => buildAgentGraphMock(...args),
+    buildSupervisorGraph: (...args: unknown[]) => buildSupervisorGraphMock(...args),
+    buildExecutionGraph: (...args: unknown[]) => buildExecutionGraphMock(...args),
+  };
+});
 
 vi.mock("@ai-sdk/langchain", () => ({
   toBaseMessages: (...args: unknown[]) => toBaseMessagesMock(...args),
@@ -71,13 +47,21 @@ vi.mock("ai", async (importOriginal) => {
   };
 });
 
-vi.mock("../tools/kb-search.tool", () => ({
-  invokeKbSearch: (...args: unknown[]) => invokeKbSearchMock(...args),
-}));
+vi.mock("../tools/kb-search.tool", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tools/kb-search.tool")>();
+  return {
+    ...actual,
+    invokeKbSearch: (...args: unknown[]) => invokeKbSearchMock(...args),
+  };
+});
 
-vi.mock("../tools/graph-search.tool", () => ({
-  invokeGraphSearch: (...args: unknown[]) => invokeGraphSearchMock(...args),
-}));
+vi.mock("../tools/graph-search.tool", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tools/graph-search.tool")>();
+  return {
+    ...actual,
+    invokeGraphSearch: (...args: unknown[]) => invokeGraphSearchMock(...args),
+  };
+});
 
 const GRAPH_PLAN = {
   primary: "graph_relation" as const,
@@ -184,20 +168,21 @@ describe("Agent SSE stream (AGENT-04)", () => {
 
   it("rejects unsafe thread_id and falls back to UUID when blank", async () => {
     const { parseAgentChatBody } = await import("./agent.service");
+    const userMsg = { role: "user" as const, parts: [{ type: "text", text: "hi" }] };
     expect(() =>
       parseAgentChatBody({
-        messages: [{ role: "user" }],
+        messages: [userMsg],
         thread_id: "../etc/passwd",
       }),
     ).toThrow(/thread_id/i);
     expect(() =>
       parseAgentChatBody({
-        messages: [{ role: "user" }],
+        messages: [userMsg],
         thread_id: "a/b",
       }),
     ).toThrow(/thread_id/i);
     const ok = parseAgentChatBody({
-      messages: [{ role: "user" }],
+      messages: [userMsg],
       thread_id: "  ",
     });
     expect(ok.threadId).toMatch(

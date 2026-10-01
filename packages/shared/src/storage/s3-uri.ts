@@ -41,12 +41,19 @@ function getS3Client(): S3Client {
 export async function materializeS3UriToTempFile(uri: string): Promise<string> {
   const { bucket, key } = parseS3Uri(uri);
   const client = getS3Client();
+  const maxBytes = getEnv().UPLOAD_MAX_BYTES;
   const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  if (typeof response.ContentLength === "number" && response.ContentLength > maxBytes) {
+    throw new Error(`S3 object exceeds UPLOAD_MAX_BYTES (${maxBytes}): ${uri}`);
+  }
   const body = response.Body;
   if (!body) {
     throw new Error(`Empty S3 object: ${uri}`);
   }
   const bytes = await body.transformToByteArray();
+  if (bytes.byteLength > maxBytes) {
+    throw new Error(`S3 object exceeds UPLOAD_MAX_BYTES (${maxBytes}): ${uri}`);
+  }
   const ext = path.extname(key) || ".bin";
   const tempPath = path.join(os.tmpdir(), `pgpt-ingest-${randomUUID()}${ext}`);
   await fs.writeFile(tempPath, Buffer.from(bytes));

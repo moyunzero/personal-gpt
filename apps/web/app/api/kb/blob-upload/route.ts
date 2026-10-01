@@ -1,6 +1,7 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 
+import { requireSession } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 import { runKbGuards } from "@/lib/kb/route-guards";
 import { isVercelBlobConfigured } from "@/lib/storage/vercel-blob";
@@ -8,9 +9,13 @@ import { isVercelBlobConfigured } from "@/lib/storage/vercel-blob";
 /**
  * POST /api/kb/blob-upload — 为浏览器直传 Vercel Blob 签发 client token。
  * 绕过 Serverless 4.5MB 请求体限制；实际文件不经过本函数。
+ * 与其它 KB 路由一致：必须登录 session（禁止仅靠 KB_ADMIN_TOKEN 铸 token）。
  */
 export async function POST(request: Request) {
   return runKbGuards(request, async () => {
+    const authResult = await requireSession();
+    if (authResult.error) return authResult.error;
+
     if (!isVercelBlobConfigured()) {
       return NextResponse.json({ error: "blob_unavailable" }, { status: 503 });
     }

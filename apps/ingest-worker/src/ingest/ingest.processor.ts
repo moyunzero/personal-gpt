@@ -16,7 +16,9 @@ import { IngestJobEntity } from "../../../web/lib/db/entities/ingest-job.entity"
 import { deleteDocument } from "./pipeline/delete";
 import { embedChunks } from "./pipeline/embed";
 import {
+  purgeGraphThenCatalog,
   shouldCleanupVectorsAfterFailure,
+  shouldFailJobOnGraphExtractError,
   shouldPurgeGraphBeforeReextract,
 } from "./ingest-cleanup-policy";
 import { extractAndUpsertGraph } from "./pipeline/graph-extract";
@@ -128,15 +130,21 @@ export class IngestProcessor extends WorkerHost {
       await this.updateIngestJob(ingestJob?.id, { progress: 90 });
 
       if (isGraphIngestEnabled()) {
+        let graphWasPurged = false;
         try {
           if (
             shouldPurgeGraphBeforeReextract({
               preserveExistingVectors: job.data.preserveExistingVectors,
             })
           ) {
-            await deleteGraphForDocument(workspaceId, documentId);
             const store = createEntityCatalogStore(this.dataSource);
-            await deleteCatalogForDocument(workspaceId, documentId, store);
+            await purgeGraphThenCatalog({
+              deleteGraph: () => deleteGraphForDocument(workspaceId, documentId),
+              deleteCatalog: () => deleteCatalogForDocument(workspaceId, documentId, store),
+              onGraphDeleted: () => {
+                graphWasPurged = true;
+              },
+            });
           }
           await traceIngestStep("graph-extract", traceCtx, () =>
             extractAndUpsertGraph(
@@ -146,6 +154,14 @@ export class IngestProcessor extends WorkerHost {
           );
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
+          if (
+            shouldFailJobOnGraphExtractError({
+              preserveExistingVectors: job.data.preserveExistingVectors,
+              graphWasPurged,
+            })
+          ) {
+            throw error instanceof Error ? error : new Error(message);
+          }
           this.logger.warn(
             `Skip graph-extract for ${documentId} after failure; vector ingest stays ready: ${message}`,
           );

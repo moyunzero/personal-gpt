@@ -18,3 +18,29 @@ export function shouldPurgeGraphBeforeReextract(input: {
 }): boolean {
   return Boolean(input.preserveExistingVectors);
 }
+
+/**
+ * After purge-before-reextract, graph extract failure must fail the job —
+ * otherwise we mark ready with an empty graph (data loss).
+ * First-time ingest may keep vectors ready when graph extract fails.
+ */
+export function shouldFailJobOnGraphExtractError(input: {
+  preserveExistingVectors?: boolean;
+  graphWasPurged: boolean;
+}): boolean {
+  return Boolean(input.preserveExistingVectors && input.graphWasPurged);
+}
+
+/**
+ * Reindex purge: Neo4j first, then PG catalog.
+ * Invokes onGraphDeleted as soon as Neo4j succeeds so catalog failures still fail-closed.
+ */
+export async function purgeGraphThenCatalog(ops: {
+  deleteGraph: () => Promise<unknown>;
+  deleteCatalog: () => Promise<unknown>;
+  onGraphDeleted: () => void;
+}): Promise<void> {
+  await ops.deleteGraph();
+  ops.onGraphDeleted();
+  await ops.deleteCatalog();
+}

@@ -16,8 +16,9 @@ import { UserEntity } from "@/lib/db/entities/user.entity";
 import { WorkspaceEntity } from "@/lib/db/entities/workspace.entity";
 import { getDataSource } from "@/lib/db/get-data-source";
 
-import { canReadDocument, type DocumentAccessContext } from "./document-acl";
+import { type DocumentAccessContext } from "./document-acl";
 import { assertRestrictedAllowlist } from "./restricted-visibility";
+import { documentVisibilitySql } from "@/lib/kb/list-documents-acl";
 
 export type WorkspaceSummary = {
   id: string;
@@ -111,8 +112,14 @@ export async function resolveAllowedDocumentIds(
   if (!ctx) return [];
 
   const ds = await getDataSource();
-  const docs = await ds.getRepository(DocEntity).find({ where: { workspaceId } });
-  return docs.filter((doc) => canReadDocument(doc, ctx)).map((doc) => doc.id);
+  const visibility = documentVisibilitySql(ctx);
+  const docs = await ds
+    .getRepository(DocEntity)
+    .createQueryBuilder("doc")
+    .where("doc.workspace_id = :workspaceId", { workspaceId })
+    .andWhere(visibility.clause, visibility.params)
+    .getMany();
+  return docs.map((doc) => doc.id);
 }
 
 export async function createWorkspaceInvite(input: {
@@ -167,7 +174,7 @@ export async function acceptWorkspaceInvite(
   return { workspaceId: invite.workspaceId };
 }
 
-/** Mirror document visibility into entity_acl rows (D-50). */
+/** Mirror document visibility into entity_acl rows (D-50). Sync-only; retrieval does not read entity_acl. */
 export async function syncEntityAclForDocument(
   dataSource: DataSource,
   document: DocumentEntity,

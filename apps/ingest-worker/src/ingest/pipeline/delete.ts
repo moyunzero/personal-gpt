@@ -3,12 +3,15 @@
  */
 import type { Corpus } from "@personal-gpt/shared";
 import {
+  createAstraRelayVectorStore,
+  createAstraRedisRelayVectorStore,
   deleteCatalogForDocument,
   deleteGraphForDocument,
+  isAstraRelayConfigured,
   isEsConfigured,
+  shouldUseAstraRedisRelay,
 } from "@personal-gpt/shared";
 import { shouldWriteAstra, shouldWriteMilvus } from "@personal-gpt/shared/stores/vector-store";
-import { createAstraRelayVectorStore, isAstraRelayConfigured } from "@personal-gpt/shared";
 import { createAstraVectorStore } from "@personal-gpt/shared/stores/vector-store.astra";
 import { createMilvusVectorStore } from "@personal-gpt/shared/stores/vector-store.milvus";
 import type { DataSource } from "typeorm";
@@ -20,6 +23,16 @@ import { deleteDocumentFromEs } from "./es-upsert";
 export type DeleteDocumentOptions = {
   dataSource?: DataSource;
 };
+
+function createAstraStoreForDelete(corpus: Corpus) {
+  if (!isAstraRelayConfigured()) {
+    return createAstraVectorStore({ corpus });
+  }
+  if (shouldUseAstraRedisRelay()) {
+    return createAstraRedisRelayVectorStore({ corpus });
+  }
+  return createAstraRelayVectorStore({ corpus });
+}
 
 export async function deleteDocument(
   workspaceId: string,
@@ -49,10 +62,7 @@ export async function deleteDocument(
 
   if (shouldWriteAstra()) {
     tasks.push(
-      (isAstraRelayConfigured()
-        ? createAstraRelayVectorStore({ corpus })
-        : createAstraVectorStore({ corpus })
-      )
+      createAstraStoreForDelete(corpus)
         .deleteByDocument(workspaceId, documentId)
         .catch((err) => {
           errors.push(err instanceof Error ? err : new Error(String(err)));

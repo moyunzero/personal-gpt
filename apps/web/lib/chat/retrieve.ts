@@ -1,6 +1,7 @@
 import { generateRagHelperText } from "@personal-gpt/shared/ai/rag-helper";
 import { DEFAULT_WORKSPACE_ID } from "@personal-gpt/shared/constants/workspace";
 import {
+  correctiveBm25MinScore,
   hybridSearch,
   type Corpus,
   type HybridSearchDeps,
@@ -59,8 +60,23 @@ function mergeHits(existing: RetrievedChunk[], incoming: RetrievedChunk[]): Retr
   return [...byKey.values()].sort((a, b) => b.similarity - a.similarity);
 }
 
+/** Strong BM25-only hit may pass when cosine is weak (aligned with Corrective gate). */
+function passesBm25Gate(hit: RetrievedChunk): boolean {
+  return (
+    typeof hit.bm25Score === "number" &&
+    Number.isFinite(hit.bm25Score) &&
+    hit.bm25Score >= correctiveBm25MinScore() &&
+    hit.text.trim().length > 0
+  );
+}
+
+function passesHitGate(hit: RetrievedChunk): boolean {
+  return hit.similarity >= TOP1_SIMILARITY_THRESHOLD || passesBm25Gate(hit);
+}
+
 function passesTop1PreCheck(hits: RetrievedChunk[]): boolean {
-  return hits.length > 0 && hits[0]!.similarity >= TOP1_SIMILARITY_THRESHOLD;
+  if (hits.length === 0) return false;
+  return hits.some(passesHitGate);
 }
 
 async function buildSearchQueries(query: string): Promise<string[]> {
@@ -250,9 +266,7 @@ export async function getRelevantContext(
           return { kind: "no-docs" } as const;
         }
 
-        const numberedHits = useNamedDocument
-          ? candidateHits
-          : candidateHits.filter((hit) => hit.similarity >= TOP1_SIMILARITY_THRESHOLD);
+        const numberedHits = useNamedDocument ? candidateHits : candidateHits.filter(passesHitGate);
         const relevantDocs = mapHitsToDocs(numberedHits);
         const blocks = formatContextBlocks(relevantDocs);
         const citations = mapDocsToCitations(relevantDocs);

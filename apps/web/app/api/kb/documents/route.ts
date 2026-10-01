@@ -51,9 +51,11 @@ export async function GET(req: Request) {
 
     try {
       const { searchParams } = new URL(req.url);
+      const pageRaw = Number(searchParams.get("page") ?? 1);
+      const limitRaw = Number(searchParams.get("limit") ?? 20);
       const result = await listDocuments(ctx, {
-        page: Number(searchParams.get("page") ?? 1),
-        limit: Number(searchParams.get("limit") ?? 20),
+        page: Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1,
+        limit: Number.isFinite(limitRaw) && limitRaw >= 1 ? Math.floor(limitRaw) : 20,
         category: searchParams.get("category") ?? undefined,
         tags: parseTagsParam(searchParams.get("tags")),
         status: searchParams.get("status") ?? undefined,

@@ -7,8 +7,8 @@
     "start": "DOTENV_CONFIG_PATH=../../.env node -r dotenv/config dist/main.js",
     "start:dev": "yarn workspace @personal-gpt/shared build && DOTENV_CONFIG_PATH=../../.env nest start --watch",
     "type-check": "tsc --noEmit",
-    "test": "vitest run --config ../../vitest.config.ts",
-    "validate": "yarn type-check && yarn build"
+    "test": "yarn --cwd ../.. vitest run apps/agent-service",
+    "validate": "yarn type-check && yarn test && yarn build"
   },
   "dependencies": {
     "@ai-sdk/langchain": "2.0.152",
