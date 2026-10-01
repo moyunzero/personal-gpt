@@ -37,6 +37,7 @@ import {
   uploadToVercelBlob,
 } from "@/lib/storage/vercel-blob";
 
+import { documentVisibilitySql } from "./list-documents-acl";
 import { getIngestQueue } from "./queue";
 import { assertRemoteUploadWithinLimits } from "./remote-upload-assert";
 
@@ -381,6 +382,8 @@ export async function listDocuments(ctx: DocumentsContext, params: ListDocuments
   const qb = docRepo.createQueryBuilder("doc").where("doc.workspace_id = :workspaceId", {
     workspaceId: ctx.workspaceId,
   });
+  const visibility = documentVisibilitySql(accessCtx);
+  qb.andWhere(visibility.clause, visibility.params);
 
   if (params.category) {
     qb.andWhere("doc.category = :category", { category: params.category });
@@ -399,11 +402,11 @@ export async function listDocuments(ctx: DocumentsContext, params: ListDocuments
 
   qb.orderBy("doc.created_at", "DESC").skip(skip).take(limit);
 
-  const [allDocs, totalBeforeAcl] = await qb.getManyAndCount();
-  const documents = allDocs.filter((doc) => canReadDocument(doc, accessCtx));
-  const total = documents.length < allDocs.length ? documents.length : totalBeforeAcl;
+  const [documents, total] = await qb.getManyAndCount();
+  // Defense in depth — SQL filter should already match canReadDocument.
+  const visible = documents.filter((doc) => canReadDocument(doc, accessCtx));
 
-  const docIds = documents.map((d) => d.id);
+  const docIds = visible.map((d) => d.id);
   const jobs =
     docIds.length > 0
       ? await jobRepo
@@ -421,7 +424,7 @@ export async function listDocuments(ctx: DocumentsContext, params: ListDocuments
   }
 
   return {
-    items: documents.map((doc) => serializeDocumentRow(doc, latestJobByDoc.get(doc.id) ?? null)),
+    items: visible.map((doc) => serializeDocumentRow(doc, latestJobByDoc.get(doc.id) ?? null)),
     page,
     limit,
     total,

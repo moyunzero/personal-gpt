@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createMilvusVectorStore, mapMilvusHit, type MilvusClientLike } from "./vector-store.milvus";
+import {
+  createMilvusVectorStore,
+  mapMilvusHit,
+  type MilvusClientLike,
+} from "./vector-store.milvus";
 
 describe("mapMilvusHit", () => {
   it("maps finite page from hit.page", () => {

@@ -121,9 +121,7 @@ describe("guestRateLimitUnavailable", () => {
 
 describe("guestRateLimitShouldFailClosed", () => {
   it("fail-closed in production when unavailable", () => {
-    expect(guestRateLimitShouldFailClosed({ unavailable: true, nodeEnv: "production" })).toBe(
-      true,
-    );
+    expect(guestRateLimitShouldFailClosed({ unavailable: true, nodeEnv: "production" })).toBe(true);
   });
 
   it("fail-open in development when unavailable", () => {

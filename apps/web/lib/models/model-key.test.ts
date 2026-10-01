@@ -1,11 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  openModelKey,
-  resetModelKeyCacheForTests,
-  sealModelKey,
-  secretKey,
-} from "./model-key";
+import { openModelKey, resetModelKeyCacheForTests, sealModelKey, secretKey } from "./model-key";
 
 const SECRET_KEYS = ["WORKSPACE_MODEL_SECRET", "AUTH_SECRET", "NEXTAUTH_SECRET"] as const;
 

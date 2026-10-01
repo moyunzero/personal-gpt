@@ -190,12 +190,6 @@ export const SharedEnvSchema = z
      */
     NEXT_PUBLIC_AGENT_SERVICE_URL: z.string().url().optional(),
 
-    /** v0.1 无 workspaceId 的 Astra chunk 回退检索；默认关闭 */
-    ASTRA_LEGACY_FALLBACK: z
-      .enum(["true", "false"])
-      .optional()
-      .transform((v) => v === "true"),
-
     /** 单文件上传上限，默认 20MB（D-13） */
     UPLOAD_MAX_BYTES: z.coerce
       .number()
@@ -230,7 +224,10 @@ export const SharedEnvSchema = z
     EMAIL_SERVER: z.string().min(1).optional(),
     EMAIL_FROM: z.string().email().optional(),
 
-    /** Grafana admin (compose bundled; rotate in production) */
+    /**
+     * Optional Grafana compose credentials (local observability stack only).
+     * Not required for app runtime; rotate if exposed beyond localhost.
+     */
     GRAFANA_ADMIN_USER: z.string().min(1).optional(),
     GRAFANA_ADMIN_PASSWORD: z.string().min(1).optional(),
   })

@@ -152,7 +152,9 @@ describe("tapAgentStreamForPersistence", () => {
         pullCount += 1;
         if (pullCount === 1) {
           controller.enqueue(
-            new TextEncoder().encode(`data: ${JSON.stringify({ type: "text-delta", delta: "partial" })}\n\n`),
+            new TextEncoder().encode(
+              `data: ${JSON.stringify({ type: "text-delta", delta: "partial" })}\n\n`,
+            ),
           );
           return;
         }

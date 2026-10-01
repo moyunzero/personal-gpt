@@ -25,7 +25,11 @@ export async function assertKbAuth(req: Request): Promise<NextResponse | null> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const provided = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ?? "";
+  const provided =
+    req.headers
+      .get("authorization")
+      ?.replace(/^Bearer\s+/i, "")
+      .trim() ?? "";
   if (!provided || !safeTokenEqual(provided, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
