@@ -8,3 +8,13 @@ export function shouldCleanupVectorsAfterFailure(input: {
   if (input.preserveExistingVectors) return false;
   return true;
 }
+
+/**
+ * Reindex: drop prior graph/catalog before re-extract so stale entities do not linger
+ * after a successful upsert (vectors are overwritten by documentId; graph merges otherwise).
+ */
+export function shouldPurgeGraphBeforeReextract(input: {
+  preserveExistingVectors?: boolean;
+}): boolean {
+  return Boolean(input.preserveExistingVectors);
+}

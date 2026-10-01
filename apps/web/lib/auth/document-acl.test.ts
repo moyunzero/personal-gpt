@@ -64,10 +64,10 @@ describe("canWriteDocument", () => {
     expect(canWriteDocument(privateDoc, ctx)).toBe(false);
   });
 
-  it("allows workspace owner role on private docs of others (owner can manage)", () => {
+  it("denies workspace owner write on private docs of others (read gate)", () => {
     const privateDoc = doc({ ownerId: "alice", visibility: "private" });
     const ctx: DocumentAccessContext = { userId: "ws-owner", memberRole: "owner" };
-    // owner role still cannot read private of others → cannot write either
+    // workspace owner role still cannot read private of others → cannot write either
     expect(canReadDocument(privateDoc, ctx)).toBe(false);
     expect(canWriteDocument(privateDoc, ctx)).toBe(false);
   });

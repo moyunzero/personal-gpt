@@ -187,7 +187,6 @@ export async function POST(req: Request) {
         // 游客强制种子库，避免扫私人知识库
         const corpus = isGuest ? "seed" : parseCorpus(body.corpus);
         const retrievalDocIds = guestRetrievalDocumentIds({
-          isGuest,
           corpus,
           allowedDocumentIds: retrievalCtx.allowedDocumentIds,
         });
