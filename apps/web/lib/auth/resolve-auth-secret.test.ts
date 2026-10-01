@@ -14,10 +14,11 @@ describe("resolveAuthSecret", () => {
   const previous = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
 
   afterEach(() => {
+    const env = process.env as Record<string, string | undefined>;
     for (const key of ENV_KEYS) {
       const value = previous[key];
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
+      if (value === undefined) delete env[key];
+      else env[key] = value;
     }
   });
 
