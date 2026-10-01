@@ -36,8 +36,8 @@ export function shouldFailJobOnGraphExtractError(input: {
  * Invokes onGraphDeleted as soon as Neo4j succeeds so catalog failures still fail-closed.
  */
 export async function purgeGraphThenCatalog(ops: {
-  deleteGraph: () => Promise<void>;
-  deleteCatalog: () => Promise<void>;
+  deleteGraph: () => Promise<unknown>;
+  deleteCatalog: () => Promise<unknown>;
   onGraphDeleted: () => void;
 }): Promise<void> {
   await ops.deleteGraph();
