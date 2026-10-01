@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 
 import WorkspaceSwitcher from "@/components/workspace-switcher";
+import { checkResOk } from "@/lib/http/check-res-ok";
 import KbDeleteConfirm from "./KbDeleteConfirm";
 import type { ChatMode } from "./ModeSegmentedControl";
 
@@ -43,22 +44,20 @@ export default function ChatSidebar({
   const [pendingDelete, setPendingDelete] = useState<ChatSessionRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const res = await fetch("/api/chat/sessions");
-      if (!res.ok) return;
-      const data = (await res.json()) as { sessions?: ChatSessionRow[] };
-      if (data.sessions) setSessions(data.sessions);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   useEffect(() => {
-    // Mount / revision: refetch session list from API (external store).
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional fetch→setState
-    void refresh();
-  }, [refresh, sessionsRevision]);
+    const ac = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch("/api/chat/sessions", { signal: ac.signal });
+        if (!checkResOk(res)) return;
+        const data = (await res.json()) as { sessions?: ChatSessionRow[] };
+        if (!ac.signal.aborted && data.sessions) setSessions(data.sessions);
+      } catch {
+        /* abort / network — ignore */
+      }
+    })();
+    return () => ac.abort();
+  }, [sessionsRevision]);
 
   const askDelete = (session: ChatSessionRow, e: MouseEvent) => {
     e.stopPropagation();
@@ -75,7 +74,7 @@ export default function ChatSidebar({
       const res = await fetch(`/api/chat/sessions?id=${encodeURIComponent(session.id)}`, {
         method: "DELETE",
       });
-      if (!res.ok) return;
+      if (!checkResOk(res)) return;
       setSessions((prev) => prev.filter((s) => s.id !== session.id));
       setPendingDelete(null);
       onDeleteSession?.(session);
