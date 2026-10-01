@@ -117,6 +117,7 @@ describe("Phase 1 regression #4: delete document → no citation on same questio
     expect(deleteByDocumentIdMock).toHaveBeenCalled();
 
     const result = await getRelevantContext(query, "reg-4", undefined, {
+      allowUnscopedDocumentIds: true,
       hybridDeps: hybridDeps(),
     });
     expect(result.kind).toBe("no-docs");

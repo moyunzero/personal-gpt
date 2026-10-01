@@ -42,7 +42,8 @@ export async function probeKbRelevance(
       limit: 1,
       similarityThreshold: 0,
       filter: routePrecheckFilter(corpus),
-      ...(documentIds !== undefined ? { documentIds } : {}),
+      // Fail-closed: omit documentIds → empty. Callers must pass ACL list or [].
+      documentIds: documentIds ?? [],
     });
 
     const top = hits[0];

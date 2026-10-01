@@ -54,6 +54,7 @@ describe("Phase 3 regression #1: hybrid proper-noun retrieval (RAG-06)", () => {
       {
         query: "奥德赛计划书给了什么建议",
         workspaceId: "ws-regression",
+        allowUnscopedDocumentIds: true,
         corpus: "user",
         limit: 5,
       },

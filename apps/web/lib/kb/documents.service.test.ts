@@ -87,6 +87,7 @@ import { getDataSource } from "@/lib/db/get-data-source";
 import {
   listDocuments,
   reindexDocument,
+  ReindexBusyError,
   serializeDocumentRow,
   updateDocumentMetadata,
   uploadDocument,
@@ -95,6 +96,7 @@ import {
   validateUploadFile,
 } from "./documents.service";
 
+const reindexCasExecuteMock = vi.fn().mockResolvedValue({ affected: 1 });
 const ALLOWED = [
   "application/pdf",
   "text/markdown",
@@ -230,7 +232,7 @@ describe("uploadDocument enqueue contract", () => {
         documentId: document.id,
         mimeType: "application/pdf",
       }),
-      { jobId: job?.id },
+      expect.objectContaining({ jobId: document.id }),
     );
     expect(jobUpdateMock).toHaveBeenCalledWith({ id: job?.id }, { bullJobId: "bull-123" });
   });
@@ -251,7 +253,7 @@ describe("uploadDocument enqueue contract", () => {
         category: "docs",
         tags: ["ai", "rag"],
       }),
-      { jobId: expect.any(String) },
+      expect.objectContaining({ jobId: expect.any(String) }),
     );
   });
 
@@ -276,7 +278,7 @@ describe("uploadDocument enqueue contract", () => {
         filePath: "https://abc123.blob.vercel-storage.com/uploads/x.pdf",
         mimeType: "application/pdf",
       }),
-      { jobId: job?.id },
+      expect.objectContaining({ jobId: document.id }),
     );
   });
 
@@ -321,6 +323,17 @@ describe("reindexDocument (INGEST-05)", () => {
     jobInsertMock.mockResolvedValue(undefined);
     queueAddMock.mockResolvedValue({ id: "bull-reindex-456" });
     jobUpdateMock.mockResolvedValue(undefined);
+    reindexCasExecuteMock.mockResolvedValue({ affected: 1 });
+
+    const createQueryBuilderMock = vi.fn(() => ({
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({
+            execute: reindexCasExecuteMock,
+          })),
+        })),
+      })),
+    }));
 
     vi.mocked(getDataSource).mockResolvedValue({
       getRepository: (entity: unknown) => {
@@ -328,6 +341,7 @@ describe("reindexDocument (INGEST-05)", () => {
           return {
             findOne: docFindOneMock,
             update: docUpdateMock,
+            createQueryBuilder: createQueryBuilderMock,
           };
         }
         if (entity === IngestJobEntity) {
@@ -345,10 +359,6 @@ describe("reindexDocument (INGEST-05)", () => {
     const result = await reindexDocument("doc-reindex", TEST_CTX);
 
     expect(result).not.toBeNull();
-    expect(docUpdateMock).toHaveBeenCalledWith(
-      { id: "doc-reindex", workspaceId },
-      { status: "processing", chunkCount: 0 },
-    );
     expect(result?.document.status).toBe("processing");
     expect(result?.document.chunkCount).toBe(0);
     expect(queueAddMock).toHaveBeenCalledWith(
@@ -358,7 +368,7 @@ describe("reindexDocument (INGEST-05)", () => {
         filePath: "/tmp/uploads/reindex.pdf",
         mimeType: "application/pdf",
       }),
-      { jobId: result?.job.id },
+      expect.objectContaining({ jobId: "doc-reindex" }),
     );
     expect(result?.job.id).toBeTruthy();
     expect(jobInsertMock).toHaveBeenCalledWith(
@@ -373,6 +383,12 @@ describe("reindexDocument (INGEST-05)", () => {
     );
   });
 
+  it("throws ReindexBusyError when CAS finds document already processing", async () => {
+    reindexCasExecuteMock.mockResolvedValueOnce({ affected: 0 });
+    await expect(reindexDocument("doc-reindex", TEST_CTX)).rejects.toBeInstanceOf(ReindexBusyError);
+    expect(queueAddMock).not.toHaveBeenCalled();
+  });
+
   it("returns null when document is missing filePath", async () => {
     docFindOneMock.mockResolvedValue({
       id: "doc-no-path",
@@ -384,7 +400,6 @@ describe("reindexDocument (INGEST-05)", () => {
     const result = await reindexDocument("doc-no-path", TEST_CTX);
 
     expect(result).toBeNull();
-    expect(docUpdateMock).not.toHaveBeenCalled();
     expect(queueAddMock).not.toHaveBeenCalled();
   });
 });

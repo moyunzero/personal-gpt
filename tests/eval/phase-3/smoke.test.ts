@@ -80,6 +80,7 @@ describe("Phase 3 GOLDEN-01 CI smoke (deterministic)", () => {
         {
           query: item.query,
           workspaceId: "ws-golden-smoke",
+          allowUnscopedDocumentIds: true,
           corpus: item.corpus,
           limit: 3,
         },

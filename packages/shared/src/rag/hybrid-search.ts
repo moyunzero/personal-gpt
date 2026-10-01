@@ -13,8 +13,10 @@ export type HybridSearchParams = {
   /** Vector embed text; defaults to `query`. HyDE uses hypothetical answer here only (WR-X-01). */
   embedQuery?: string;
   workspaceId: string;
-  /** Security trim: only these documentIds (D-07, D-17). */
+  /** Security trim: only these documentIds (D-07, D-17). Omit = deny unless allowUnscopedDocumentIds. */
   documentIds?: string[];
+  /** Trusted scripts/eval only: allow workspace-wide search when documentIds omitted. */
+  allowUnscopedDocumentIds?: boolean;
   /** Default "user" (D-27) — seed must be explicit */
   corpus?: Corpus;
   limit?: number;
@@ -48,8 +50,12 @@ function isRerankerEnabled(): boolean {
   return process.env.ENABLE_RERANKER !== "false";
 }
 
-function filterByDocumentIds(hits: RetrievedChunk[], documentIds?: string[]): RetrievedChunk[] {
-  if (documentIds === undefined) return hits;
+function filterByDocumentIds(
+  hits: RetrievedChunk[],
+  documentIds: string[] | undefined,
+  allowUnscoped: boolean,
+): RetrievedChunk[] {
+  if (documentIds === undefined) return allowUnscoped ? hits : [];
   if (documentIds.length === 0) return [];
   const allowed = new Set(documentIds);
   return hits.filter((hit) => hit.documentId && allowed.has(hit.documentId));
@@ -59,6 +65,10 @@ async function hybridSearchOnce(
   params: HybridSearchParams,
   deps: HybridSearchDeps,
 ): Promise<RetrievedChunk[]> {
+  const allowUnscoped = Boolean(params.allowUnscopedDocumentIds);
+  if (params.documentIds === undefined && !allowUnscoped) {
+    return [];
+  }
   if (params.documentIds !== undefined && params.documentIds.length === 0) {
     return [];
   }
@@ -83,6 +93,7 @@ async function hybridSearchOnce(
     vector,
     limit: candidateLimit,
     documentIds: params.documentIds,
+    allowUnscopedDocumentIds: allowUnscoped,
     ...(params.page != null ? { filter: { page: { $eq: params.page } } } : {}),
   });
 
@@ -92,6 +103,7 @@ async function hybridSearchOnce(
     corpus,
     limit: candidateLimit,
     documentIds: params.documentIds,
+    allowUnscopedDocumentIds: allowUnscoped,
     ...(params.page != null ? { page: params.page } : {}),
   }).catch((err: unknown) => {
     logWarn("es unavailable; vector-only", { err });
@@ -101,7 +113,7 @@ async function hybridSearchOnce(
   const [vectorHits, esHits] = await Promise.all([vectorPromise, esPromise]);
 
   let fused = reciprocalRankFusion([esHits, vectorHits]);
-  fused = filterByDocumentIds(fused, params.documentIds);
+  fused = filterByDocumentIds(fused, params.documentIds, allowUnscoped);
   if (params.page != null) {
     fused = fused.filter((hit) => hit.page === params.page);
   }

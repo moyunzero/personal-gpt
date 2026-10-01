@@ -60,8 +60,15 @@ function createInMemoryVectorStore(): VectorStore {
       if (!params.workspaceId?.trim()) {
         throw new Error("VectorStore.search requires workspaceId");
       }
+      if (params.documentIds === undefined && !params.allowUnscopedDocumentIds) {
+        return [];
+      }
+      if (params.documentIds !== undefined && params.documentIds.length === 0) {
+        return [];
+      }
       return rows
         .filter((r) => r.workspaceId === params.workspaceId)
+        .filter((r) => !params.documentIds?.length || params.documentIds.includes(r.documentId))
         .map((r) => ({
           text: r.text,
           similarity: 0.99,
@@ -82,11 +89,13 @@ describe("Phase 3 regression #5: workspace A/B isolation (STORE)", () => {
     const hitsA = await store.search({
       workspaceId: WS_A,
       vector: [0.1, 0.2, 0.3],
+      allowUnscopedDocumentIds: true,
       limit: 10,
     });
     const hitsB = await store.search({
       workspaceId: WS_B,
       vector: [0.1, 0.2, 0.3],
+      allowUnscopedDocumentIds: true,
       limit: 10,
     });
 
@@ -99,7 +108,12 @@ describe("Phase 3 regression #5: workspace A/B isolation (STORE)", () => {
     // verify via scoped search never returning the other workspace's only row as cross).
     expect(hitsA).toHaveLength(1);
     expect(hitsB).toHaveLength(1);
-    const allA = await store.search({ workspaceId: WS_A, vector: [1], limit: 100 });
+    const allA = await store.search({
+      workspaceId: WS_A,
+      vector: [1],
+      limit: 100,
+      allowUnscopedDocumentIds: true,
+    });
     expect(allA.every((h) => h.documentId === "doc-shared-title")).toBe(true);
     expect(allA).toHaveLength(1);
   });
@@ -135,6 +149,7 @@ describe("Phase 3 regression #5: workspace A/B isolation (STORE)", () => {
       store.search({
         workspaceId: "",
         vector: [0.1],
+        allowUnscopedDocumentIds: true,
         limit: 3,
       }),
     ).rejects.toThrow(/workspaceId/i);
@@ -142,6 +157,7 @@ describe("Phase 3 regression #5: workspace A/B isolation (STORE)", () => {
     await store.search({
       workspaceId: WS_A,
       vector: [0.1, 0.2],
+      allowUnscopedDocumentIds: true,
       limit: 3,
     });
 
@@ -206,8 +222,18 @@ describe("Phase 3 regression #5: workspace A/B isolation (STORE)", () => {
     });
     expect(resolveVectorBackend()).toBe("milvus");
 
-    const hitsA = await store.search({ workspaceId: WS_A, vector: [0.1], limit: 5 });
-    const hitsB = await store.search({ workspaceId: WS_B, vector: [0.1], limit: 5 });
+    const hitsA = await store.search({
+      workspaceId: WS_A,
+      vector: [0.1],
+      limit: 5,
+      allowUnscopedDocumentIds: true,
+    });
+    const hitsB = await store.search({
+      workspaceId: WS_B,
+      vector: [0.1],
+      limit: 5,
+      allowUnscopedDocumentIds: true,
+    });
 
     expect(hitsA).toHaveLength(1);
     expect(hitsB).toHaveLength(1);

@@ -45,6 +45,8 @@ export type RetrieveKbParams = {
   hybridDeps?: HybridSearchDeps;
   /** Security trim: only these documentIds (D-07). */
   documentIds?: string[];
+  /** Trusted / tests: allow workspace-wide search when documentIds omitted. */
+  allowUnscopedDocumentIds?: boolean;
 };
 
 /**
@@ -93,6 +95,7 @@ export async function retrieveKb(params: RetrieveKbParams): Promise<KbRetrieveRe
       corpus,
       limit: topK,
       documentIds,
+      allowUnscopedDocumentIds: params.allowUnscopedDocumentIds,
     },
     params.hybridDeps ?? {},
   );

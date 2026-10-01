@@ -45,7 +45,7 @@ describe("kb_search tool", () => {
     const { kbSearchTool, invokeKbSearch } = await import("./kb-search.tool");
     expect(kbSearchTool.name).toBe("kb_search");
 
-    const out = await invokeKbSearch({ query: "差旅报销" });
+    const out = await invokeKbSearch({ allowUnscopedDocumentIds: true, query: "差旅报销" });
     expect(hybridSearchMock).toHaveBeenCalled();
     const params = hybridSearchMock.mock.calls[0]![0] as {
       workspaceId: string;
@@ -63,6 +63,7 @@ describe("kb_search tool", () => {
   it("forwards explicit workspaceId and topK", async () => {
     const { invokeKbSearch } = await import("./kb-search.tool");
     await invokeKbSearch({
+      allowUnscopedDocumentIds: true,
       query: "政策",
       workspaceId: "ws-custom",
       topK: 3,
@@ -87,7 +88,10 @@ describe("kb_search tool", () => {
       },
     ]);
     const { invokeKbSearch, KB_SEARCH_NO_HIT_STATUS } = await import("./kb-search.tool");
-    const out = await invokeKbSearch({ query: "LangGraph vs AutoGen" });
+    const out = await invokeKbSearch({
+      allowUnscopedDocumentIds: true,
+      query: "LangGraph vs AutoGen",
+    });
     expect(out).toContain(KB_SEARCH_NO_HIT_STATUS);
     expect(out).toMatch(/禁止编造/);
     expect(out).not.toMatch(/\[citation/);
@@ -96,7 +100,7 @@ describe("kb_search tool", () => {
 
   it("keeps high-similarity hits with HIT status", async () => {
     const { invokeKbSearch } = await import("./kb-search.tool");
-    const out = await invokeKbSearch({ query: "差旅报销" });
+    const out = await invokeKbSearch({ allowUnscopedDocumentIds: true, query: "差旅报销" });
     expect(out).toContain("KB_SEARCH_STATUS: HIT");
     expect(out).toMatch(/doc-1/);
   });
@@ -125,6 +129,7 @@ describe("kb_search tool", () => {
       ]);
     const { invokeKbSearch } = await import("./kb-search.tool");
     const out = await invokeKbSearch({
+      allowUnscopedDocumentIds: true,
       query: "生效条件",
       userText: "请检索蓝莓河豚协议 ZX-7749 的生效条件",
     });
@@ -164,7 +169,11 @@ describe("kb_search tool", () => {
       ]);
     const { invokeKbSearch } = await import("./kb-search.tool");
     const long = "先查知识库里关于韶音手册的资料，再整理成一份简短 Markdown 报告";
-    const out = await invokeKbSearch({ query: long, userText: long });
+    const out = await invokeKbSearch({
+      allowUnscopedDocumentIds: true,
+      query: long,
+      userText: long,
+    });
     expect(hybridSearchMock).toHaveBeenCalledTimes(2);
     expect((hybridSearchMock.mock.calls[1]![0] as { query: string }).query).toMatch(/韶音手册/);
     expect(out).toContain("KB_SEARCH_STATUS: HIT");
@@ -184,7 +193,7 @@ describe("kb_search tool", () => {
       },
     ]);
     const { invokeKbSearch } = await import("./kb-search.tool");
-    const out = await invokeKbSearch({ query: "韶音手册" });
+    const out = await invokeKbSearch({ allowUnscopedDocumentIds: true, query: "韶音手册" });
     expect(out).toContain("KB_SEARCH_STATUS: HIT");
     expect(out).toContain("near");
   });
@@ -216,8 +225,14 @@ describe("kb_search tool", () => {
         },
       ]);
 
-    const out1 = await invokeKbSearch({ query: "子查询一 专有名词A" });
-    const out2 = await invokeKbSearch({ query: "子查询二 专有名词B" });
+    const out1 = await invokeKbSearch({
+      allowUnscopedDocumentIds: true,
+      query: "子查询一 专有名词A",
+    });
+    const out2 = await invokeKbSearch({
+      allowUnscopedDocumentIds: true,
+      query: "子查询二 专有名词B",
+    });
 
     expect(hybridSearchMock).toHaveBeenCalledTimes(2);
     expect(hybridSearchMock.mock.calls[0]![0]).toEqual(
@@ -248,7 +263,7 @@ describe("kb_search tool", () => {
       },
     ]);
     const { invokeKbSearch } = await import("./kb-search.tool");
-    const withPage = await invokeKbSearch({ query: "差旅报销" });
+    const withPage = await invokeKbSearch({ allowUnscopedDocumentIds: true, query: "差旅报销" });
     const withPageLines = withPage.split("\n");
     const chunkLine = withPageLines.indexOf("chunkIndex: 2");
     expect(chunkLine).toBeGreaterThanOrEqual(0);
@@ -265,7 +280,7 @@ describe("kb_search tool", () => {
         chunkIndex: 0,
       },
     ]);
-    const withoutPage = await invokeKbSearch({ query: "差旅报销" });
+    const withoutPage = await invokeKbSearch({ allowUnscopedDocumentIds: true, query: "差旅报销" });
     expect(withoutPage).toMatch(/chunkIndex: 0/);
     expect(withoutPage).not.toMatch(/^page:/m);
   });

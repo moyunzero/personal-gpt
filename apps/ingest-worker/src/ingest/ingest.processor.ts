@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
 import type { Job } from "bullmq";
@@ -36,8 +36,16 @@ export function isGraphIngestEnabled(source: NodeJS.ProcessEnv = process.env): b
   return source.ENABLE_GRAPH_RAG === "true";
 }
 
+const INGEST_LOCK_DURATION_MS = 120_000;
+const INGEST_STALLED_INTERVAL_MS = 30_000;
+
 @Injectable()
-@Processor(INGEST_QUEUE_NAME, { concurrency: 2 })
+@Processor(INGEST_QUEUE_NAME, {
+  concurrency: 2,
+  lockDuration: INGEST_LOCK_DURATION_MS,
+  stalledInterval: INGEST_STALLED_INTERVAL_MS,
+  maxStalledCount: 1,
+})
 export class IngestProcessor extends WorkerHost {
   private readonly logger = new Logger(IngestProcessor.name);
 
@@ -50,6 +58,36 @@ export class IngestProcessor extends WorkerHost {
     private readonly dataSource: DataSource,
   ) {
     super();
+  }
+
+  @OnWorkerEvent("stalled")
+  async onStalled(jobId: string): Promise<void> {
+    this.logger.warn(`Ingest job stalled: ${jobId}`);
+    const ingestJob = await this.ingestJobRepo.findOne({ where: { bullJobId: String(jobId) } });
+    if (ingestJob) {
+      await this.updateIngestJob(ingestJob.id, {
+        status: "failed",
+        error: "stalled",
+      });
+      await this.documentRepo.update(
+        { id: ingestJob.documentId, workspaceId: ingestJob.workspaceId },
+        { status: "failed" },
+      );
+      return;
+    }
+    // Stable Bull jobId === document.id
+    const byDoc = await this.documentRepo.findOne({ where: { id: String(jobId) } });
+    if (byDoc) {
+      await this.documentRepo.update(
+        { id: byDoc.id, workspaceId: byDoc.workspaceId },
+        { status: "failed" },
+      );
+      const latest = await this.ingestJobRepo.findOne({
+        where: { documentId: byDoc.id },
+        order: { createdAt: "DESC" },
+      });
+      await this.updateIngestJob(latest?.id, { status: "failed", error: "stalled" });
+    }
   }
 
   async process(job: Job<IngestJobPayload>): Promise<void> {

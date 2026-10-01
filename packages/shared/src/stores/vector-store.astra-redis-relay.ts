@@ -114,6 +114,12 @@ export function createAstraRedisRelayVectorStore(options: {
     },
 
     async search(params) {
+      if (params.documentIds === undefined && !params.allowUnscopedDocumentIds) {
+        return [];
+      }
+      if (params.documentIds !== undefined && params.documentIds.length === 0) {
+        return [];
+      }
       assertSearchWorkspaceId(params.workspaceId);
       const ack = await enqueueAndWait({
         id: randomUUID(),

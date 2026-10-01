@@ -37,8 +37,10 @@ export interface VectorSearchParams {
   vector: number[];
   limit?: number;
   similarityThreshold?: number;
-  /** Security trim by documentId (D-07). */
+  /** Security trim by documentId (D-07). Omit = deny unless allowUnscopedDocumentIds. */
   documentIds?: string[];
+  /** Trusted scripts/eval only: allow workspace-wide search when documentIds omitted. */
+  allowUnscopedDocumentIds?: boolean;
   /** Astra find 附加过滤（与 workspaceId 以 $and 合并） */
   filter?: Record<string, unknown>;
 }

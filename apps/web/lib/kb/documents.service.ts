@@ -229,12 +229,17 @@ async function enqueueIngestJob(
   });
 
   const queue = getIngestQueue();
-  const bullJobId = id;
+  // Stable Bull jobId = document.id so concurrent enqueue of the same doc is rejected.
+  const bullJobId = document.id;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let bullJob;
   try {
     bullJob = await Promise.race([
-      queue.add(`ingest-${document.id}`, payload, { jobId: bullJobId }),
+      queue.add(`ingest-${document.id}`, payload, {
+        jobId: bullJobId,
+        removeOnComplete: true,
+        removeOnFail: true,
+      }),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
           reject(new Error("导入队列没有响应，请确认 Redis 已启动"));
@@ -250,6 +255,12 @@ async function enqueueIngestJob(
         .getRepository(DocumentEntity)
         .update({ id: document.id, workspaceId }, { status: "failed" });
       throw new UploadValidationError("queue_unavailable", message);
+    }
+    // Job already active/waiting with this id — treat as busy for reindex/upload races.
+    const state = await bullJob.getState().catch(() => "unknown");
+    if (state === "active" || state === "waiting" || state === "delayed") {
+      await jobRepo.update({ id }, { status: "failed", error: "document_already_queued" });
+      throw new ReindexBusyError();
     }
   } finally {
     if (timer) clearTimeout(timer);
@@ -621,15 +632,21 @@ export async function reindexDocument(
 
   const accessCtx = await resolveDocumentAccessContext(ctx.userId, ctx.workspaceId);
   if (!accessCtx || !canWriteDocument(document, accessCtx)) return null;
-  if (document.status === "processing") {
+
+  // Atomic CAS: only one reindex may flip status into processing.
+  const cas = await docRepo
+    .createQueryBuilder()
+    .update(DocumentEntity)
+    .set({ status: "processing", chunkCount: 0 })
+    .where("id = :id AND workspace_id = :workspaceId AND status <> :busy", {
+      id: documentId,
+      workspaceId: ctx.workspaceId,
+      busy: "processing",
+    })
+    .execute();
+  if (!cas.affected || cas.affected < 1) {
     throw new ReindexBusyError();
   }
-
-  // Do not purge vectors/graph before upsert — parse/embed failure must keep prior ready index.
-  await docRepo.update(
-    { id: documentId, workspaceId: ctx.workspaceId },
-    { status: "processing", chunkCount: 0 },
-  );
   document.status = "processing";
   document.chunkCount = 0;
 

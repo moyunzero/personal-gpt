@@ -40,6 +40,7 @@ describe("retrieveKb via hybridSearch", () => {
       { text: "c", similarity: 0.5, title: "mid" },
     ]);
     const out = await retrieveKb({
+      allowUnscopedDocumentIds: true,
       query: "q",
       minSimilarity: 0.95,
       hybridDeps: {
@@ -61,6 +62,7 @@ describe("retrieveKb via hybridSearch", () => {
 
   it("leaves topSimilarity undefined when raw is empty", async () => {
     const out = await retrieveKb({
+      allowUnscopedDocumentIds: true,
       query: "q",
       hybridDeps: {
         embed: vi.fn().mockResolvedValue([0.1]),
@@ -88,6 +90,7 @@ describe("retrieveKb via hybridSearch", () => {
       },
     ]);
     const out = await retrieveKb({
+      allowUnscopedDocumentIds: true,
       query: "政策",
       minSimilarity: 0,
       hybridDeps: {

@@ -151,6 +151,7 @@ describe("Phase 2 regression #1: framework compare report", () => {
     ]);
     const { retrieveKb } = await import("../../../apps/agent-service/src/rag/retrieve");
     const result = await retrieveKb({
+      allowUnscopedDocumentIds: true,
       query: "LangGraph vs AutoGen",
       hybridDeps: {
         embed: async () => [0.1, 0.2, 0.3],

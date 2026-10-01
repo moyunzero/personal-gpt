@@ -50,6 +50,7 @@ describe("milvus page filter over-fetch", () => {
       workspaceId: "ws-1",
       limit: 3,
       filter: { page: { $eq: 2 } },
+      allowUnscopedDocumentIds: true,
     });
     expect(search.mock.calls[0]![0].limit).toBe(Math.max(3 * 5, 50));
     expect(hits.every((h) => h.page === 2)).toBe(true);
@@ -95,6 +96,7 @@ describe("milvus page filter over-fetch", () => {
       workspaceId: "ws-1",
       limit: 5,
       filter: { page: { $eq: 2 } },
+      allowUnscopedDocumentIds: true,
     });
     expect(search.mock.calls[0]![0].limit).toBe(50);
     expect(hits.length).toBeGreaterThan(0);

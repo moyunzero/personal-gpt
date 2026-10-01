@@ -19,7 +19,7 @@ describe("graph_search tool", () => {
 
   it("returns EMPTY_QUERY for blank question", async () => {
     const { invokeGraphSearch } = await import("./graph-search.tool");
-    const out = await invokeGraphSearch({ question: "   " });
+    const out = await invokeGraphSearch({ allowUnscopedDocumentIds: true, question: "   " });
     expect(out).toMatch(/EMPTY_QUERY/);
   });
 
